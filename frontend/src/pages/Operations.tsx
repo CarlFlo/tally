@@ -706,7 +706,7 @@ export function SettingsPage({
                     await api("/auth/password", "POST", { current, password });
                     setCurrent("");
                     setPassword("");
-                    await sessions.refetch();
+                    await invalidateResources(cache, ["bootstrap", "sessions"]);
                     notify("Password changed; other sessions revoked");
                   } catch (e) {
                     notify((e as Error).message, true);
@@ -775,7 +775,11 @@ export function SettingsPage({
                       try {
                         await api("/auth/sessions/" + session.id, "DELETE");
                         if (session.current) resetSession();
-                        else await sessions.refetch();
+                        else
+                          await invalidateResources(cache, [
+                            "bootstrap",
+                            "sessions",
+                          ]);
                         notify("Session revoked");
                       } catch (e) {
                         notify((e as Error).message, true);
