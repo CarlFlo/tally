@@ -1,59 +1,67 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import {
+  invalidateChanges,
+  revalidateActiveServerData,
+  type Change,
+} from "./queryInvalidation";
+
+type LiveEvent = {
+  version: number;
+  changes: Change[];
+};
 
 export function LiveUpdates({ enabled }: { enabled: boolean }) {
   const cache = useQueryClient();
-  const timer = useRef<number | undefined>(undefined);
+  const hiddenChanges = useRef(new Map<string, Change>());
+
   useEffect(() => {
     if (!enabled) return;
     let disposed = false;
-    let refreshing = false;
-    let changedWhileRefreshing = false;
-    const schedule = () => {
+
+    const apply = (changes: Change[]) => {
+      if (!changes.length) return;
       if (document.visibilityState !== "visible") {
-        changedWhileRefreshing = true;
+        for (const change of changes)
+          hiddenChanges.current.set(
+            `${change.resource}:${change.id || ""}`,
+            change,
+          );
         return;
       }
-      if (timer.current !== undefined || refreshing) return;
-      timer.current = window.setTimeout(() => {
-        timer.current = undefined;
-        refreshing = true;
-        changedWhileRefreshing = false;
-        void cache
-          .invalidateQueries(
-            {
-              type: "active", refetchType: "active",
-              // Validation and discovery are driven by user input, not every
-              // deployment event. Replaying them creates unrelated remote work.
-              predicate: (query) => !["schedule-preview", "show-search", "show-suggestions"].includes(String(query.queryKey[0])),
-            },
-            { cancelRefetch: false },
-          )
-          .finally(() => {
-            refreshing = false;
-            if (!disposed && changedWhileRefreshing) schedule();
-          });
-      }, 150);
+      void invalidateChanges(cache, changes);
     };
-    const refresh = () => {
-      if (refreshing) changedWhileRefreshing = true;
-      schedule();
-    };
+
     const stream = new EventSource("/api/events");
-    stream.onmessage = refresh;
-    const visible = () => {
-      if (document.visibilityState === "visible") refresh();
+    stream.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data) as LiveEvent;
+        if (payload.version !== 1 || !Array.isArray(payload.changes)) return;
+        apply(payload.changes);
+      } catch {
+        // Ignore malformed live hints. Authoritative data is recovered on focus.
+      }
     };
-    document.addEventListener("visibilitychange", visible);
-    window.addEventListener("focus", refresh);
+
+    const recover = () => {
+      if (disposed || document.visibilityState !== "visible") return;
+      const missed = [...hiddenChanges.current.values()];
+      hiddenChanges.current.clear();
+      if (missed.length) void invalidateChanges(cache, missed);
+      else void revalidateActiveServerData(cache);
+    };
+
+    document.addEventListener("visibilitychange", recover);
+    window.addEventListener("focus", recover);
+
     return () => {
       disposed = true;
       stream.close();
-      window.clearTimeout(timer.current);
-      timer.current = undefined;
-      document.removeEventListener("visibilitychange", visible);
-      window.removeEventListener("focus", refresh);
+      hiddenChanges.current.clear();
+      document.removeEventListener("visibilitychange", recover);
+      window.removeEventListener("focus", recover);
     };
   }, [cache, enabled]);
+
   return null;
 }
