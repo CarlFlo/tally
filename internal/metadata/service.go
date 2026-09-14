@@ -25,6 +25,5 @@ func (s *Service) Sync(ctx context.Context, external string) (string, error) {
 	if e != nil {
 		return "", e
 	}
-	s.changed("shows", "show", "calendar", "statistics")
 	return v.(string), nil
 }
