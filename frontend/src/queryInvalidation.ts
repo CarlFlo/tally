@@ -91,7 +91,7 @@ async function flush(client: QueryClient, state: Pending) {
             : prefix();
         return client.invalidateQueries(
           { queryKey, refetchType: "active" },
-          { cancelRefetch: false },
+          { cancelRefetch: true },
         );
       }),
     );
@@ -154,6 +154,6 @@ export async function revalidateActiveServerData(client: QueryClient) {
           String(query.queryKey[0]),
         ),
     },
-    { cancelRefetch: false },
+    { cancelRefetch: true },
   );
 }
