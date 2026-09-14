@@ -11,6 +11,8 @@ type LiveEvent = {
   changes: Change[];
 };
 
+const SUSPENSION_RECOVERY_MS = 30_000;
+
 export function LiveUpdates({ enabled }: { enabled: boolean }) {
   const cache = useQueryClient();
   const hiddenChanges = useRef(new Map<string, Change>());
@@ -19,6 +21,7 @@ export function LiveUpdates({ enabled }: { enabled: boolean }) {
     if (!enabled) return;
     let disposed = false;
     let needsRecovery = false;
+    let hiddenAt = 0;
 
     const apply = (changes: Change[]) => {
       if (!changes.length) return;
@@ -43,7 +46,8 @@ export function LiveUpdates({ enabled }: { enabled: boolean }) {
         if (payload.version !== 1 || !Array.isArray(payload.changes)) return;
         apply(payload.changes);
       } catch {
-        // Ignore malformed live hints. Authoritative data is recovered on focus.
+        // Malformed hints are ignored. A later reconnect or suspension
+        // recovery revalidates authoritative active data.
       }
     };
 
@@ -59,9 +63,12 @@ export function LiveUpdates({ enabled }: { enabled: boolean }) {
 
     const visibility = () => {
       if (document.visibilityState !== "visible") {
-        needsRecovery = true;
+        hiddenAt = Date.now();
         return;
       }
+      if (hiddenAt && Date.now() - hiddenAt >= SUSPENSION_RECOVERY_MS)
+        needsRecovery = true;
+      hiddenAt = 0;
       recover();
     };
 
