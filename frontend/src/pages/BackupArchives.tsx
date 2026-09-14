@@ -10,7 +10,7 @@ export function BackupArchives() {
   const cache = useQueryClient();
   const [busy, setBusy] = useState(false);
   const archives = useQuery<{ records: any[]; failures: any[] }>({
-    queryKey: [...queryKeys.backups(), boot.profile!.id],
+    queryKey: queryKeys.backups(boot.profile!.id),
     queryFn: ({ signal }) => api("/backups", "GET", undefined, signal),
   });
   const rows = archives.data
