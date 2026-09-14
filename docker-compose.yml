@@ -1,0 +1,23 @@
+services:
+  tally:
+    build: .
+    image: tally:local
+    restart: unless-stopped
+    ports:
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-8080}:8080"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      APP_DATA_DIR: /config
+      APP_ADDR: :8080
+      TZ: ${TZ:-UTC}
+    volumes:
+      - tally-config:/config
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+volumes:
+  tally-config:

@@ -1,0 +1,12 @@
+.git
+.tools
+config
+.env
+frontend/node_modules
+frontend/test-results
+frontend/playwright-report
+frontend/tsconfig.tsbuildinfo
+tally.exe
+tally
+*.log
+docs/screenshots

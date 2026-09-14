@@ -1,0 +1,20 @@
+package api
+
+import (
+	"net/http"
+
+	"github.com/CarlFlo/mediaManager/internal/auth"
+)
+
+func (s *Server) backups(w http.ResponseWriter, r *http.Request, _ auth.Session) error {
+	records, err := s.DB.Rows(r.Context(), "SELECT * FROM backup_records ORDER BY created_at DESC,id DESC LIMIT 100")
+	if err != nil {
+		return err
+	}
+	failures, err := s.DB.Rows(r.Context(), "SELECT id,started_at,status,trigger FROM job_runs WHERE job_key='backup' AND status IN ('failed','interrupted') ORDER BY started_at DESC LIMIT 25")
+	if err != nil {
+		return err
+	}
+	jsonResponse(w, 200, map[string]any{"records": records, "failures": failures})
+	return nil
+}

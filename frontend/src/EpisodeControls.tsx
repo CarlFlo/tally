@@ -1,0 +1,167 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { ArrowUpRight, Check, Download, Star } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  api,
+  dateOnly,
+  episodeCode,
+  useApp,
+  type Episode,
+  type Show,
+} from "./lib";
+import { released } from "./releaseTime";
+
+export function EpisodeRow({
+  episode,
+  onOpen,
+}: {
+  episode: Episode;
+  onOpen: () => void;
+}) {
+  const [ep, setEp] = useState(episode);
+  const [pending, setPending] = useState(false);
+  const { boot, notify } = useApp();
+  const cache = useQueryClient();
+  useEffect(() => {
+    if (!pending) setEp(episode);
+  }, [episode, pending]);
+  async function toggle(field: "watched" | "downloaded") {
+    const value = !ep[field];
+    setEp((old) => ({ ...old, [field]: value }));
+    setPending(true);
+    try {
+      await api("/episodes/" + ep.id, "PATCH", { [field]: value });
+      await Promise.all(
+        ["show", "shows", "calendar"].map((key) =>
+          cache.invalidateQueries({ queryKey: [key] }),
+        ),
+      );
+    } catch (e) {
+      setEp(episode);
+      notify((e as Error).message, true);
+    } finally {
+      setPending(false);
+    }
+  }
+  return (
+    <div
+      className={`episode-row ${ep.watched ? "episode-watched" : released(ep, boot.preferences.timezone) ? "episode-available" : "episode-upcoming"}`}
+      onClick={onOpen}
+    >
+      <span className="episode-number">
+        {ep.number ? String(ep.number).padStart(2, "0") : "SP"}
+      </span>
+      <button
+        className="episode-row-title"
+        onClick={(e) => {
+          e.stopPropagation();
+          onOpen();
+        }}
+      >
+        <strong>{ep.name}</strong>
+        <small>
+          {episodeCode(ep)} · {ep.runtime ? `${ep.runtime} min` : "Runtime TBA"}
+        </small>
+      </button>
+      <span className="episode-airdate">
+        {dateOnly(ep.airdate)}
+        <small className="episode-status">
+          {ep.watched
+            ? "Watched"
+            : released(ep, boot.preferences.timezone)
+              ? "Available"
+              : "Upcoming"}
+        </small>
+      </span>
+      <button
+        className={
+          "icon-button state-icon " + (ep.downloaded ? "amber-text" : "")
+        }
+        aria-label={ep.downloaded ? "Mark not downloaded" : "Mark downloaded"}
+        aria-pressed={!!ep.downloaded}
+        disabled={pending}
+        onClick={(e) => {
+          e.stopPropagation();
+          void toggle("downloaded");
+        }}
+      >
+        <Download size={17} />
+      </button>
+      <button
+        className={"icon-button state-icon " + (ep.watched ? "mint-text" : "")}
+        aria-label={ep.watched ? "Mark unwatched" : "Mark watched"}
+        aria-pressed={!!ep.watched}
+        disabled={pending}
+        onClick={(e) => {
+          e.stopPropagation();
+          void toggle("watched");
+        }}
+      >
+        <Check size={18} />
+      </button>
+      <button
+        className="icon-button"
+        aria-label={`Episode details: ${ep.name}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          onOpen();
+        }}
+      >
+        <ArrowUpRight size={17} />
+      </button>
+    </div>
+  );
+}
+export function FavoriteButton({ show }: { show: Show }) {
+  const { boot, notify } = useApp();
+  const cache = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const [stamping, setStamping] = useState(false);
+  useEffect(() => {
+    if (!stamping) return;
+    const timer = setTimeout(() => setStamping(false), 350);
+    return () => clearTimeout(timer);
+  }, [stamping]);
+  return (
+    <button
+      className={
+        "favorite-button " +
+        (show.favorite ? "is-favorite" : "") +
+        (stamping ? " is-stamping" : "")
+      }
+      aria-label={`${show.favorite ? "Unfavorite" : "Favorite"} ${show.name}`}
+      aria-pressed={!!show.favorite}
+      disabled={busy}
+      onClick={async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setBusy(true);
+        if (!show.favorite) setStamping(true);
+        try {
+          await Promise.all([
+            api(`/shows/${show.id}/favorite`, "PATCH", {
+              favorite: !show.favorite,
+            }),
+            !show.favorite
+              ? new Promise((resolve) => setTimeout(resolve, 320))
+              : Promise.resolve(),
+          ]);
+          await Promise.all(
+            ["shows", "show", "calendar"].map((key) =>
+              cache.invalidateQueries({ queryKey: [key] }),
+            ),
+          );
+        } catch (e) {
+          notify((e as Error).message, true);
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <Star
+        size={16}
+        fill={show.favorite || stamping ? "currentColor" : "none"}
+      />
+    </button>
+  );
+}

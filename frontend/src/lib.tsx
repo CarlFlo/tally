@@ -1,0 +1,560 @@
+import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
+import { dateTimeFormatter } from "./dateFormatting";
+import {
+  ArrowUpRight,
+  Check,
+  Download,
+  LoaderCircle,
+  LogOut,
+  Search,
+  Tv,
+  X,
+} from "lucide-react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { useNavigate } from "react-router-dom";
+
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: false },
+    mutations: { retry: false },
+  },
+});
+export async function api<T = any>(
+  path: string,
+  method = "GET",
+  body?: unknown,
+  signal?: AbortSignal,
+): Promise<T> {
+  const form = body instanceof FormData;
+  const response = await fetch("/api" + path, {
+    method,
+    credentials: "same-origin",
+    signal,
+    headers: {
+      ...(method !== "GET" ? { "X-Tally-CSRF": "1" } : {}),
+      ...(!form && body !== undefined
+        ? { "Content-Type": "application/json" }
+        : {}),
+    },
+    body: body === undefined ? undefined : form ? body : JSON.stringify(body),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    if (response.status === 401 || data.code === "password_change_required")
+      void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+    throw new Error(data.error || `Request failed (${response.status})`);
+  }
+  return data;
+}
+export type Profile = {
+  id: string;
+  display_name: string;
+  avatar: string;
+  has_password?: boolean | number;
+};
+export type Prefs = {
+  theme: string;
+  timezone: string;
+  calendar_view: string;
+  week_start: number;
+  time_format: string;
+  date_format: string;
+  debug_mode: boolean;
+  debug_job_state: string;
+  request_limit: number;
+  scan_limit: number;
+  job_type_filter: string;
+  job_status_filter: string;
+  bell_categories: string[];
+};
+export type Boot = {
+  browser_theme: string;
+  profiles: Profile[];
+  profile: Profile | null;
+  preferences: Prefs;
+  preferences_initialized: boolean;
+  auth_mode: string;
+  restricted: boolean;
+  warning: string;
+  max_profiles: number;
+  password_min: number;
+  password_max: number;
+};
+export function resetSession(destination = "/calendar") {
+  queryClient.clear();
+  try {
+    // Other tabs share cookies; discard their previous profile's cached UI too.
+    localStorage.setItem(
+      "tally-session-change",
+      `${Date.now()}-${Math.random()}`,
+    );
+  } catch {
+    // Sign-out must still work when browser storage is unavailable.
+  }
+  window.location.replace(destination);
+}
+export type Show = {
+  favorite: number;
+  id: string;
+  name: string;
+  summary: string;
+  image: string;
+  status: string;
+  premiered: string;
+  network: string;
+  genres: string;
+  rating: number;
+  runtime: number;
+  episode_count: number;
+  watched_count: number;
+  aired_count: number;
+  aired_unwatched: number;
+  next_episode: string;
+  last_checked_at: number;
+  next_check_at: number;
+};
+export type Episode = {
+  favorite: number;
+  id: string;
+  show_id: string;
+  show_name: string;
+  show_image: string;
+  name: string;
+  summary: string;
+  season: number;
+  season_episode_count?: number;
+  number: number;
+  airdate: string;
+  airstamp: string;
+  runtime: number;
+  watched: number | boolean;
+  downloaded: number | boolean;
+  network: string;
+  type: string;
+};
+export const en = {
+  nav: {
+    system: "System",
+    calendar: "Calendar",
+    shows: "My shows",
+    search: "Torrent search",
+    jobs: "Jobs",
+    statistics: "Statistics",
+    settings: "Settings",
+    logs: "Logs",
+    profile: "My profile",
+    login: "Sign in",
+  },
+  brand: "Tally",
+  tagline: "A little more in the loop.",
+};
+export const AppContext = createContext<{
+  boot: Boot;
+  notify: (message: string, error?: boolean, retry?: () => void) => void;
+}>({} as any);
+export const useApp = () => useContext(AppContext);
+export function SignOutButton({
+  className = "button",
+}: {
+  className?: string;
+}) {
+  const { notify } = useApp();
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      type="button"
+      className={className}
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        try {
+          await api("/auth/logout", "POST", {});
+          resetSession("/login");
+        } catch (e) {
+          notify((e as Error).message, true);
+          setBusy(false);
+        }
+      }}
+    >
+      {busy ? <Busy /> : <LogOut size={17} />}
+      {busy ? "Signing out…" : "Sign out"}
+    </button>
+  );
+}
+export const imageURL = (url: string) =>
+  url ? "/api/images?url=" + encodeURIComponent(url) : "";
+export function Avatar({
+  profile,
+  large = false,
+}: {
+  profile: Profile;
+  large?: boolean;
+}) {
+  return (
+    <span className={`avatar avatar-${profile.avatar} ${large ? "large" : ""}`}>
+      {profile.avatar.endsWith(".png") ? (
+        <img src={"/api/avatars/" + profile.avatar} alt="" />
+      ) : (
+        profile.display_name.slice(0, 1).toUpperCase()
+      )}
+    </span>
+  );
+}
+export function Poster({
+  image,
+  name,
+  className = "",
+}: {
+  image?: string;
+  name: string;
+  className?: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <div className={"poster " + className}>
+      {image && !failed ? (
+        <img
+          src={imageURL(image)}
+          alt={name + " poster"}
+          loading="lazy"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <>
+          <Tv size={30} />
+          <span>{name}</span>
+        </>
+      )}
+    </div>
+  );
+}
+export function Busy() {
+  return <LoaderCircle size={17} className="spin" aria-label="Loading" />;
+}
+export function Empty({
+  icon = <Tv size={30} />,
+  title,
+  children,
+  action,
+}: {
+  icon?: ReactNode;
+  title: string;
+  children: ReactNode;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="empty">
+      <span className="empty-icon">{icon}</span>
+      <h3>{title}</h3>
+      <p>{children}</p>
+      {action}
+    </div>
+  );
+}
+export function ErrorState({
+  error,
+  retry,
+}: {
+  error: Error;
+  retry?: () => void;
+}) {
+  return (
+    <div className="error-box" role="alert">
+      <span>{error.message}</span>
+      {retry && (
+        <button className="button small" onClick={retry}>
+          Try again
+        </button>
+      )}
+    </div>
+  );
+}
+export function Dialog({
+  title,
+  children,
+  onClose,
+  drawer = false,
+  className = "",
+}: {
+  title: string;
+  children: ReactNode;
+  onClose: () => void;
+  drawer?: boolean;
+  className?: string;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = ref.current;
+    dialog?.showModal();
+    dialog?.querySelector<HTMLInputElement>("[data-autofocus]")?.focus();
+    // React clears refs before passive unmount cleanup. Retain the actual
+    // element so its modal state is always closed, including nested dialogs.
+    return () => dialog?.close();
+  }, []);
+  return (
+    <dialog
+      ref={ref}
+      className={(drawer ? "dialog drawer" : "dialog") + " " + className}
+      onCancel={onClose}
+      onClick={(e) => {
+        if (e.target !== e.currentTarget) return;
+        const box = e.currentTarget.getBoundingClientRect();
+        if (
+          e.clientX < box.left ||
+          e.clientX > box.right ||
+          e.clientY < box.top ||
+          e.clientY > box.bottom
+        )
+          onClose();
+      }}
+      aria-label={title}
+    >
+      <div className="dialog-head">
+        <h2>{title}</h2>
+        <button
+          className="icon-button"
+          aria-label="Close dialog"
+          onClick={onClose}
+        >
+          <X size={20} />
+        </button>
+      </div>
+      {children}
+    </dialog>
+  );
+}
+export function Confirm({
+  title,
+  message,
+  onConfirm,
+  onClose,
+}: {
+  title: string;
+  message: string;
+  onConfirm: () => Promise<void>;
+  onClose: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const { notify } = useApp();
+  return (
+    <Dialog title={title} onClose={onClose}>
+      <p className="muted">{message}</p>
+      <div className="dialog-actions">
+        <button className="button" onClick={onClose}>
+          Cancel
+        </button>
+        <button
+          className="button danger"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              await onConfirm();
+              onClose();
+            } catch (e) {
+              notify((e as Error).message, true);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy && <Busy />}Confirm
+        </button>
+      </div>
+    </Dialog>
+  );
+}
+export function useLocal<T>(
+  key: string,
+  path: string,
+  enabled = true,
+  refreshInterval?: number,
+) {
+  return useQuery<T>({
+    enabled,
+    queryKey: [key, path],
+    queryFn: ({ signal }) => api<T>(path, "GET", undefined, signal),
+    refetchInterval: refreshInterval,
+    refetchIntervalInBackground: false,
+  });
+}
+export function episodeCode(e: Episode) {
+  return e.number
+    ? `S${String(e.season).padStart(2, "0")}E${String(e.number).padStart(2, "0")}`
+    : `S${String(e.season).padStart(2, "0")} · Special`;
+}
+export function localDay(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+export function episodeDay(e: Episode, timezone: string) {
+  if (!e.airstamp || !Number.isFinite(new Date(e.airstamp).getTime()))
+    return e.airdate;
+  return dateTimeFormatter("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(e.airstamp));
+}
+export function timeLabel(e: Episode, prefs: Prefs) {
+  return e.airstamp && Number.isFinite(new Date(e.airstamp).getTime())
+    ? dateTimeFormatter("en", {
+        timeZone: prefs.timezone,
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: prefs.time_format === "12h",
+      }).format(new Date(e.airstamp))
+    : "Time TBA";
+}
+export function dateLabel(value: number | string | null) {
+  if (!value) return "Not yet";
+  const prefs = queryClient.getQueryData<Boot>(["bootstrap"])?.preferences;
+  const date = new Date(typeof value === "number" ? value * 1000 : value);
+  if (!Number.isFinite(date.getTime())) return "Date TBA";
+  const day = dateTimeFormatter("en-CA", {
+    timeZone: prefs?.timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+  return (
+    dateOnly(day) +
+    " · " +
+    dateTimeFormatter("en", {
+      timeZone: prefs?.timezone,
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: prefs?.time_format === "12h",
+    }).format(date)
+  );
+}
+export function dateOnly(day: string) {
+  if (!day) return "Date TBA";
+  const date = new Date(day + "T12:00:00Z");
+  if (!Number.isFinite(date.getTime())) return "Date TBA";
+  const format = queryClient.getQueryData<Boot>(["bootstrap"])?.preferences
+    ?.date_format;
+  const [year, month, dateNumber] = day.split("-");
+  if (format === "yyyy-MM-dd") return day;
+  if (format === "MM/dd/yyyy") return `${month}/${dateNumber}/${year}`;
+  return dateTimeFormatter("en-GB", {
+    timeZone: "UTC",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+export function bytes(value: number) {
+  if (!value) return "—";
+  const n = Math.floor(Math.log(value) / Math.log(1024));
+  return `${(value / 1024 ** n).toFixed(n > 0 ? 1 : 0)} ${["B", "KB", "MB", "GB", "TB"][n]}`;
+}
+export function EpisodeDrawer({
+  episode,
+  onClose,
+}: {
+  episode: Episode;
+  onClose: () => void;
+}) {
+  const { boot, notify } = useApp();
+  const cache = useQueryClient();
+  const navigate = useNavigate();
+  const [ep, setEp] = useState(episode);
+  const [busy, setBusy] = useState(false);
+  async function toggle(field: "watched" | "downloaded") {
+    const old = ep;
+    const value = !ep[field];
+    setEp({ ...ep, [field]: value });
+    setBusy(true);
+    try {
+      await api("/episodes/" + ep.id, "PATCH", { [field]: value });
+      notify(
+        value
+          ? `Marked ${field}`
+          : `Marked ${field === "watched" ? "unwatched" : "not downloaded"}`,
+      );
+      await Promise.all(
+        ["calendar", "show", "shows"].map((key) =>
+          cache.invalidateQueries({ queryKey: [key] }),
+        ),
+      );
+    } catch (e) {
+      setEp(old);
+      notify((e as Error).message, true);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Dialog title="Episode details" onClose={onClose} drawer>
+      <div className="episode-hero">
+        <Poster image={ep.show_image} name={ep.show_name} />
+        <div>
+          <span className="eyebrow">{episodeCode(ep)}</span>
+          <h2>{ep.show_name}</h2>
+          <p>{ep.name}</p>
+          <span className="muted small-text">
+            {dateOnly(episodeDay(ep, boot.preferences.timezone))} ·{" "}
+            {timeLabel(ep, boot.preferences)}
+            {ep.runtime ? ` · ${ep.runtime} min` : ""}
+          </span>
+        </div>
+      </div>
+      <p className="description">
+        {ep.summary || "No episode summary is available yet."}
+      </p>
+      <div className="drawer-actions">
+        <button
+          className={"button " + (ep.watched ? "active" : "")}
+          disabled={busy}
+          onClick={() => toggle("watched")}
+        >
+          <Check size={18} />
+          {ep.watched ? "Watched" : "Mark watched"}
+        </button>
+        <button
+          className={"button " + (ep.downloaded ? "active" : "")}
+          disabled={busy}
+          onClick={() => toggle("downloaded")}
+        >
+          <Download size={18} />
+          {ep.downloaded ? "Downloaded" : "Mark downloaded"}
+        </button>
+        <button
+          className="button primary"
+          onClick={() => {
+            onClose();
+            navigate(
+              "/search?q=" +
+                encodeURIComponent(
+                  ep.show_name +
+                    " " +
+                    episodeCode(ep).replace(" · Special", ""),
+                ),
+            );
+          }}
+        >
+          <Search size={18} />
+          Search torrents
+        </button>
+        <button
+          className="button ghost"
+          onClick={() => {
+            onClose();
+            navigate("/shows/" + ep.show_id);
+          }}
+        >
+          View show
+          <ArrowUpRight size={17} />
+        </button>
+      </div>
+    </Dialog>
+  );
+}

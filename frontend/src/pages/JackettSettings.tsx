@@ -1,0 +1,98 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { CheckCircle2, Plug, Save } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { ConnectionInput } from "../ConnectionInput";
+import { api, Busy, ErrorState, useApp, useLocal } from "../lib";
+
+type JackettConfig = {
+  base_url: string;
+  api_key: string;
+  enabled: boolean;
+};
+
+type SavedSearch = { data: JackettConfig; revision: number };
+
+export function JackettSettings() {
+  const query = useLocal<SavedSearch>("editable-settings", "/settings/search", true);
+  if (query.error) return <ErrorState error={query.error} retry={() => query.refetch()} />;
+  if (!query.data) return <Busy />;
+  return <JackettForm saved={query.data} />;
+}
+
+function JackettForm({ saved }: { saved: SavedSearch }) {
+  const { notify } = useApp();
+  const cache = useQueryClient();
+  const form = useRef<HTMLFormElement>(null);
+  const previous = useRef(saved);
+  const [data, setData] = useState(saved.data);
+  const [revision, setRevision] = useState(saved.revision);
+  const [busy, setBusy] = useState<"test" | "save" | null>(null);
+  const [feedback, setFeedback] = useState<{ message: string; error: boolean } | null>(null);
+  useEffect(() => {
+    if (JSON.stringify(data) === JSON.stringify(previous.current.data)) {
+      setData(saved.data);
+      setRevision(saved.revision);
+    }
+    previous.current = saved;
+  }, [data, saved]);
+  function change(next: Partial<JackettConfig>) {
+    setData((current) => ({ ...current, ...next }));
+    setFeedback(null);
+  }
+  async function run(action: "test" | "save", event?: FormEvent) {
+    event?.preventDefault();
+    if ((action === "test" || data.enabled) && !form.current?.reportValidity()) return;
+    setBusy(action);
+    setFeedback(null);
+    try {
+      if (action === "test") {
+        const result = await api<{ message: string }>("/settings/search/test", "POST", { data });
+        setFeedback({ message: result.message, error: false });
+      } else {
+        const result = await api<{ revision: number }>("/settings/search", "PUT", { data, revision });
+        setRevision(result.revision);
+        await Promise.all(["settings", "editable-settings", "capabilities"].map((key) => cache.invalidateQueries({ queryKey: [key] })));
+        notify(data.enabled ? "Jackett settings saved" : "Jackett disabled");
+      }
+    } catch (error) {
+      setFeedback({ message: (error as Error).message, error: true });
+    } finally {
+      setBusy(null);
+    }
+  }
+  return (
+    <section className="panel settings-card client-settings">
+      <h3><Plug size={19} />Jackett</h3>
+      <p className="muted">Jackett searches your configured indexers. Tally lets you filter and select a result before sending it to your torrent client.</p>
+      <form ref={form} onSubmit={(event) => run("save", event)} autoComplete="off">
+        <fieldset disabled={busy !== null} className="client-fields">
+          <label className="toggle-setting">
+            <input type="checkbox" checked={data.enabled} onChange={(event) => change({ enabled: event.target.checked })} />
+            Enable Jackett search
+          </label>
+          <label>
+            Jackett base URL
+            <ConnectionInput label="Jackett base URL" type="url" value={data.base_url} required placeholder="http://jackett:9117" onChange={(event) => change({ base_url: event.target.value })} />
+          </label>
+          <p className="small-text muted client-field-help">Enter the address of the Jackett instance. Tally uses Jackett's all-indexers Torznab endpoint.</p>
+          <label>
+            API key
+            <ConnectionInput label="Jackett API key" secret hiddenByDefault value={data.api_key} required maxLength={4096} onChange={(event) => change({ api_key: event.target.value })} />
+          </label>
+          <p className="small-text muted client-field-help">Find the API key in the Jackett dashboard. It stays server-side.</p>
+          <div className="client-actions">
+            <button type="button" className="button" onClick={() => run("test")}>
+              {busy === "test" ? <Busy /> : <Plug size={17} />}Test connection
+            </button>
+            <button className="button primary" type="submit" formNoValidate={!data.enabled}>
+              {busy === "save" ? <Busy /> : <Save size={17} />}Save Jackett
+            </button>
+          </div>
+        </fieldset>
+        {feedback && <div className={feedback.error ? "error-box" : "client-test-success"} role={feedback.error ? "alert" : "status"}>
+          {!feedback.error && <CheckCircle2 size={18} />}<span>{feedback.message}</span>
+        </div>}
+      </form>
+    </section>
+  );
+}

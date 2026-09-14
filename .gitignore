@@ -1,0 +1,13 @@
+/config/
+/.tools/
+/frontend/node_modules/
+/frontend/dist/
+/tally.exe
+/tally
+*.log
+*.test
+coverage.out
+.env
+/frontend/test-results/
+/frontend/playwright-report/
+/frontend/tsconfig.tsbuildinfo

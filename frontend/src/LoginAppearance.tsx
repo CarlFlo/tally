@@ -1,0 +1,53 @@
+import { useState } from "react";
+import { Moon, Sun, Monitor } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { api, type Boot } from "./lib";
+export function LoginAppearance({ boot }: { boot: Boot }) {
+  const cache = useQueryClient(),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  return (
+    <div className="login-appearance">
+      <div
+        role="group"
+        aria-label="Appearance"
+        data-selection={boot.browser_theme || "system"}
+      >
+        <span className="appearance-thumb" aria-hidden="true" />
+        {(
+          [
+            { theme: "light", Icon: Sun },
+            { theme: "dark", Icon: Moon },
+            { theme: "system", Icon: Monitor },
+          ] as const
+        ).map(({ theme, Icon }) => (
+          <button
+            key={theme}
+            className="icon-button"
+            aria-label={`${theme[0].toUpperCase() + theme.slice(1)} appearance`}
+            title={`${theme[0].toUpperCase() + theme.slice(1)} appearance`}
+            aria-pressed={(boot.browser_theme || "system") === theme}
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              setError("");
+              try {
+                await api("/browser/preferences", "PATCH", { theme });
+                cache.setQueryData<Boot>(["bootstrap"], (old) =>
+                  old ? { ...old, browser_theme: theme } : old,
+                );
+              } catch (e) {
+                setError((e as Error).message);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <Icon size={17} />
+          </button>
+        ))}
+      </div>
+      {error && <small role="alert">{error}</small>}
+    </div>
+  );
+}
