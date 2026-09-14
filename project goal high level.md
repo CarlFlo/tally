@@ -1573,7 +1573,8 @@ These are the decisions most important to preserve:
 
 ```text
 app/
-├── cmd/server/
+├── main.go
+├── internal/commands/
 ├── internal/
 │   ├── api/
 │   ├── auth/

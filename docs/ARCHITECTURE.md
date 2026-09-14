@@ -8,11 +8,12 @@ React Query owns read deduplication and AbortSignals; imperative connection test
 
 Provider shared requests retain work while at least one caller needs it. The last caller leaving cancels downstream HTTP/slot waits; at most 64 distinct shared operations may remain outstanding, including operations still unwinding cancellation. Browser stress tests use freshly built embedded assets, retain the same document and verify input, listener/interval/stream counts and transport concurrency after repeated switching.
 
-Tally uses `cmd/server` for process setup and operator commands, and `internal` for application packages. Files target one responsibility and about 150-200 lines. Domain types and repositories live beside the services that use them, so a feature can be understood without traversing generic model/helper layers.
+Tally uses the repository-root `main.go` as the small process entrypoint. `internal/commands` owns process setup and operator commands, while the other `internal` packages own application domains. Files target one responsibility and about 150-200 lines. Domain types and repositories live beside the services that use them, so a feature can be understood without traversing generic model/helper layers.
 
 | Package | Responsibility | Useful entry points |
 | --- | --- | --- |
-| `cmd/server` | Configuration, deployment lock, startup/shutdown, CLI commands | `main.go`, `serve.go`, individual command files |
+| `main.go` | Process entrypoint and top-level error logging | `main.go` |
+| `internal/commands` | Configuration, deployment lock, startup/shutdown, CLI commands | `main.go`, `serve.go`, individual command files |
 | `internal/api` | HTTP routes, authorization, request/response handling | `routes.go`, `authenticated_handler.go`, `security_middleware.go`, named `*_handler.go` files |
 | `internal/auth` | Passwords, sessions, recovery, OIDC | `auth.go`, `login.go`, `session.go`, `oidc_callback.go`, `identity_repository.go` |
 | `internal/metadata` | TVmaze protocol, shared metadata, queued follows | `tvmaze.go`, `service.go`, `repository.go`, `queue_worker.go` |

@@ -131,7 +131,7 @@ npm run build
 cd ..
 go test ./...
 go vet ./...
-go build -o tally ./cmd/server
+go build -o tally .
 APP_DATA_DIR=./config ./tally
 ```
 
@@ -139,14 +139,14 @@ PowerShell:
 
 ```powershell
 $env:APP_DATA_DIR = './config'
-go run ./cmd/server
+go run .
 ```
 
 Frontend development: start Go, then `npm run dev` in `frontend`. Its API proxy targets port 8080. The compiled `web/dist` is embedded in the binary. Frontend production assets are checked into this initial source delivery so a Go-only build is runnable; rebuild them after UI changes.
 
 Tests use isolated temporary databases and local fake providers/clients. `frontend/tests` contains browser checks; use `npm run test:e2e` after installing Chromium with `npx playwright install chromium`. See [the validation record](docs/VALIDATION.md) for completed checks and deployment-specific limits, and `TODO.md` for implementation status.
 
-The Go implementation uses focused files under `cmd/server` and domain packages under `internal`. See [the code map](docs/ARCHITECTURE.md) for handler, repository, job, provider, and command entry points. Files target one responsibility and about 150 lines.
+The repository root contains the small process entrypoint. Command and deployment operations live in focused files under `internal/commands`, with domain packages under `internal`. See [the code map](docs/ARCHITECTURE.md) for handler, repository, job, provider, and command entry points. Files target one responsibility and about 150 lines.
 
 Torrent adapters live under `internal/torrent`: `qbittorrent.go` implements the download client, `torznab.go` implements search, and `torrent.go` contains shared interfaces and types. To support another client, add its implementation and field definition in its own file, then return its definition from `clientAdapters()` in `client_registry.go`. The UI dropdown and connection fields come from that registry. Implement `TestConnection`, `AddMagnet`, and `AddTorrent` through the provider coordinator. The qBittorrent adapter uses the official Web UI API with Bearer API-key authentication; it does not call the cookie-based login or logout endpoints.
 

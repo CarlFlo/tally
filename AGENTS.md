@@ -1,6 +1,6 @@
 # Working on Tally
 
-Read `project goal high level.md` and `TODO.md` before changing the application.
+Read `TODO.md` before changing the application.
 Continue the current milestone before unrelated features and update `TODO.md` before ending work.
 
 - SQLite is the permanent database. Shared metadata never belongs to a profile.

@@ -1,9 +1,8 @@
-package main
+package commands
 
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -17,15 +16,7 @@ import (
 	"github.com/CarlFlo/mediaManager/internal/database"
 )
 
-func main() {
-	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
-	if err := run(os.Args[1:]); err != nil {
-		slog.Error("application stopped", "error", err)
-		os.Exit(1)
-	}
-}
-
-func run(args []string) error {
+func Run(args []string) error {
 	c, err := config.Load()
 	if err != nil {
 		return err
