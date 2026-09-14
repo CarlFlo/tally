@@ -15,31 +15,38 @@ type Event struct {
 	Changes []Change `json:"changes"`
 }
 
+type subscription struct {
+	profile string
+	updates chan Event
+}
+
 // Hub broadcasts small state-change hints. Events never contain application data.
 type Hub struct {
 	mu          sync.Mutex
-	subscribers map[chan Event]struct{}
+	subscribers map[*subscription]struct{}
 }
 
 func New() *Hub {
-	return &Hub{subscribers: make(map[chan Event]struct{})}
+	return &Hub{subscribers: make(map[*subscription]struct{})}
 }
 
-func (h *Hub) Subscribe(ctx context.Context) <-chan Event {
-	updates := make(chan Event, 1)
+func (h *Hub) Subscribe(ctx context.Context, profile string) <-chan Event {
+	sub := &subscription{profile: profile, updates: make(chan Event, 1)}
 	h.mu.Lock()
-	h.subscribers[updates] = struct{}{}
+	h.subscribers[sub] = struct{}{}
 	h.mu.Unlock()
 	go func() {
 		<-ctx.Done()
 		h.mu.Lock()
-		delete(h.subscribers, updates)
+		delete(h.subscribers, sub)
 		h.mu.Unlock()
 	}()
-	return updates
+	return sub.updates
 }
 
-func (h *Hub) Publish(resources ...string) {
+// Publish sends a global event when profile is empty, otherwise only to
+// subscribers for that profile. Duplicate resource hints are collapsed.
+func (h *Hub) Publish(profile string, resources ...string) {
 	if h == nil || len(resources) == 0 {
 		return
 	}
@@ -62,8 +69,11 @@ func (h *Hub) Publish(resources ...string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	for subscriber := range h.subscribers {
+		if profile != "" && subscriber.profile != profile {
+			continue
+		}
 		select {
-		case subscriber <- event:
+		case subscriber.updates <- event:
 		default:
 		}
 	}
