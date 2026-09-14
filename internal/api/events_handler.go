@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -25,8 +26,12 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request, _ auth.Session) 
 		select {
 		case <-r.Context().Done():
 			return nil
-		case <-updates:
-			fmt.Fprint(w, "data: update\n\n")
+		case event := <-updates:
+			data, err := json.Marshal(event)
+			if err != nil {
+				continue
+			}
+			fmt.Fprintf(w, "data: %s\n\n", data)
 			flusher.Flush()
 		case <-heartbeat.C:
 			fmt.Fprint(w, ": keepalive\n\n")
