@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, Busy, ErrorState, useApp } from "../lib";
+import { invalidateResources } from "../queryInvalidation";
 
 export function BackupRetention({ saved }: { saved: any }) {
   const [keep, setKeep] = useState(saved.data.keep);
@@ -27,7 +28,7 @@ export function BackupRetention({ saved }: { saved: any }) {
         revision,
       });
       setRevision(result.revision);
-      await cache.invalidateQueries({ queryKey: ["editable-settings"] });
+      await invalidateResources(cache, ["editable-settings"]);
       notify("Backup settings saved");
     } catch (e) {
       setError(e as Error);
