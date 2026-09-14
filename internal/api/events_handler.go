@@ -9,7 +9,7 @@ import (
 	"github.com/CarlFlo/mediaManager/internal/auth"
 )
 
-func (s *Server) events(w http.ResponseWriter, r *http.Request, _ auth.Session) error {
+func (s *Server) events(w http.ResponseWriter, r *http.Request, session auth.Session) error {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		return apiError{http.StatusNotImplemented, "live updates are unavailable"}
@@ -19,7 +19,7 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request, _ auth.Session) 
 	w.Header().Set("X-Accel-Buffering", "no")
 	fmt.Fprint(w, ": connected\n\n")
 	flusher.Flush()
-	updates := s.Events.Subscribe(r.Context())
+	updates := s.Events.Subscribe(r.Context(), session.Profile)
 	heartbeat := time.NewTicker(25 * time.Second)
 	defer heartbeat.Stop()
 	for {
