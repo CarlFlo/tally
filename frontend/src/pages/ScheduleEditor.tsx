@@ -28,7 +28,7 @@ export function ScheduleEditor({ job }: { job: Schedule }) {
   const [saveError, setSaveError] = useState<Error>();
   const previewSpec = useDebouncedValue(spec, 350);
   const preview = useQuery<Preview>({
-    queryKey: ["schedule-preview", previewSpec],
+    queryKey: queryKeys.schedulePreview(previewSpec),
     queryFn: ({ signal }) =>
       api(
         "/settings/scheduling/preview",
