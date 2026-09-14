@@ -13,7 +13,7 @@ import (
 type Service struct {
 	DB       *database.Store
 	Provider TVProvider
-	OnChange func()
+	OnChange func(...string)
 	flights  singleflight.Group
 }
 
@@ -25,5 +25,6 @@ func (s *Service) Sync(ctx context.Context, external string) (string, error) {
 	if e != nil {
 		return "", e
 	}
+	s.changed("shows", "show", "calendar", "statistics")
 	return v.(string), nil
 }
