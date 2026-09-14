@@ -1,6 +1,8 @@
 import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
 import { dateTimeFormatter } from "./dateFormatting";
 import { requestPool } from "./requestPool";
+import { queryKeys } from "./queryKeys";
+import { invalidateResources } from "./queryInvalidation";
 import {
   ArrowUpRight,
   Check,
@@ -61,7 +63,7 @@ export async function api<T = any>(
       combined.throwIfAborted();
       if (!response.ok) {
         if (response.status === 401 || data.code === "password_change_required")
-          void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+          void invalidateResources(queryClient, ["bootstrap"]);
         throw new Error(data.error || `Request failed (${response.status})`);
       }
       return data;
@@ -392,14 +394,11 @@ export function useLocal<T>(
   key: string,
   path: string,
   enabled = true,
-  refreshInterval?: number,
 ) {
   return useQuery<T>({
     enabled,
-    queryKey: [key, path],
+    queryKey: queryKeys.local(key, path),
     queryFn: ({ signal }) => api<T>(path, "GET", undefined, signal),
-    refetchInterval: refreshInterval,
-    refetchIntervalInBackground: false,
   });
 }
 export function episodeCode(e: Episode) {
@@ -432,7 +431,7 @@ export function timeLabel(e: Episode, prefs: Prefs) {
 }
 export function dateLabel(value: number | string | null) {
   if (!value) return "Not yet";
-  const prefs = queryClient.getQueryData<Boot>(["bootstrap"])?.preferences;
+  const prefs = queryClient.getQueryData<Boot>(queryKeys.bootstrap())?.preferences;
   const date = new Date(typeof value === "number" ? value * 1000 : value);
   if (!Number.isFinite(date.getTime())) return "Date TBA";
   const day = dateTimeFormatter("en-CA", {
@@ -456,7 +455,7 @@ export function dateOnly(day: string) {
   if (!day) return "Date TBA";
   const date = new Date(day + "T12:00:00Z");
   if (!Number.isFinite(date.getTime())) return "Date TBA";
-  const format = queryClient.getQueryData<Boot>(["bootstrap"])?.preferences
+  const format = queryClient.getQueryData<Boot>(queryKeys.bootstrap())?.preferences
     ?.date_format;
   const [year, month, dateNumber] = day.split("-");
   if (format === "yyyy-MM-dd") return day;
@@ -497,11 +496,7 @@ export function EpisodeDrawer({
           ? `Marked ${field}`
           : `Marked ${field === "watched" ? "unwatched" : "not downloaded"}`,
       );
-      await Promise.all(
-        ["calendar", "show", "shows"].map((key) =>
-          cache.invalidateQueries({ queryKey: [key] }),
-        ),
-      );
+      await invalidateResources(cache, ["calendar", "show", "shows"]);
     } catch (e) {
       setEp(old);
       notify((e as Error).message, true);
