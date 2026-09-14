@@ -18,6 +18,8 @@ import {
   useLocal,
 } from "../lib";
 import { jobName } from "../schedules";
+import { queryKeys } from "../queryKeys";
+import { invalidateResources } from "../queryInvalidation";
 
 export function JobsPage() {
   const { boot, notify } = useApp();
@@ -26,7 +28,7 @@ export function JobsPage() {
   const kind = prefs.job_type_filter || "all",
     status = prefs.job_status_filter || "all";
   const jobs = useQuery<any>({
-    queryKey: ["jobs", kind, status],
+    queryKey: [...queryKeys.jobs(), kind, status],
     queryFn: ({ signal }) =>
       api(`/jobs?kind=${kind}&status=${status}`, "GET", undefined, signal),
   });
@@ -36,7 +38,7 @@ export function JobsPage() {
   async function preference(key: string, value: string) {
     try {
       await api("/preferences", "PATCH", { [key]: value });
-      await cache.invalidateQueries({ queryKey: ["bootstrap"] });
+      await invalidateResources(cache, ["bootstrap"]);
     } catch (e) {
       notify((e as Error).message, true);
     }
@@ -46,11 +48,7 @@ export function JobsPage() {
     try {
       await api(`/jobs/${key}${resume ? "/resume" : ""}`, "POST", {});
       notify(resume ? "Schedule resumed" : "Job started");
-      await Promise.all(
-        ["jobs", "schedules"].map((k) =>
-          cache.invalidateQueries({ queryKey: [k] }),
-        ),
-      );
+      await invalidateResources(cache, ["jobs", "schedules"]);
     } catch (e) {
       notify((e as Error).message, true);
     } finally {
