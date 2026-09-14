@@ -28,6 +28,7 @@ func (s *Service) collectBellReleases(ctx context.Context, now time.Time) error 
 	}
 	defer rows.Close()
 	count := 0
+	changedProfiles := map[string]struct{}{}
 	for rows.Next() {
 		var profile, id, show string
 		var released int64
@@ -37,6 +38,7 @@ func (s *Service) collectBellReleases(ctx context.Context, now time.Time) error 
 		if err = activity.Record(ctx, tx, activity.Event{Action: "episode_released", Profile: profile, ShowID: id, ShowName: show, Message: show + " has a new episode available."}); err != nil {
 			return err
 		}
+		changedProfiles[profile] = struct{}{}
 		last, count = released, count+1
 	}
 	if err = rows.Err(); err != nil {
@@ -48,5 +50,14 @@ func (s *Service) collectBellReleases(ctx context.Context, now time.Time) error 
 	if err = saveCursor(ctx, tx, "bell_release_cursor", last); err != nil {
 		return err
 	}
-	return tx.Commit()
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+	for profile := range changedProfiles {
+		s.changedProfile(profile, "logs", "inbox")
+		if profile != "user0" {
+			s.changedProfile("user0", "logs", "inbox")
+		}
+	}
+	return nil
 }
