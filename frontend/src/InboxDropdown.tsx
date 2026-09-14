@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import { Bell, CheckCircle2, Clock3, X, XCircle } from "lucide-react";
 import { api, Busy, dateLabel, ErrorState, useApp } from "./lib";
 import { usePopover } from "./usePopover";
+import { queryKeys } from "./queryKeys";
+import { invalidateResources } from "./queryInvalidation";
 
 type Entry = {
   id: number;
@@ -18,7 +20,7 @@ export function InboxDropdown() {
   const { boot, notify } = useApp();
   const cache = useQueryClient();
   const { open, setOpen, root, trigger } = usePopover();
-  const key = ["inbox", boot.profile!.id];
+  const key = queryKeys.inbox(boot.profile!.id);
   const query = useQuery<Inbox>({
     queryKey: key,
     queryFn: ({ signal }) => api("/inbox", "GET", undefined, signal),
@@ -29,7 +31,7 @@ export function InboxDropdown() {
     if (!open || latest <= seen.current) return;
     seen.current = latest;
     void api("/inbox/seen", "POST", { through: latest })
-      .then(() => cache.invalidateQueries({ queryKey: ["inbox"] }))
+      .then(() => invalidateResources(cache, ["inbox"]))
       .catch(() => {
         seen.current = 0;
       });
@@ -37,7 +39,7 @@ export function InboxDropdown() {
   async function update(path: string, method: string, body?: unknown) {
     try {
       await api(path, method, body);
-      await cache.invalidateQueries({ queryKey: key });
+      await invalidateResources(cache, ["inbox"]);
     } catch (e) {
       notify((e as Error).message, true);
     }
