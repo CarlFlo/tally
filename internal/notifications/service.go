@@ -14,6 +14,13 @@ import (
 type Service struct {
 	DB        *database.Store
 	Requester providers.Requester
+	OnChange  func(string, ...string)
+}
+
+func (s *Service) changedProfile(profile string, resources ...string) {
+	if s.OnChange != nil {
+		s.OnChange(profile, resources...)
+	}
 }
 
 func (s *Service) Run(ctx context.Context, wake <-chan struct{}) {
