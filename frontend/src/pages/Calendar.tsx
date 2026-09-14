@@ -186,7 +186,7 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
                 Today
               </button>
               <h2>{heading}</h2>
-              {episodes.isFetching && <Busy />}
+              {episodes.isPending && <Busy />}
             </div>
             <div className="calendar-toolbar-actions">
               <div className="segmented" aria-label="Calendar view">
