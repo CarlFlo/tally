@@ -18,6 +18,7 @@ export function LiveUpdates({ enabled }: { enabled: boolean }) {
   useEffect(() => {
     if (!enabled) return;
     let disposed = false;
+    let needsRecovery = false;
 
     const apply = (changes: Change[]) => {
       if (!changes.length) return;
@@ -33,6 +34,9 @@ export function LiveUpdates({ enabled }: { enabled: boolean }) {
     };
 
     const stream = new EventSource("/api/events");
+    stream.onerror = () => {
+      needsRecovery = true;
+    };
     stream.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data) as LiveEvent;
@@ -48,17 +52,27 @@ export function LiveUpdates({ enabled }: { enabled: boolean }) {
       const missed = [...hiddenChanges.current.values()];
       hiddenChanges.current.clear();
       if (missed.length) void invalidateChanges(cache, missed);
-      else void revalidateActiveServerData(cache);
+      else if (needsRecovery) void revalidateActiveServerData(cache);
+      needsRecovery = false;
+    };
+    stream.onopen = recover;
+
+    const visibility = () => {
+      if (document.visibilityState !== "visible") {
+        needsRecovery = true;
+        return;
+      }
+      recover();
     };
 
-    document.addEventListener("visibilitychange", recover);
+    document.addEventListener("visibilitychange", visibility);
     window.addEventListener("focus", recover);
 
     return () => {
       disposed = true;
       stream.close();
       hiddenChanges.current.clear();
-      document.removeEventListener("visibilitychange", recover);
+      document.removeEventListener("visibilitychange", visibility);
       window.removeEventListener("focus", recover);
     };
   }, [cache, enabled]);
