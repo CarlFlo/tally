@@ -187,18 +187,18 @@ function ClientForm({
                       ? "Saved — leave blank to keep it"
                       : field.placeholder
                   }
-                  aria-describedby={`client-${field.key}-help`}
+                  aria-describedby={field.help ? `client-${field.key}-help` : undefined}
                   onChange={(event) => change(field.key, event.target.value)}
                 />
               </label>
-              <p
-                className="small-text muted client-field-help"
-                id={`client-${field.key}-help`}
-              >
-                {field.secret && saved
-                  ? `${field.label} is saved. Edit it to replace it. Use the eye button to hide or show it.`
-                  : field.help}
-              </p>
+              {field.help && (
+                <p
+                  className="small-text muted client-field-help"
+                  id={`client-${field.key}-help`}
+                >
+                  {field.help}
+                </p>
+              )}
               {field.secret && saved && !field.required && (
                 <label className="client-clear-secret">
                   <input

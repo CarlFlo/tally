@@ -79,7 +79,7 @@ test("configure, test, save and use a shared torrent client with visible API key
     .getByRole("textbox", { name: "Web UI URL", exact: true })
     .fill(clientURL + "/different");
   await card.getByRole("button", { name: "Test connection" }).click();
-  await expect(card.getByRole("alert")).toContainText("re-enter api key");
+  await expect(card.getByRole("alert")).toContainText("HTTP 404");
   await card
     .getByRole("textbox", { name: "Web UI URL", exact: true })
     .fill(clientURL);

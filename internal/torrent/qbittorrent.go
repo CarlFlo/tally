@@ -18,8 +18,8 @@ func qBittorrentAdapter() clientAdapter {
 		ClientDefinition: ClientDefinition{
 			ID: "qbittorrent", Name: "qBittorrent",
 			Fields: []ClientField{
-				{Key: "url", Label: "Web UI URL", Type: "url", Required: true, Placeholder: "http://qbittorrent:8080", Help: "The Web UI address reachable from Tally, including any reverse-proxy path."},
-				{Key: "api_key", Label: "API key", Type: "password", Required: true, Secret: true, Placeholder: "qbt_…", Help: "Generate an API key in qBittorrent Preferences → WebUI → API Key (qBittorrent 5.2+). Paste the key only, without Bearer."},
+				{Key: "url", Label: "Web UI URL", Type: "url", Required: true, Placeholder: "http://qbittorrent:8080"},
+				{Key: "api_key", Label: "API key", Type: "password", Required: true, Secret: true, Placeholder: "qbt_…", Help: "Generate an API key in qBittorrent Preferences → WebUI → API Key (qBittorrent 5.2+)."},
 			},
 		},
 		create: func(control providers.Requester, fields map[string]string) DownloadClient {

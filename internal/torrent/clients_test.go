@@ -50,8 +50,9 @@ func TestClientSettingsSecretsRevisionsAndDisable(t *testing.T) {
 	}
 	in.Revision = kept.Revision
 	in.Fields["url"] = "https://other.example"
-	if _, e = store.Prepare(ctx, in); e == nil {
-		t.Fatal("saved credentials could be sent to a changed endpoint")
+	prepared, e := store.Prepare(ctx, in)
+	if e != nil || prepared.Fields["api_key"] != saved.Fields["api_key"] {
+		t.Fatal("saved credentials were not retained after changing endpoint", e)
 	}
 	in.Fields["api_key"] = ""
 	if _, e := store.Prepare(ctx, in); e == nil {

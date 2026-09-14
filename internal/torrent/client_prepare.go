@@ -41,7 +41,6 @@ func (s *ClientStore) Prepare(ctx context.Context, in ClientUpdate) (ClientConfi
 		}
 		c.Fields[key] = value
 	}
-	sameTarget := in.Adapter == saved.Adapter
 	for _, field := range adapter.Fields {
 		if field.Secret {
 			continue
@@ -58,16 +57,10 @@ func (s *ClientStore) Prepare(ctx context.Context, in ClientUpdate) (ClientConfi
 			value = strings.TrimRight(value, "/")
 		}
 		c.Fields[field.Key] = value
-		if value != saved.Fields[field.Key] {
-			sameTarget = false
-		}
 	}
 	for _, field := range adapter.Fields {
 		if field.Secret {
 			if _, supplied := in.Fields[field.Key]; !supplied && saved.Adapter == in.Adapter && saved.Fields[field.Key] != "" {
-				if !sameTarget {
-					return c, fmt.Errorf("re-enter %s after changing the connection details", strings.ToLower(field.Label))
-				}
 				c.Fields[field.Key] = saved.Fields[field.Key]
 			}
 		}

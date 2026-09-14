@@ -77,7 +77,9 @@ func TestClientSetupTestSaveAndSecretRedaction(t *testing.T) {
 	delete(fields, "api_key")
 	expect(t, request(t, h, "POST", "/api/downloader/test", in), 200)
 	fields["url"] = client.URL + "/another-target"
-	expect(t, request(t, h, "POST", "/api/downloader/test", in), 400)
+	// Changing the endpoint keeps the saved API key; validation reaches the
+	// endpoint and reports its connection failure instead of requiring re-entry.
+	expect(t, request(t, h, "POST", "/api/downloader/test", in), 502)
 	if adds.Load() != 0 {
 		t.Fatal("connection test sent a torrent")
 	}
