@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ConnectionInput } from "../ConnectionInput";
 import { useLatestRequest } from "../useLatestRequest";
 import { api, Busy, ErrorState, useApp, useLocal } from "../lib";
+import { invalidateResources } from "../queryInvalidation";
 
 type JackettConfig = {
   base_url: string;
@@ -54,7 +55,7 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
       } else {
         const result = await api<{ revision: number }>("/settings/search", "PUT", { data, revision });
         setRevision(result.revision);
-        await Promise.all(["settings", "editable-settings", "capabilities"].map((key) => cache.invalidateQueries({ queryKey: [key] })));
+        await invalidateResources(cache, ["settings", "editable-settings", "capabilities"]);
         notify(data.enabled ? "Jackett settings saved" : "Jackett disabled");
       }
     } catch (error) {
