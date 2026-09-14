@@ -52,7 +52,7 @@ export function LiveUpdates({ enabled }: { enabled: boolean }) {
       const missed = [...hiddenChanges.current.values()];
       hiddenChanges.current.clear();
       if (missed.length) void invalidateChanges(cache, missed);
-      else if (needsRecovery) void revalidateActiveServerData(cache);
+      if (needsRecovery) void revalidateActiveServerData(cache);
       needsRecovery = false;
     };
     stream.onopen = recover;
