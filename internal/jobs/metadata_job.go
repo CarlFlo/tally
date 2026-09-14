@@ -39,6 +39,7 @@ func (s *Service) runMetadata(ctx context.Context, id, trigger, show string) (re
 			continue
 		}
 		result.Processed++
+		s.changed("shows", "show", "calendar", "statistics")
 		var updated int64
 		_ = s.DB.QueryRowContext(ctx, "SELECT provider_updated_at FROM shows WHERE id=?", row["id"]).Scan(&updated)
 		if updated != row["provider_updated_at"].(int64) {
