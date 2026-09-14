@@ -10,9 +10,9 @@ func TestHubCoalescesAndDeliversChanges(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	hub := New()
-	updates := hub.Subscribe(ctx)
-	hub.Publish("jobs", "jobs", "statistics")
-	hub.Publish("calendar")
+	updates := hub.Subscribe(ctx, "user0")
+	hub.Publish("", "jobs", "jobs", "statistics")
+	hub.Publish("", "calendar")
 	select {
 	case event := <-updates:
 		if event.Version != 1 || len(event.Changes) != 2 {
