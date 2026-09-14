@@ -50,10 +50,12 @@ export function CalendarGrid({
               {visible.map((episodes) => {
                 const episode = episodes[0],
                   watched = episodes.every((ep) => ep.watched),
-                  downloaded = episodes.every((ep) => ep.downloaded);
+                  downloaded = episodes.every((ep) => ep.downloaded),
+                  favorite = episodes.some((ep) => ep.favorite),
+                  completed = watched || downloaded;
                 return (
                   <button
-                    className={`calendar-episode ${watched ? "watched" : downloaded ? "downloaded" : ""}`}
+                    className={`calendar-episode ${completed ? "completed" : favorite ? "favorite" : ""}`}
                     key={episode.show_id}
                     title={`${episode.show_name}: ${releaseLabel(episodes)}`}
                     onClick={() => select(episodes)}
@@ -71,11 +73,10 @@ export function CalendarGrid({
                     </strong>
                     <span className="release-codes">
                       {releaseLabel(episodes)}
-                      {watched ? (
-                        <Check size={11} />
-                      ) : downloaded ? (
-                        <Download size={11} />
-                      ) : null}
+                      <span className="calendar-state-icons">
+                        {downloaded && <Download size={11} aria-label="Downloaded" />}
+                        {watched && <Check size={11} aria-label="Watched" />}
+                      </span>
                     </span>
                     {view === "week" && (
                       <small>{timeLabel(episode, prefs)}</small>
