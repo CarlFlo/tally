@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarDays,
   Check,
+  Download,
   ChevronLeft,
   ChevronRight,
   Plus,
@@ -246,7 +247,7 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
                       <div>
                         {byDay.get(localDay(d))?.map((ep) => (
                           <button
-                            className="agenda-episode"
+                            className={`agenda-episode ${ep.watched || ep.downloaded ? "completed" : ep.favorite ? "favorite" : ""}`}
                             key={ep.id}
                             onClick={() => setSelected(ep)}
                           >
@@ -270,9 +271,14 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
                             <span className="agenda-time">
                               {timeLabel(ep, prefs)}
                             </span>
-                            {!!ep.watched && (
-                              <Check className="mint-text" size={18} />
-                            )}
+                            <span className="agenda-state-icons">
+                              {!!ep.downloaded && (
+                                <Download className="mint-text" size={17} aria-label="Downloaded" />
+                              )}
+                              {!!ep.watched && (
+                                <Check className="mint-text" size={18} aria-label="Watched" />
+                              )}
+                            </span>
                           </button>
                         ))}
                       </div>
@@ -313,12 +319,12 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
                 Upcoming
               </span>
               <span>
-                <i className="legend-dot mint" />
-                Watched
+                <i className="legend-dot amber" />
+                Favorite
               </span>
               <span>
-                <i className="legend-dot amber" />
-                Downloaded
+                <i className="legend-dot mint" />
+                Watched / Downloaded
               </span>
             </div>
           </div>
