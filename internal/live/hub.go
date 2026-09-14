@@ -44,12 +44,7 @@ func (h *Hub) Subscribe(ctx context.Context, profile string) <-chan Event {
 	return sub.updates
 }
 
-// Publish sends a global event when profile is empty, otherwise only to
-// subscribers for that profile. Duplicate resource hints are collapsed.
-func (h *Hub) Publish(profile string, resources ...string) {
-	if h == nil || len(resources) == 0 {
-		return
-	}
+func event(resources ...string) Event {
 	seen := make(map[string]struct{}, len(resources))
 	changes := make([]Change, 0, len(resources))
 	for _, resource := range resources {
@@ -62,10 +57,36 @@ func (h *Hub) Publish(profile string, resources ...string) {
 		seen[resource] = struct{}{}
 		changes = append(changes, Change{Resource: resource})
 	}
-	if len(changes) == 0 {
+	return Event{Version: 1, Changes: changes}
+}
+
+func merge(a, b Event) Event {
+	seen := make(map[string]struct{}, len(a.Changes)+len(b.Changes))
+	changes := make([]Change, 0, len(a.Changes)+len(b.Changes))
+	for _, source := range [][]Change{a.Changes, b.Changes} {
+		for _, change := range source {
+			key := change.Resource + "\x00" + change.ID
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			changes = append(changes, change)
+		}
+	}
+	return Event{Version: 1, Changes: changes}
+}
+
+// Publish sends a global event when profile is empty, otherwise only to
+// subscribers for that profile. If a subscriber already has an unread event,
+// new resource hints are merged into it rather than dropped.
+func (h *Hub) Publish(profile string, resources ...string) {
+	if h == nil || len(resources) == 0 {
 		return
 	}
-	event := Event{Version: 1, Changes: changes}
+	next := event(resources...)
+	if len(next.Changes) == 0 {
+		return
+	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	for subscriber := range h.subscribers {
@@ -73,8 +94,18 @@ func (h *Hub) Publish(profile string, resources ...string) {
 			continue
 		}
 		select {
-		case subscriber.updates <- event:
+		case subscriber.updates <- next:
 		default:
+			var pending Event
+			select {
+			case pending = <-subscriber.updates:
+			default:
+			}
+			combined := merge(pending, next)
+			select {
+			case subscriber.updates <- combined:
+			default:
+			}
 		}
 	}
 }
