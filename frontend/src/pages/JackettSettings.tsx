@@ -74,16 +74,20 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
             <input type="checkbox" checked={data.enabled} onChange={(event) => change({ enabled: event.target.checked })} />
             Enable Jackett search
           </label>
-          <label>
-            Jackett base URL
-            <ConnectionInput label="Jackett base URL" type="url" value={data.base_url} required placeholder="http://jackett:9117" onChange={(event) => change({ base_url: event.target.value })} />
-          </label>
-          <p className="small-text muted client-field-help">Enter the address of the Jackett instance. Tally uses Jackett's all-indexers Torznab endpoint.</p>
-          <label>
-            API key
-            <ConnectionInput label="Jackett API key" secret hiddenByDefault value={data.api_key} required maxLength={4096} onChange={(event) => change({ api_key: event.target.value })} />
-          </label>
-          <p className="small-text muted client-field-help">Find the API key in the Jackett dashboard. It stays server-side.</p>
+          <div>
+            <label>
+              Jackett base URL
+              <ConnectionInput label="Jackett base URL" type="url" value={data.base_url} required placeholder="http://jackett:9117" onChange={(event) => change({ base_url: event.target.value })} />
+            </label>
+            <p className="small-text muted client-field-help">Enter the address of the Jackett instance. Tally uses Jackett's all-indexers Torznab endpoint.</p>
+          </div>
+          <div>
+            <label>
+              API key
+              <ConnectionInput label="Jackett API key" secret hiddenByDefault value={data.api_key} required maxLength={4096} onChange={(event) => change({ api_key: event.target.value })} />
+            </label>
+            <p className="small-text muted client-field-help">Find the API key in the Jackett dashboard. It stays server-side.</p>
+          </div>
           <div className="client-actions">
             <button type="button" className="button" onClick={() => run("test")}>
               {busy === "test" ? <Busy /> : <Plug size={17} />}Test connection
