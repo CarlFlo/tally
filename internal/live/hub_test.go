@@ -15,10 +15,10 @@ func TestHubCoalescesAndDeliversChanges(t *testing.T) {
 	hub.Publish("", "calendar")
 	select {
 	case event := <-updates:
-		if event.Version != 1 || len(event.Changes) != 2 {
+		if event.Version != 1 || len(event.Changes) != 3 {
 			t.Fatalf("unexpected event: %#v", event)
 		}
-		if event.Changes[0].Resource != "jobs" || event.Changes[1].Resource != "statistics" {
+		if event.Changes[0].Resource != "jobs" || event.Changes[1].Resource != "statistics" || event.Changes[2].Resource != "calendar" {
 			t.Fatalf("unexpected changes: %#v", event.Changes)
 		}
 	case <-time.After(time.Second):
