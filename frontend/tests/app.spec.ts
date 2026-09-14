@@ -109,6 +109,26 @@ test("library, calendar, episode state, profiles, jobs and responsive layout", a
   await expect(
     page.getByRole("button", { name: "Added", exact: true }),
   ).toBeVisible();
+  await expect
+    .poll(
+      async () => {
+        const response = await page.request.get("/api/show-actions");
+        if (!response.ok()) return `http-${response.status()}`;
+        const actions = (await response.json()) as Array<{
+          name: string;
+          status: string;
+          followed: number | boolean;
+        }>;
+        const action = actions.find((item) => item.name === "Example Show");
+        if (!action) return "missing";
+        if (action.status === "failed") return "failed";
+        return action.status === "done" && !!action.followed
+          ? "done"
+          : action.status;
+      },
+      { timeout: 30_000 },
+    )
+    .toBe("done");
   await page.getByRole("button", { name: "Close dialog" }).click();
   await expect(page.locator(".calendar-episode").first()).toBeVisible();
   await page.locator(".calendar-episode").first().click();
