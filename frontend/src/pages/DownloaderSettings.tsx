@@ -1,5 +1,6 @@
 import { ConnectionInput } from "../ConnectionInput";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useLatestRequest } from "../useLatestRequest";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Plug, Save } from "lucide-react";
 import { api, Busy, ErrorState, useApp, useLocal } from "../lib";
@@ -69,6 +70,7 @@ function ClientForm({
   const { notify } = useApp();
   const cache = useQueryClient();
   const form = useRef<HTMLFormElement>(null);
+  const startTest = useLatestRequest();
   const [adapter, setAdapter] = useState(data.settings.adapter);
   const [fields, setFields] = useState<Record<string, string>>(
     data.settings.fields,
@@ -112,12 +114,14 @@ function ClientForm({
     if (!form.current?.reportValidity()) return;
     setBusy(action);
     setFeedback(null);
+    const signal = action === "test" ? startTest() : undefined;
     try {
       if (action === "test") {
         const result = await api<{ message: string }>(
           "/downloader/test",
           "POST",
           payload(),
+          signal,
         );
         setFeedback({
           message: result.message,
@@ -132,6 +136,7 @@ function ClientForm({
         notify(adapter ? "Torrent client saved" : "Torrent client disabled");
       }
     } catch (error) {
+      if (signal?.aborted) return;
       setFeedback({ message: (error as Error).message, error: true });
     } finally {
       setBusy(null);

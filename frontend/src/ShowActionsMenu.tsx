@@ -48,7 +48,9 @@ export function ShowActionsMenu({
         `/shows/${show.id}${action === "clear" ? "/watch-history" : ""}`,
         "DELETE",
       );
-      if (action === "remove") onRemoved?.();
+      // A committed deletion still invalidates shared data, but must not
+      // navigate away from the user's new page after this menu unmounts.
+      if (action === "remove" && root.current?.isConnected) onRemoved?.();
       await Promise.all(
         ["shows", "show", "calendar", "logs", "show-actions"].map((key) =>
           cache.invalidateQueries({ queryKey: [key] }),

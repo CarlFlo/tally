@@ -104,7 +104,9 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
   const byDay = new Map<string, Episode[]>();
   for (const ep of filtered) {
     const key = episodeDay(ep, prefs.timezone);
-    byDay.set(key, [...(byDay.get(key) || []), ep]);
+    const group = byDay.get(key);
+    if (group) group.push(ep);
+    else byDay.set(key, [ep]);
   }
   const inRange = all.filter((e) => {
     const key = episodeDay(e, prefs.timezone);

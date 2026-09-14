@@ -1,5 +1,13 @@
 # Go code map
 
+## Frontend navigation lifecycle
+
+The authenticated route subtree is keyed by pathname. A new page/tab owns fresh local form, loading and dialog state, while the header, query cache and single live-event subscription stay mounted. Dialogs close during layout cleanup before DOM removal. Navigation has no cooldown, pointer lock or blocking overlay.
+
+React Query owns read deduplication and AbortSignals; imperative connection tests use `useLatestRequest` and torrent search owns an abortable latest request. `requestPool.ts` bounds API transport to six active requests and 64 queued requests, removes aborted queue entries and releases slots on failures. API calls have a 90-second deadline, including queue and response-body time. Durable manual writes may complete after a page leaves, but stale show deletion callbacks cannot navigate the new page. Live events coalesce refreshes without replacing in-flight fetches and exclude input-driven discovery/cron previews.
+
+Provider shared requests retain work while at least one caller needs it. The last caller leaving cancels downstream HTTP/slot waits; at most 64 distinct shared operations may remain outstanding, including operations still unwinding cancellation. Browser stress tests use freshly built embedded assets, retain the same document and verify input, listener/interval/stream counts and transport concurrency after repeated switching.
+
 Tally uses `cmd/server` for process setup and operator commands, and `internal` for application packages. Files target one responsibility and about 150-200 lines. Domain types and repositories live beside the services that use them, so a feature can be understood without traversing generic model/helper layers.
 
 | Package | Responsibility | Useful entry points |

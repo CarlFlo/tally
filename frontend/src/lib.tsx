@@ -1,5 +1,6 @@
 import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
 import { dateTimeFormatter } from "./dateFormatting";
+import { requestPool } from "./requestPool";
 import {
   ArrowUpRight,
   Check,
@@ -14,6 +15,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
@@ -32,26 +34,41 @@ export async function api<T = any>(
   body?: unknown,
   signal?: AbortSignal,
 ): Promise<T> {
-  const form = body instanceof FormData;
-  const response = await fetch("/api" + path, {
-    method,
-    credentials: "same-origin",
-    signal,
-    headers: {
-      ...(method !== "GET" ? { "X-Tally-CSRF": "1" } : {}),
-      ...(!form && body !== undefined
-        ? { "Content-Type": "application/json" }
-        : {}),
-    },
-    body: body === undefined ? undefined : form ? body : JSON.stringify(body),
-  });
-  const data = await response.json();
-  if (!response.ok) {
-    if (response.status === 401 || data.code === "password_change_required")
-      void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
-    throw new Error(data.error || `Request failed (${response.status})`);
+  const deadline = new AbortController();
+  const timer = window.setTimeout(
+    () => deadline.abort(new DOMException("Request timed out", "TimeoutError")),
+    90_000,
+  );
+  const combined = signal
+    ? AbortSignal.any([signal, deadline.signal])
+    : deadline.signal;
+  try {
+    return await requestPool.run(combined, async () => {
+      const form = body instanceof FormData;
+      const response = await fetch("/api" + path, {
+        method,
+        credentials: "same-origin",
+        signal: combined,
+        headers: {
+          ...(method !== "GET" ? { "X-Tally-CSRF": "1" } : {}),
+          ...(!form && body !== undefined
+            ? { "Content-Type": "application/json" }
+            : {}),
+        },
+        body: body === undefined ? undefined : form ? body : JSON.stringify(body),
+      });
+      const data = await response.json();
+      combined.throwIfAborted();
+      if (!response.ok) {
+        if (response.status === 401 || data.code === "password_change_required")
+          void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+        throw new Error(data.error || `Request failed (${response.status})`);
+      }
+      return data;
+    });
+  } finally {
+    window.clearTimeout(timer);
   }
-  return data;
 }
 export type Profile = {
   id: string;
@@ -290,7 +307,7 @@ export function Dialog({
   className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const dialog = ref.current;
     dialog?.showModal();
     dialog?.querySelector<HTMLInputElement>("[data-autofocus]")?.focus();

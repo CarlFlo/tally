@@ -5,8 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"sync/atomic"
-	"time"
 
 	"github.com/CarlFlo/mediaManager/internal/config"
 )
@@ -39,27 +37,5 @@ func (c *Coordinator) Do(ctx context.Context, r Request) (Response, error) {
 		return c.perform(ctx, r)
 	}
 	key := cacheKey(r)
-	var leader atomic.Bool
-	ch := c.flight.DoChan(key+strconv.FormatBool(r.Force), func() (any, error) {
-		if !c.begin() {
-			return nil, context.Canceled
-		}
-		defer c.active.Done()
-		leader.Store(true)
-		work, cancel := context.WithTimeout(c.ctx, 90*time.Second)
-		defer cancel()
-		return c.perform(work, r)
-	})
-	select {
-	case <-ctx.Done():
-		return Response{}, ctx.Err()
-	case result := <-ch:
-		if result.Shared && !leader.Load() {
-			c.record(r, 0, "duplicate/coalesced", 0, 0)
-		}
-		if result.Err != nil {
-			return Response{}, result.Err
-		}
-		return result.Val.(Response), nil
-	}
+	return c.shared(ctx, key+strconv.FormatBool(r.Force), r)
 }

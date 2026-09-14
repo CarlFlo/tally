@@ -1,5 +1,32 @@
 import { test, expect } from "@playwright/test";
 
+test("abandoned connection tests cannot disable or overwrite the next tab", async ({ page }) => {
+  await page.request.post("/api/profiles/select", {
+    headers: { "X-Tally-CSRF": "1" }, data: { profile: "user0" },
+  });
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  await page.route("**/api/settings/search/test", async (route) => {
+    await gate;
+    await route.fulfill({ json: { message: "Obsolete test result" } });
+  });
+  await page.goto("/settings/search");
+  await page.getByLabel("Jackett base URL", { exact: true }).fill("http://fixture.invalid");
+  await page.locator(".client-settings input.concealed-secret").fill("fixture-key");
+  const pending = page.waitForRequest("**/api/settings/search/test");
+  await page.getByRole("button", { name: "Test connection", exact: true }).click();
+  const request = await pending;
+  const aborted = page.waitForEvent("requestfailed", (failed) => failed === request);
+  await page.locator('.settings-tabs a[href="/settings/bell"]').click();
+  await aborted;
+  release();
+  await page.locator('.settings-tabs a[href="/settings/search"]').click();
+  await page.getByLabel("Jackett base URL", { exact: true }).fill("http://new-draft.invalid");
+  await expect(page.getByRole("button", { name: "Test connection", exact: true })).toBeEnabled();
+  await expect(page.getByText("Obsolete test result", { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("Jackett base URL", { exact: true })).toHaveValue("http://new-draft.invalid");
+});
+
 test("leaving a tab aborts its pending request and a later mount still loads", async ({ page }) => {
   await page.request.post("/api/profiles/select", {
     headers: { "X-Tally-CSRF": "1" }, data: { profile: "user0" },

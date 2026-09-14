@@ -21,7 +21,12 @@ export function LiveUpdates({ enabled }: { enabled: boolean }) {
         changedWhileRefreshing = false;
         void cache
           .invalidateQueries(
-            { type: "active", refetchType: "active" },
+            {
+              type: "active", refetchType: "active",
+              // Validation and discovery are driven by user input, not every
+              // deployment event. Replaying them creates unrelated remote work.
+              predicate: (query) => !["schedule-preview", "show-search", "show-suggestions"].includes(String(query.queryKey[0])),
+            },
             { cancelRefetch: false },
           )
           .finally(() => {

@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Plug, Save } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ConnectionInput } from "../ConnectionInput";
+import { useLatestRequest } from "../useLatestRequest";
 import { api, Busy, ErrorState, useApp, useLocal } from "../lib";
 
 type JackettConfig = {
@@ -23,6 +24,7 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
   const { notify } = useApp();
   const cache = useQueryClient();
   const form = useRef<HTMLFormElement>(null);
+  const startTest = useLatestRequest();
   const previous = useRef(saved);
   const [data, setData] = useState(saved.data);
   const [revision, setRevision] = useState(saved.revision);
@@ -44,9 +46,10 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
     if ((action === "test" || data.enabled) && !form.current?.reportValidity()) return;
     setBusy(action);
     setFeedback(null);
+    const signal = action === "test" ? startTest() : undefined;
     try {
       if (action === "test") {
-        const result = await api<{ message: string }>("/settings/search/test", "POST", { data });
+        const result = await api<{ message: string }>("/settings/search/test", "POST", { data }, signal);
         setFeedback({ message: result.message, error: false });
       } else {
         const result = await api<{ revision: number }>("/settings/search", "PUT", { data, revision });
@@ -55,6 +58,7 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
         notify(data.enabled ? "Jackett settings saved" : "Jackett disabled");
       }
     } catch (error) {
+      if (signal?.aborted) return;
       setFeedback({ message: (error as Error).message, error: true });
     } finally {
       setBusy(null);

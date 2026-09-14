@@ -610,10 +610,6 @@ code {
   display: flex;
   flex-direction: column;
 }
-.navigation-cooling a,
-.navigation-cooling button[data-navigation] {
-  pointer-events: none;
-}
 .topbar {
   height: 76px;
   border-bottom: 1px solid var(--border);

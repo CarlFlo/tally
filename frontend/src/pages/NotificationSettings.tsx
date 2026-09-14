@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Bell, Save, Send } from "lucide-react";
 import { api, Busy, ErrorState, useApp, useLocal } from "../lib";
 import { NotificationFields } from "./NotificationFields";
+import { useLatestRequest } from "../useLatestRequest";
 import {
   displayNotificationTime,
   notificationErrors,
@@ -40,6 +41,7 @@ export function NotificationSettings() {
   );
 }
 function NotificationForm({ saved }: { saved: any }) {
+  const startTest = useLatestRequest();
   const { boot, notify } = useApp(),
     cache = useQueryClient();
   const [data, setData] = useState(() =>
@@ -185,14 +187,17 @@ function NotificationForm({ saved }: { saved: any }) {
               }
               setBusy(true);
               setFeedback("");
+              const signal = startTest();
               try {
                 const result = await api(
                   "/settings/notifications/test",
                   "POST",
                   normalized,
+                  signal,
                 );
                 notify(result.message);
               } catch (e) {
+                if (signal.aborted) return;
                 setFeedback((e as Error).message);
               } finally {
                 setBusy(false);

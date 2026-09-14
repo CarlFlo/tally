@@ -1,6 +1,6 @@
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { AlertCircle, CalendarDays, Menu, Search, Tv } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   BrowserRouter,
@@ -50,9 +50,6 @@ function App() {
   });
   const [add, setAdd] = useState(false);
   const [mobile, setMobile] = useState(false);
-  const [navigationCooling, setNavigationCooling] = useState(false);
-  const initialLocation = useRef(true);
-  const navigationCount = useRef(0);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toast = toasts[0] || null;
   function setToast(value: Toast | null) {
@@ -80,23 +77,6 @@ function App() {
   useEffect(() => {
     setMobile(false);
     setAdd(false);
-  }, [location.key]);
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      navigationCount.current = Math.max(0, navigationCount.current - 1);
-    }, 100);
-    return () => window.clearInterval(timer);
-  }, []);
-  useEffect(() => {
-    if (initialLocation.current) {
-      initialLocation.current = false;
-      return;
-    }
-    navigationCount.current += 1;
-    if (navigationCount.current < 4) return;
-    setNavigationCooling(true);
-    const timer = window.setTimeout(() => setNavigationCooling(false), 100);
-    return () => window.clearTimeout(timer);
   }, [location.key]);
   useEffect(() => {
     const revalidate = (event: PageTransitionEvent) => {
@@ -176,18 +156,7 @@ function App() {
         ) : boot.restricted ? (
           <PasswordGate notify={notify} />
         ) : (
-          <div
-            className={"app-shell " + (navigationCooling ? "navigation-cooling" : "")}
-            onKeyDownCapture={(event) => {
-              if (!navigationCooling || (event.key !== "Enter" && event.key !== " ")) return;
-              const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
-              const href = anchor?.getAttribute("href");
-              if (href?.startsWith("/") && !anchor?.hasAttribute("download")) {
-                event.preventDefault();
-                event.stopPropagation();
-              }
-            }}
-          >
+          <div className="app-shell">
             {mobile && (
               <div className="mobile-scrim" onClick={() => setMobile(false)} />
             )}
@@ -250,7 +219,7 @@ function App() {
                 </div>
               )}
               <main id="main">
-                <Routes>
+                <Routes key={location.pathname}>
                   <Route
                     path="/calendar"
                     element={<CalendarPage onAdd={() => setAdd(true)} />}

@@ -9,8 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/sync/singleflight"
-
 	"github.com/CarlFlo/mediaManager/internal/database"
 )
 
@@ -21,7 +19,9 @@ type Coordinator struct {
 	concurrency, retries int
 	mu                   sync.Mutex
 	states               map[string]*state
-	flight               singleflight.Group
+	flightMu             sync.Mutex
+	flights              map[string]*sharedRequest
+	flightActive         int
 	ctx                  context.Context
 	cancel               context.CancelFunc
 	Alert                func(string, string, string)
