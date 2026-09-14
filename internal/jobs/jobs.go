@@ -15,7 +15,7 @@ type Service struct {
 	Metadata      MetadataSource
 	Control       ProviderControl
 	Backup        BackupCreator
-	OnChange      func()
+	OnChange      func(...string)
 	ctx           context.Context
 	cancel        context.CancelFunc
 	mu            sync.Mutex
