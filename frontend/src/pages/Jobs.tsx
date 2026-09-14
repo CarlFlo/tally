@@ -294,7 +294,7 @@ export function JobsPage() {
                           try {
                             await api("/jobs/runs/" + run.id, "DELETE");
                             notify("Cancellation requested");
-                            await jobs.refetch();
+                            await invalidateResources(cache, ["jobs"]);
                           } catch (e) {
                             notify((e as Error).message, true);
                           }
