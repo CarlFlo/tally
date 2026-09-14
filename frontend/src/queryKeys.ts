@@ -3,7 +3,8 @@ export const queryKeys = {
   calendar: (path?: string) =>
     path ? (["calendar", path] as const) : (["calendar"] as const),
   shows: () => ["shows"] as const,
-  show: (id?: string) => (id ? (["show", id] as const) : (["show"] as const)),
+  show: (id?: string) =>
+    id ? (["show", `/shows/${id}`] as const) : (["show"] as const),
   showActions: (profileId?: string) =>
     profileId
       ? (["show-actions", profileId] as const)
