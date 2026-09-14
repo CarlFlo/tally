@@ -333,6 +333,12 @@ test("settings categories persist connections, schedules, debug previews and sta
   await page
     .getByRole("combobox", { name: "Next metadata checks rows" })
     .selectOption("100");
+  await expect
+    .poll(async () => {
+      const boot = await (await page.request.get("/api/bootstrap")).json();
+      return [boot.preferences.request_limit, boot.preferences.scan_limit];
+    })
+    .toEqual([50, 100]);
   await page.reload();
   await expect(
     page.getByRole("combobox", { name: "Recent requests rows" }),
