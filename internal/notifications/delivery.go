@@ -13,6 +13,8 @@ func (s *Service) deliver(ctx context.Context, now time.Time) error {
 	if err != nil {
 		return err
 	}
+	statsChanged := false
+	adminActivityChanged := false
 	for _, row := range rows {
 		var config settings.Webhook
 		revision, loadErr := (settings.Store{DB: s.DB}).Load(ctx, "notifications", &config)
@@ -36,16 +38,24 @@ func (s *Service) deliver(ctx context.Context, now time.Time) error {
 				continue
 			}
 			status = "sent"
+			statsChanged = true
 			if sendErr := Send(ctx, s.Requester, config, message); sendErr != nil {
 				status = "failed"
 				if err = activity.Record(ctx, s.DB, activity.Event{Action: "notification_failed", Message: "Notification delivery failed. Check Notification Services and test the connection."}); err != nil {
 					return err
 				}
+				adminActivityChanged = true
 			}
 		}
 		if _, err = s.DB.ExecContext(ctx, "UPDATE notification_outbox SET status=? WHERE id=?", status, row["id"]); err != nil {
 			return err
 		}
+	}
+	if statsChanged {
+		s.changedProfile("user0", "statistics")
+	}
+	if adminActivityChanged {
+		s.changedProfile("user0", "logs", "inbox")
 	}
 	return nil
 }
