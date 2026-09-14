@@ -94,6 +94,7 @@ export type Prefs = {
   bell_categories: string[];
 };
 export type Boot = {
+  version: string;
   browser_theme: string;
   profiles: Profile[];
   profile: Profile | null;
