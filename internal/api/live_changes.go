@@ -7,12 +7,29 @@ import (
 	"github.com/CarlFlo/mediaManager/internal/auth"
 )
 
+type liveUpdate struct {
+	Profile   string
+	Resources []string
+}
+
+func update(profile string, resources ...string) liveUpdate {
+	return liveUpdate{Profile: profile, Resources: resources}
+}
+
+func profileAndAdmin(profile string, profileResources []string, adminResources ...string) []liveUpdate {
+	updates := []liveUpdate{update(profile, profileResources...)}
+	if profile != "user0" && len(adminResources) > 0 {
+		updates = append(updates, update("user0", adminResources...))
+	}
+	return updates
+}
+
 // liveChanges is the single mapping from successful HTTP mutations to cached
 // frontend resource domains. Keep transport concerns out of individual handlers.
-func liveChanges(r *http.Request, session auth.Session) (string, []string) {
+func liveChanges(r *http.Request, session auth.Session) []liveUpdate {
 	path := r.URL.Path
 	if r.Method == http.MethodGet || r.Method == http.MethodHead {
-		return "", nil
+		return nil
 	}
 
 	// Validation/test endpoints do not mutate authoritative application state.
@@ -20,60 +37,56 @@ func liveChanges(r *http.Request, session auth.Session) (string, []string) {
 		path == "/api/settings/search/test" ||
 		path == "/api/settings/notifications/test" ||
 		path == "/api/downloader/test" {
-		return "", nil
+		return nil
 	}
 
 	// Shared deployment state is visible to every profile.
 	if strings.HasPrefix(path, "/api/settings/") {
 		switch strings.TrimPrefix(path, "/api/settings/") {
 		case "search":
-			return "", []string{"editable-settings", "settings", "capabilities"}
+			return []liveUpdate{update("", "editable-settings", "settings", "capabilities")}
 		case "notifications":
-			return "", []string{"editable-settings", "settings"}
+			return []liveUpdate{update("", "editable-settings", "settings")}
 		case "backups":
-			return "", []string{"editable-settings", "settings", "backups"}
+			return []liveUpdate{update("", "editable-settings", "settings", "backups")}
 		case "scheduling":
-			return "", []string{"schedules", "jobs", "logs"}
+			return []liveUpdate{update("", "schedules", "jobs", "logs")}
 		}
 	}
 	if strings.HasPrefix(path, "/api/jobs/") {
-		return "", []string{"jobs", "schedules", "statistics"}
+		return []liveUpdate{update("", "jobs", "schedules", "statistics")}
 	}
 	if path == "/api/downloader" {
-		return "", []string{"downloader", "settings", "capabilities"}
-	}
-	if strings.HasPrefix(path, "/api/alerts/") {
-		return "", []string{"logs", "inbox"}
+		return []liveUpdate{update("", "downloader", "settings", "capabilities")}
 	}
 
-	// Profile/account changes affect only browsers using the same profile.
 	profile := session.Profile
 	switch {
 	case path == "/api/show-actions":
-		return profile, []string{"show-actions"}
+		return []liveUpdate{update(profile, "show-actions")}
 	case strings.HasSuffix(path, "/favorite") && strings.HasPrefix(path, "/api/shows/"):
-		return profile, []string{"shows", "show", "calendar"}
+		return []liveUpdate{update(profile, "shows", "show", "calendar")}
 	case strings.HasSuffix(path, "/watch-history") && strings.HasPrefix(path, "/api/shows/"):
-		return profile, []string{"shows", "show", "calendar", "logs"}
+		return profileAndAdmin(profile, []string{"shows", "show", "calendar", "logs"}, "logs")
 	case strings.HasSuffix(path, "/bulk") && strings.HasPrefix(path, "/api/shows/"):
-		return profile, []string{"shows", "show", "calendar"}
+		return []liveUpdate{update(profile, "shows", "show", "calendar")}
 	case strings.HasSuffix(path, "/refresh") && strings.HasPrefix(path, "/api/shows/"):
-		return "", []string{"jobs"}
+		return []liveUpdate{update("", "jobs")}
 	case path == "/api/shows" || (strings.HasPrefix(path, "/api/shows/") && r.Method == http.MethodDelete):
-		return profile, []string{"shows", "show", "calendar", "show-actions", "logs"}
+		return profileAndAdmin(profile, []string{"shows", "show", "calendar", "show-actions", "logs"}, "logs")
 	case strings.HasPrefix(path, "/api/episodes/"):
-		return profile, []string{"shows", "show", "calendar"}
+		return []liveUpdate{update(profile, "shows", "show", "calendar")}
 	case strings.HasPrefix(path, "/api/inbox"):
-		return profile, []string{"inbox"}
+		return []liveUpdate{update(profile, "inbox")}
 	case path == "/api/preferences" || path == "/api/profile" || path == "/api/profile/avatar":
-		return profile, []string{"bootstrap"}
+		return []liveUpdate{update(profile, "bootstrap")}
 	case strings.HasPrefix(path, "/api/auth/sessions/") || path == "/api/auth/password":
-		return profile, []string{"bootstrap", "sessions"}
+		return []liveUpdate{update(profile, "bootstrap", "sessions")}
 	case path == "/api/profiles" || strings.HasPrefix(path, "/api/profiles/"):
-		return "", []string{"bootstrap"}
+		return []liveUpdate{update("", "bootstrap")}
 	case path == "/api/torrents/search" || path == "/api/torrents/send":
-		return profile, []string{"torrent-history"}
+		return profileAndAdmin(profile, []string{"torrent-history"}, "statistics")
 	}
 
-	return "", nil
+	return nil
 }
