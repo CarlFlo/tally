@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api, useApp } from "../lib";
+import { invalidateResources } from "../queryInvalidation";
 
 export function DebugSettings() {
   const { boot, notify } = useApp();
@@ -28,7 +29,7 @@ export function DebugSettings() {
             setSaving(true);
             try {
               await api("/preferences", "PATCH", { debug_mode: value });
-              await cache.invalidateQueries({ queryKey: ["bootstrap"] });
+              await invalidateResources(cache, ["bootstrap"]);
             } catch (error) {
               setEnabled(!value);
               notify((error as Error).message, true);
