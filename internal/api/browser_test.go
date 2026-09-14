@@ -79,6 +79,7 @@ func TestBrowserServer(t *testing.T) {
 	s.Metadata.Provider = &browserTV{}
 	b := &backup.Service{DB: s.DB, DataDir: s.Config.DataDir, Path: filepath.Join(s.Config.DataDir, "backups"), Keep: 2}
 	s.Jobs = jobs.New(context.Background(), s.DB, s.Config, s.Metadata, s.Control, b)
+	s.Jobs.OnChange = s.Events.Publish
 	s.Control.Alert = s.Jobs.Alert
 	if e := s.Jobs.Start(); e != nil {
 		t.Fatal(e)
