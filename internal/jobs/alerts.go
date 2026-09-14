@@ -48,5 +48,5 @@ func (s *Service) Alert(key, level, message string) {
 		default:
 		}
 	}
-	s.changed()
+	s.changed("jobs", "logs", "inbox")
 }
