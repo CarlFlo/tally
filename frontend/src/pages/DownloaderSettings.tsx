@@ -132,7 +132,11 @@ function ClientForm({
         const result = await api<Connection>("/downloader", "PUT", payload());
         setRevision(result.revision);
         setChanged(false);
-        await invalidateResources(cache, ["settings", "downloader"]);
+        await invalidateResources(cache, [
+          "settings",
+          "downloader",
+          "capabilities",
+        ]);
         notify(adapter ? "Torrent client saved" : "Torrent client disabled");
       }
     } catch (error) {
