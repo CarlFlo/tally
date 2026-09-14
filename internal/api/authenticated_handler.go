@@ -39,8 +39,8 @@ func (s *Server) wrap(fn handler, public bool) http.HandlerFunc {
 			}
 			return
 		}
-		if r.Method != http.MethodGet && r.Method != http.MethodHead && r.URL.Path != "/api/settings/scheduling/preview" {
-			s.Events.Publish()
+		if scope, changes := liveChanges(r, session); len(changes) > 0 {
+			s.Events.Publish(scope, changes...)
 		}
 	}
 }
