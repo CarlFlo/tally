@@ -996,19 +996,37 @@ code {
   font-size: 8px;
   color: var(--muted);
 }
-.calendar-episode.watched {
-  background: color-mix(in srgb, var(--mint) 10%, var(--surface));
-  border-color: var(--mint);
-}
-.calendar-episode.watched > span {
-  color: var(--mint);
-}
-.calendar-episode.downloaded {
+.calendar-episode.favorite {
   background: color-mix(in srgb, var(--amber) 10%, var(--surface));
   border-color: var(--amber);
 }
-.calendar-episode.downloaded > span {
+.calendar-episode.favorite > span {
   color: var(--amber);
+}
+.calendar-episode.completed {
+  background: color-mix(in srgb, var(--mint) 10%, var(--surface));
+  border-color: var(--mint);
+}
+.calendar-episode.completed > span {
+  color: var(--mint);
+}
+.calendar-state-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.agenda-episode.favorite {
+  background: color-mix(in srgb, var(--amber) 8%, transparent);
+}
+.agenda-episode.completed {
+  background: color-mix(in srgb, var(--mint) 8%, transparent);
+}
+.agenda-state-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
 }
 .calendar-episode:hover {
   filter: brightness(1.2);
