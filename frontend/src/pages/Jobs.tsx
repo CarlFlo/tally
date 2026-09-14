@@ -28,7 +28,7 @@ export function JobsPage() {
   const kind = prefs.job_type_filter || "all",
     status = prefs.job_status_filter || "all";
   const jobs = useQuery<any>({
-    queryKey: [...queryKeys.jobs(), kind, status],
+    queryKey: queryKeys.jobs(kind, status),
     queryFn: ({ signal }) =>
       api(`/jobs?kind=${kind}&status=${status}`, "GET", undefined, signal),
   });
