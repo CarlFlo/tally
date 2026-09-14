@@ -39,8 +39,8 @@ func (s *Server) wrap(fn handler, public bool) http.HandlerFunc {
 			}
 			return
 		}
-		if scope, changes := liveChanges(r, session); len(changes) > 0 {
-			s.Events.Publish(scope, changes...)
+		for _, live := range liveChanges(r, session) {
+			s.Events.Publish(live.Profile, live.Resources...)
 		}
 	}
 }
