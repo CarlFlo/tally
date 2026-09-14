@@ -43,8 +43,6 @@ import "./style.css";
 import "./activity.css";
 import "./workspace.css";
 
-const appVersion = "v0.1.0";
-
 function App() {
   const bootstrap = useQuery<Boot>({
     queryKey: queryKeys.bootstrap(),
@@ -186,7 +184,7 @@ function App() {
               <div className="sidebar-bottom">
                 <div className="local-status">
                   <span className="status-dot" />
-                  Tally {appVersion}
+                  Tally v{boot.version}
                 </div>
               </div>
             </aside>
