@@ -13,7 +13,7 @@ import (
 type Service struct {
 	DB       *database.Store
 	Provider TVProvider
-	OnChange func(...string)
+	OnChange func(string, ...string)
 	flights  singleflight.Group
 }
 
