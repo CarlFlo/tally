@@ -144,7 +144,10 @@ test("library, calendar, episode state, profiles, jobs and responsive layout", a
   ).toBeVisible();
   await page.getByRole("button", { name: "Close dialog" }).click();
   await page.reload();
-  await expect(page.locator(".calendar-episode.watched")).toHaveCount(1);
+  const completedEpisode = page.locator(".calendar-episode.completed");
+  await expect(completedEpisode).toHaveCount(1);
+  await expect(completedEpisode.getByLabel("Watched")).toHaveCount(1);
+  await expect(completedEpisode.getByLabel("Downloaded")).toHaveCount(1);
   await page.screenshot({
     path: "../docs/screenshots/calendar-desktop.png",
     fullPage: true,
