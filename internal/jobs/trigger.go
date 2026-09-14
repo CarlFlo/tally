@@ -55,7 +55,7 @@ func (s *Service) Trigger(kind, trigger, show string) (string, error) {
 			}
 		}
 	}
-	s.changed()
+	s.changed("jobs", "statistics")
 	s.running[key] = cancel
 	s.wg.Add(1)
 	go func() {
@@ -92,7 +92,12 @@ func (s *Service) Trigger(kind, trigger, show string) (string, error) {
 			}
 		}
 		slog.Info("job finished", "job_id", id, "job_key", key, "status", status, "processed", result.Processed)
-		s.changed()
+		resources := []string{"jobs", "statistics", "logs"}
+		if kind == "backup" { resources = append(resources, "backups") }
+		s.changed(resources...)
+		if status == "success" && (kind == "backup" || trigger == "manual" || trigger == "manual_refresh") {
+			s.changedProfile("user0", "inbox")
+		}
 	}()
 	return id, nil
 }

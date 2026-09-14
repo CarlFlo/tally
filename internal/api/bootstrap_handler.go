@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 
+	"github.com/CarlFlo/mediaManager/internal/appversion"
 	"github.com/CarlFlo/mediaManager/internal/auth"
 )
 
@@ -34,6 +35,6 @@ func (s *Server) bootstrap(w http.ResponseWriter, r *http.Request, _ auth.Sessio
 	}
 	var preferenceCount int
 	_ = s.DB.QueryRowContext(r.Context(), "SELECT COUNT(*) FROM profile_preferences WHERE profile_id=?", session.Profile).Scan(&preferenceCount)
-	jsonResponse(w, 200, map[string]any{"browser_theme": s.browserTheme(r), "profiles": profiles, "profile": profile, "preferences": prefs, "preferences_initialized": preferenceCount > 0, "auth_mode": s.Config.AuthMode, "restricted": session.Restricted, "warning": warning, "max_profiles": s.Config.MaxProfiles, "password_min": s.Config.PasswordMin, "password_max": s.Config.PasswordMax})
+	jsonResponse(w, 200, map[string]any{"version": appversion.Version, "browser_theme": s.browserTheme(r), "profiles": profiles, "profile": profile, "preferences": prefs, "preferences_initialized": preferenceCount > 0, "auth_mode": s.Config.AuthMode, "restricted": session.Restricted, "warning": warning, "max_profiles": s.Config.MaxProfiles, "password_min": s.Config.PasswordMin, "password_max": s.Config.PasswordMax})
 	return nil
 }

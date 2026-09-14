@@ -35,6 +35,7 @@ import {
   type Episode,
   type Show,
 } from "../lib";
+import { invalidateResources } from "../queryInvalidation";
 
 export { AddShow } from "./Discovery";
 export function ShowsPage({ onAdd }: { onAdd: () => void }) {
@@ -222,11 +223,7 @@ export function ShowPage() {
     try {
       await api("/shows/" + id + "/bulk", "POST", body);
       notify("Episode states updated");
-      await Promise.all(
-        ["show", "shows", "calendar"].map((key) =>
-          cache.invalidateQueries({ queryKey: [key] }),
-        ),
-      );
+      await invalidateResources(cache, ["show", "shows", "calendar"]);
     } catch (e) {
       notify((e as Error).message, true);
     } finally {

@@ -43,6 +43,7 @@ import {
 import { JackettSettings } from "./JackettSettings";
 import { DownloaderSettings } from "./DownloaderSettings";
 import { NotificationSettings } from "./NotificationSettings";
+import { invalidateResources } from "../queryInvalidation";
 
 export { JobsPage } from "./Jobs";
 
@@ -72,7 +73,7 @@ export function StatisticsPage() {
               await api("/preferences", "PATCH", {
                 [key]: Number(e.target.value),
               });
-              await cache.invalidateQueries({ queryKey: ["bootstrap"] });
+              await invalidateResources(cache, ["bootstrap"]);
             } catch (e) {
               notify((e as Error).message, true);
             }
@@ -341,7 +342,7 @@ export function SettingsPage({
   async function prefs(key: string, value: any) {
     try {
       await api("/preferences", "PATCH", { [key]: value });
-      await cache.invalidateQueries({ queryKey: ["bootstrap"] });
+      await invalidateResources(cache, ["bootstrap"]);
       notify("Preference saved");
     } catch (e) {
       notify((e as Error).message, true);
@@ -355,7 +356,7 @@ export function SettingsPage({
         name,
         avatar: avatar.endsWith(".png") ? "" : avatar,
       });
-      await cache.invalidateQueries({ queryKey: ["bootstrap"] });
+      await invalidateResources(cache, ["bootstrap"]);
       notify("Profile updated");
     } catch (e) {
       notify((e as Error).message, true);
@@ -518,9 +519,7 @@ export function SettingsPage({
                             form,
                           );
                           setAvatar(response.avatar);
-                          await cache.invalidateQueries({
-                            queryKey: ["bootstrap"],
-                          });
+                          await invalidateResources(cache, ["bootstrap"]);
                           notify("Avatar updated");
                         } catch (e) {
                           notify((e as Error).message, true);
@@ -707,7 +706,7 @@ export function SettingsPage({
                     await api("/auth/password", "POST", { current, password });
                     setCurrent("");
                     setPassword("");
-                    await sessions.refetch();
+                    await invalidateResources(cache, ["bootstrap", "sessions"]);
                     notify("Password changed; other sessions revoked");
                   } catch (e) {
                     notify((e as Error).message, true);
@@ -776,7 +775,11 @@ export function SettingsPage({
                       try {
                         await api("/auth/sessions/" + session.id, "DELETE");
                         if (session.current) resetSession();
-                        else await sessions.refetch();
+                        else
+                          await invalidateResources(cache, [
+                            "bootstrap",
+                            "sessions",
+                          ]);
                         notify("Session revoked");
                       } catch (e) {
                         notify((e as Error).message, true);
@@ -829,7 +832,7 @@ function CreateProfile({ onClose }: { onClose: () => void }) {
               ],
               password,
             });
-            await cache.invalidateQueries({ queryKey: ["bootstrap"] });
+            await invalidateResources(cache, ["bootstrap"]);
             notify("Profile created");
             onClose();
           } catch (e) {

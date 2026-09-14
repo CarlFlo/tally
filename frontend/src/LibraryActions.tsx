@@ -8,6 +8,8 @@ import {
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, useApp } from "./lib";
+import { queryKeys } from "./queryKeys";
+import { invalidateResources } from "./queryInvalidation";
 
 type Action = {
   external_id: number;
@@ -36,7 +38,7 @@ export function LibraryActionsProvider({ children }: { children: ReactNode }) {
   const seen = useRef(new Set<string>());
   const previous = useRef("");
   const actions = useQuery<Action[]>({
-    queryKey: ["show-actions", boot.profile?.id],
+    queryKey: queryKeys.showActions(boot.profile?.id),
     queryFn: ({ signal }) =>
       api("/show-actions", "GET", undefined, signal),
     enabled: !!boot.profile && !boot.restricted,
@@ -55,7 +57,7 @@ export function LibraryActionsProvider({ children }: { children: ReactNode }) {
             name: r.show.name,
             follow,
           });
-          await cache.invalidateQueries({ queryKey: ["show-actions"] });
+          await invalidateResources(cache, ["show-actions"]);
         } catch (e) {
           notify((e as Error).message, true, () => submit(r, follow));
         } finally {
@@ -92,14 +94,6 @@ export function LibraryActionsProvider({ children }: { children: ReactNode }) {
         );
       }
     }
-    for (const key of [
-      "shows",
-      "show",
-      "calendar",
-      "show-search",
-      "show-suggestions",
-    ])
-      void cache.invalidateQueries({ queryKey: [key] });
   }, [actions.data]);
   function followed(r: Candidate) {
     if (r.show.id in optimistic) return optimistic[r.show.id];

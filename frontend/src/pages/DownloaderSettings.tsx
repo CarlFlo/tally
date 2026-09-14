@@ -4,6 +4,7 @@ import { useLatestRequest } from "../useLatestRequest";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Plug, Save } from "lucide-react";
 import { api, Busy, ErrorState, useApp, useLocal } from "../lib";
+import { invalidateResources } from "../queryInvalidation";
 
 type Field = {
   key: string;
@@ -131,8 +132,11 @@ function ClientForm({
         const result = await api<Connection>("/downloader", "PUT", payload());
         setRevision(result.revision);
         setChanged(false);
-        await cache.invalidateQueries({ queryKey: ["settings"] });
-        await cache.invalidateQueries({ queryKey: ["downloader"] });
+        await invalidateResources(cache, [
+          "settings",
+          "downloader",
+          "capabilities",
+        ]);
         notify(adapter ? "Torrent client saved" : "Torrent client disabled");
       }
     } catch (error) {

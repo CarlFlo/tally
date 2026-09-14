@@ -13,6 +13,7 @@ import (
 	"github.com/CarlFlo/mediaManager/internal/auth"
 	"github.com/CarlFlo/mediaManager/internal/config"
 	"github.com/CarlFlo/mediaManager/internal/database"
+	"github.com/CarlFlo/mediaManager/internal/live"
 	"github.com/CarlFlo/mediaManager/internal/metadata"
 	"github.com/CarlFlo/mediaManager/internal/providers"
 	"github.com/CarlFlo/mediaManager/internal/torrent"
@@ -50,7 +51,9 @@ func testServer(t *testing.T, mode string) (*Server, http.Handler, *fakeTV) {
 	}
 	t.Cleanup(func() { p.Close() })
 	tv := &fakeTV{}
-	s := &Server{DB: db, Config: c, Auth: auth.New(db, c), Metadata: &metadata.Service{DB: db, Provider: tv}, Control: p}
+	hub := live.New()
+	s := &Server{DB: db, Config: c, Auth: auth.New(db, c), Metadata: &metadata.Service{DB: db, Provider: tv}, Control: p, Events: hub}
+	s.Metadata.OnChange = hub.Publish
 	s.Clients = &torrent.ClientStore{DB: db, Control: p}
 	return s, s.Handler(), tv
 }

@@ -36,16 +36,16 @@ import { SystemPage } from "./pages/System";
 import { PasswordGate } from "./PasswordGate";
 import { ProfilePicker } from "./ProfilePicker";
 import { RegisterProfile } from "./RegisterProfile";
+import { queryKeys } from "./queryKeys";
+import { invalidateResources } from "./queryInvalidation";
 
 import "./style.css";
 import "./activity.css";
 import "./workspace.css";
 
-const appVersion = "v0.1.0";
-
 function App() {
   const bootstrap = useQuery<Boot>({
-    queryKey: ["bootstrap"],
+    queryKey: queryKeys.bootstrap(),
     queryFn: ({ signal }) => api("/bootstrap", "GET", undefined, signal),
   });
   const [add, setAdd] = useState(false);
@@ -106,7 +106,7 @@ function App() {
       void api("/preferences", "PATCH", {
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       })
-        .then(() => queryClient.invalidateQueries({ queryKey: ["bootstrap"] }))
+        .then(() => invalidateResources(queryClient, ["bootstrap"]))
         .catch(() => {});
     }
   }, [boot?.profile?.id, boot?.preferences_initialized, boot?.restricted]);
@@ -184,7 +184,7 @@ function App() {
               <div className="sidebar-bottom">
                 <div className="local-status">
                   <span className="status-dot" />
-                  Tally {appVersion}
+                  Tally v{boot.version}
                 </div>
               </div>
             </aside>

@@ -2,13 +2,15 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Archive, Download, Plus, XCircle } from "lucide-react";
 import { useState } from "react";
 import { api, Busy, bytes, dateLabel, ErrorState, useApp } from "../lib";
+import { queryKeys } from "../queryKeys";
+import { invalidateResources } from "../queryInvalidation";
 
 export function BackupArchives() {
   const { boot, notify } = useApp();
   const cache = useQueryClient();
   const [busy, setBusy] = useState(false);
   const archives = useQuery<{ records: any[]; failures: any[] }>({
-    queryKey: ["backups", boot.profile!.id],
+    queryKey: queryKeys.backups(boot.profile!.id),
     queryFn: ({ signal }) => api("/backups", "GET", undefined, signal),
   });
   const rows = archives.data
@@ -22,7 +24,7 @@ export function BackupArchives() {
     try {
       await api("/jobs/backup", "POST", {});
       notify("Backup started. The archive will appear here when ready.");
-      await cache.invalidateQueries({ queryKey: ["backups"] });
+      await invalidateResources(cache, ["backups"]);
     } catch (error) {
       notify((error as Error).message, true);
     } finally {

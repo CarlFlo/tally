@@ -4,6 +4,8 @@ import { Bell, Save, Send } from "lucide-react";
 import { api, Busy, ErrorState, useApp, useLocal } from "../lib";
 import { NotificationFields } from "./NotificationFields";
 import { useLatestRequest } from "../useLatestRequest";
+import { invalidateResources } from "../queryInvalidation";
+import { queryKeys } from "../queryKeys";
 import {
   displayNotificationTime,
   notificationErrors,
@@ -91,11 +93,11 @@ function NotificationForm({ saved }: { saved: any }) {
     });
     setRevision(response.revision);
     setStored(next);
-    cache.setQueryData(["editable-settings", "/settings/notifications"], {
+    cache.setQueryData(queryKeys.local("editable-settings", "/settings/notifications"), {
       data: next,
       revision: response.revision,
     });
-    await cache.invalidateQueries({ queryKey: ["settings"] });
+    await invalidateResources(cache, ["settings"]);
   }
   async function toggle(enabled: boolean) {
     const previous = stored;

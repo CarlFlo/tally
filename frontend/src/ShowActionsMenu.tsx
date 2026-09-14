@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
 import { MoreVertical, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
 import { api, Confirm, useApp, type Show } from "./lib";
+import { invalidateResources } from "./queryInvalidation";
 
 type Action = "remove" | "clear";
 export function ShowActionsMenu({
@@ -51,11 +52,13 @@ export function ShowActionsMenu({
       // A committed deletion still invalidates shared data, but must not
       // navigate away from the user's new page after this menu unmounts.
       if (action === "remove" && root.current?.isConnected) onRemoved?.();
-      await Promise.all(
-        ["shows", "show", "calendar", "logs", "show-actions"].map((key) =>
-          cache.invalidateQueries({ queryKey: [key] }),
-        ),
-      );
+      await invalidateResources(cache, [
+        "shows",
+        "show",
+        "calendar",
+        "logs",
+        "show-actions",
+      ]);
       notify(
         action === "clear"
           ? `Watch history cleared for ${show.name}`

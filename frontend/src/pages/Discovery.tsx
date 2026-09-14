@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Check, Plus, Search, Star, X } from "lucide-react";
 import { api, Busy, Dialog, Empty, ErrorState, Poster, useApp } from "../lib";
 import { useLibraryActions } from "../LibraryActions";
+import { queryKeys } from "../queryKeys";
 
 export function AddShow({ onClose }: { onClose: () => void }) {
   const [query, setQuery] = useState("");
@@ -15,7 +16,7 @@ export function AddShow({ onClose }: { onClose: () => void }) {
     return () => clearTimeout(timer);
   }, [query]);
   const suggestions = useQuery<any[]>({
-    queryKey: ["show-suggestions"],
+    queryKey: queryKeys.showSuggestions(),
     queryFn: ({ signal }) =>
       api("/shows/suggestions", "GET", undefined, signal),
     enabled: query.trim() === "",
@@ -23,7 +24,7 @@ export function AddShow({ onClose }: { onClose: () => void }) {
     retry: false,
   });
   const search = useQuery<any[]>({
-    queryKey: ["show-search", debounced.toLowerCase()],
+    queryKey: queryKeys.showSearch(debounced.toLowerCase()),
     queryFn: ({ signal }) =>
       api(
         "/shows/search?q=" + encodeURIComponent(debounced),

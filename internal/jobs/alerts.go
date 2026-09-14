@@ -48,5 +48,6 @@ func (s *Service) Alert(key, level, message string) {
 		default:
 		}
 	}
-	s.changed()
+	s.changed("jobs")
+	s.changedProfile("user0", "logs", "inbox")
 }

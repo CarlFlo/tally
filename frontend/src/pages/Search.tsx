@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import {
   ArrowDownWideNarrow,
@@ -21,6 +22,7 @@ import {
   useApp,
   useLocal,
 } from "../lib";
+import { invalidateResources } from "../queryInvalidation";
 
 type Result = {
   id: string;
@@ -47,6 +49,7 @@ function torrentAge(value: string) {
 export function SearchPage() {
   const [params] = useSearchParams();
   const { notify } = useApp();
+  const cache = useQueryClient();
   const settings = useLocal<any>("capabilities", "/capabilities");
   const history = useLocal<any>("torrent-history", "/torrents/history");
   const [query, setQuery] = useState(params.get("q") || "");
@@ -99,7 +102,7 @@ export function SearchPage() {
       if (data.warnings.length) notify(data.warnings.join(" · "), true);
       setSearched(true);
       setSent([]);
-      await history.refetch();
+      await invalidateResources(cache, ["torrent-history"]);
     } catch (e) {
       if (!controller.signal.aborted) setError(e as Error);
     } finally {
@@ -149,7 +152,7 @@ export function SearchPage() {
       });
       setSent([...sent, result.id]);
       notify("Torrent sent");
-      await history.refetch();
+      await invalidateResources(cache, ["torrent-history"]);
     } catch (e) {
       notify((e as Error).message, true);
     } finally {

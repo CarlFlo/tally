@@ -32,6 +32,8 @@ import { CalendarFilter } from "./CalendarFilter";
 import { CalendarHorizon } from "./CalendarHorizon";
 import { CalendarOverview } from "./CalendarOverview";
 import { ReleaseGroupDialog } from "./ReleaseGroupDialog";
+import { queryKeys } from "../queryKeys";
+import { invalidateResources } from "../queryInvalidation";
 
 export function CalendarPage({ onAdd }: { onAdd: () => void }) {
   const { boot, notify } = useApp();
@@ -77,7 +79,7 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
   const activePath = useRef(path);
   activePath.current = path;
   const episodes = useQuery<Episode[]>({
-    queryKey: ["calendar", path],
+    queryKey: queryKeys.calendar(path),
     queryFn: ({ signal }) => api(path, "GET", undefined, signal),
     placeholderData: (prev) => prev,
   });
@@ -86,7 +88,7 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
     const to = new Date(end);
     to.setDate(to.getDate() + 42);
     const prefetchPath = `/calendar?from=${localDay(from)}&to=${localDay(to)}`;
-    const queryKey = ["calendar", prefetchPath];
+    const queryKey = queryKeys.calendar(prefetchPath);
     void cache.prefetchQuery({
       queryKey,
       queryFn: ({ signal }) => api(prefetchPath, "GET", undefined, signal),
@@ -128,7 +130,7 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
     setView(next);
     try {
       await api("/preferences", "PATCH", { calendar_view: next });
-      await cache.invalidateQueries({ queryKey: ["bootstrap"] });
+      await invalidateResources(cache, ["bootstrap"]);
     } catch (e) {
       notify((e as Error).message, true);
     }

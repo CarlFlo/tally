@@ -5,6 +5,8 @@ import { api, Busy, ErrorState, useApp } from "../lib";
 import { commonSchedules, jobDescription, jobName } from "../schedules";
 import { useDebouncedValue } from "../useDebouncedValue";
 import { SchedulePreview, type Preview } from "./SchedulePreview";
+import { queryKeys } from "../queryKeys";
+import { invalidateResources } from "../queryInvalidation";
 
 export type Schedule = {
   key: string;
@@ -26,7 +28,7 @@ export function ScheduleEditor({ job }: { job: Schedule }) {
   const [saveError, setSaveError] = useState<Error>();
   const previewSpec = useDebouncedValue(spec, 350);
   const preview = useQuery<Preview>({
-    queryKey: ["schedule-preview", previewSpec],
+    queryKey: queryKeys.schedulePreview(previewSpec),
     queryFn: ({ signal }) =>
       api(
         "/settings/scheduling/preview",
@@ -55,7 +57,7 @@ export function ScheduleEditor({ job }: { job: Schedule }) {
         key: job.key, schedule, enabled: automatic, revision: saved.revision,
       });
       setSaved({ ...saved, schedule, enabled: automatic, revision: result.revision });
-      await cache.invalidateQueries({ queryKey: ["schedules"] });
+      await invalidateResources(cache, ["schedules"]);
       notify(automatic !== !!saved.enabled
         ? `${jobName(job.key)} ${automatic ? "enabled" : "disabled"}`
         : "Schedule saved");

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Moon, Sun, Monitor } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, type Boot } from "./lib";
+import { queryKeys } from "./queryKeys";
 export function LoginAppearance({ boot }: { boot: Boot }) {
   const cache = useQueryClient(),
     [busy, setBusy] = useState(false),
@@ -33,7 +34,7 @@ export function LoginAppearance({ boot }: { boot: Boot }) {
               setError("");
               try {
                 await api("/browser/preferences", "PATCH", { theme });
-                cache.setQueryData<Boot>(["bootstrap"], (old) =>
+                cache.setQueryData<Boot>(queryKeys.bootstrap(), (old) =>
                   old ? { ...old, browser_theme: theme } : old,
                 );
               } catch (e) {
