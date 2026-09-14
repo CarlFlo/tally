@@ -55,15 +55,9 @@ jobs:
         run: |
           sed -i 's/FROM node:22-alpine/FROM node:24-alpine/' Dockerfile
           sed -i 's/FROM alpine:3.23/FROM alpine:3.24/' Dockerfile
-          sed -i 's/actions\/checkout@v4/actions\/checkout@v7/' .github/workflows/check.yml
-          sed -i 's/actions\/setup-go@v5/actions\/setup-go@v7/' .github/workflows/check.yml
-          sed -i 's/actions\/setup-node@v4/actions\/setup-node@v7/' .github/workflows/check.yml
-          sed -i 's/actions\/upload-artifact@v4/actions\/upload-artifact@v7/' .github/workflows/check.yml
-          sed -i 's/node-version: 22/node-version: 24/' .github/workflows/check.yml
 
       - name: Record upgrade
         run: |
-          rm .github/workflows/dependency-upgrade.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
