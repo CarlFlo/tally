@@ -1,6 +1,7 @@
 import { BellRing } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { invalidateResources } from "../queryInvalidation";
 import { api, useApp } from "../lib";
 
 const categoryGroups = [
@@ -76,10 +77,7 @@ export function BellNotificationSettings() {
     setBusy(key);
     try {
       await api("/preferences", "PATCH", { bell_categories: next });
-      await Promise.all([
-        cache.invalidateQueries({ queryKey: ["bootstrap"] }),
-        cache.invalidateQueries({ queryKey: ["inbox"] }),
-      ]);
+      await invalidateResources(cache, ["bootstrap", "inbox"]);
     } catch (error) {
       setSelected(previous);
       notify((error as Error).message, true);
