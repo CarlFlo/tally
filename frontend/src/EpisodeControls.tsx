@@ -10,6 +10,7 @@ import {
   type Show,
 } from "./lib";
 import { released } from "./releaseTime";
+import { invalidateResources } from "./queryInvalidation";
 
 export function EpisodeRow({
   episode,
@@ -31,11 +32,7 @@ export function EpisodeRow({
     setPending(true);
     try {
       await api("/episodes/" + ep.id, "PATCH", { [field]: value });
-      await Promise.all(
-        ["show", "shows", "calendar"].map((key) =>
-          cache.invalidateQueries({ queryKey: [key] }),
-        ),
-      );
+      await invalidateResources(cache, ["show", "shows", "calendar"]);
     } catch (e) {
       setEp(episode);
       notify((e as Error).message, true);
@@ -146,11 +143,7 @@ export function FavoriteButton({ show }: { show: Show }) {
               ? new Promise((resolve) => setTimeout(resolve, 320))
               : Promise.resolve(),
           ]);
-          await Promise.all(
-            ["shows", "show", "calendar"].map((key) =>
-              cache.invalidateQueries({ queryKey: [key] }),
-            ),
-          );
+          await invalidateResources(cache, ["shows", "show", "calendar"]);
         } catch (e) {
           notify((e as Error).message, true);
         } finally {
