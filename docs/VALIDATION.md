@@ -61,7 +61,7 @@ Completed checks:
 - Job tests cover saved disabled schedules, stale-revision rejection, invalid cron rejection, pause after three consecutive failures, blocked automatic runs while paused, Resume, cancellation, and timeouts counting as failures. A local HTTP fixture verifies that saved webhook settings take effect immediately and disabling delivery retains in-app alerts.
 - Suggestion tests verify six bounded cached schedule requests, rating order, deduplication, the 24-show cap, and plain-text summaries. Suggestions sample recent US broadcasts and worldwide streaming; they are not a global popularity chart.
 - Migration tests cover version 2 to 3 with a verified pre-upgrade snapshot and preserved job/client data. Version 1 archives still restore and upgrade sequentially. Backup round-trips preserve favorites, queued actions, paused/disabled schedules, application settings and connection credentials, while excluding caches.
-- Legacy configuration tests verify one-time import of valid old environment settings and that stale or invalid environment values cannot overwrite saved UI changes or prevent subsequent startup.
+- Configuration tests verify that infrastructure environment values remain validated while UI-managed settings are seeded with SQLite defaults and remain independent of the process environment.
 - General API responses remain redacted. Explicit operator connection settings are non-cacheable and may reveal credentials as requested. Other authenticated profiles cannot access those settings.
 
 Desktop and 390-pixel mobile screenshots were inspected:

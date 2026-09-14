@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -70,19 +71,13 @@ func TestBrowserServer(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	s.Config.MetadataCron = "0 * * * *"
-	s.Config.MaintenanceCron = "30 3 * * *"
-	s.Config.BackupCron = "0 3 * * *"
 	s.Config.JobConcurrency = 2
 	s.Config.JobRuntime = time.Minute
 	s.Config.BatchSize = 20
 	s.Config.RawRetention = 30
 	s.Config.AggregateRetention = 365
-	s.Config.BackupEnabled = true
-	s.Config.BackupKeep = 2
-	s.Config.BackupPath = s.Config.DataDir + "/backups"
 	s.Metadata.Provider = &browserTV{}
-	b := &backup.Service{DB: s.DB, DataDir: s.Config.DataDir, Path: s.Config.BackupPath, Keep: 2}
+	b := &backup.Service{DB: s.DB, DataDir: s.Config.DataDir, Path: filepath.Join(s.Config.DataDir, "backups"), Keep: 2}
 	s.Jobs = jobs.New(context.Background(), s.DB, s.Config, s.Metadata, s.Control, b)
 	s.Control.Alert = s.Jobs.Alert
 	if e := s.Jobs.Start(); e != nil {

@@ -15,7 +15,7 @@ import (
 func TestEditableSettingsPersistAndIgnoreLaterEnvironment(t *testing.T) {
 	s, h, _ := testServer(t, "disabled")
 	ctx := context.Background()
-	if e := s.settingsStore().Ensure(ctx, s.Config); e != nil {
+	if e := s.settingsStore().Ensure(ctx); e != nil {
 		t.Fatal(e)
 	}
 	input := map[string]any{"revision": 1, "data": settings.Search{BaseURL: "http://fixture.invalid", APIKey: "test-only-secret", Enabled: true}}
@@ -24,9 +24,7 @@ func TestEditableSettingsPersistAndIgnoreLaterEnvironment(t *testing.T) {
 		t.Fatal("saved Jackett connection not applied")
 	}
 	expect(t, request(t, h, "PUT", "/api/settings/search", input), 409)
-	s.Config.TorznabURL = "http://ignored.invalid"
-	s.Config.WebhookURL = "http://ignored.invalid"
-	if e := s.settingsStore().Ensure(ctx, s.Config); e != nil {
+	if e := s.settingsStore().Ensure(ctx); e != nil {
 		t.Fatal(e)
 	}
 	expect(t, request(t, h, "GET", "/api/settings/search", nil), 200)
@@ -48,7 +46,7 @@ func TestEditableSettingsPersistAndIgnoreLaterEnvironment(t *testing.T) {
 func TestConnectionSecretsVisibleOnlyInExplicitOperatorView(t *testing.T) {
 	s, h, _ := testServer(t, "local")
 	ctx := context.Background()
-	s.settingsStore().Ensure(ctx, s.Config)
+	s.settingsStore().Ensure(ctx)
 	if _, e := s.Clients.Save(ctx, torrent.ClientUpdate{Adapter: "qbittorrent", Fields: map[string]string{"url": "http://unused.invalid", "api_key": fixtureClientKey}}); e != nil {
 		t.Fatal(e)
 	}

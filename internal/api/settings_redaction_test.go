@@ -13,7 +13,6 @@ func TestSettingsSecretRedaction(t *testing.T) {
 	if _, e := s.Clients.Save(context.Background(), torrent.ClientUpdate{Adapter: "qbittorrent", Fields: map[string]string{"url": "http://client.invalid", "api_key": fixtureClientKey}}); e != nil {
 		t.Fatal(e)
 	}
-	s.Config.TorznabKey = "DO-NOT-EXPOSE"
 	s.Config.OIDCSecret = "DO-NOT-EXPOSE"
 	w := request(t, h, "GET", "/api/settings", nil)
 	expect(t, w, 200)

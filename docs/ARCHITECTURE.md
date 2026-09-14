@@ -25,7 +25,7 @@ Tally uses the repository-root `main.go` as the small process entrypoint. `inter
 | `internal/activity` | Durable, credential-free event records | `record.go` |
 | `internal/library` | Transactional follow changes and their activity | `follow.go` |
 | `internal/notifications` | Event subscriptions, durable outbox, release scheduling and Webhook/Discord delivery | `service.go`, `activity_queue.go`, `release_queue.go`, `delivery.go`, `message.go`, `send.go`, `schedule.go` |
-| `internal/settings` | Durable editable settings and their validation | `settings.go`, `search.go`, `webhook.go`, `legacy.go` |
+| `internal/settings` | Durable editable settings and their validation | `settings.go`, `search.go`, `webhook.go`, `defaults.go` |
 | `internal/database` | SQLite opening, migration, validation and snapshots | `database.go`, `migrations.go`, `schema_validation.go`, `snapshot.go` |
 | `internal/backup` | Snapshot archives, validation, restore and retention | `create.go`, `archive_writer.go`, `extract.go`, `snapshot_validation.go`, `restore.go` |
 | `internal/config` | Validated infrastructure environment values | `config.go`, `load.go`, `url.go` |

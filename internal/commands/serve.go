@@ -15,7 +15,6 @@ import (
 	"github.com/CarlFlo/mediaManager/internal/live"
 	"github.com/CarlFlo/mediaManager/internal/metadata"
 	"github.com/CarlFlo/mediaManager/internal/providers"
-	"github.com/CarlFlo/mediaManager/internal/settings"
 	"github.com/CarlFlo/mediaManager/internal/torrent"
 	"github.com/CarlFlo/mediaManager/web"
 )
@@ -31,7 +30,6 @@ func serve(ctx context.Context, c config.Config, db *database.Store, b *backup.S
 	clients := &torrent.ClientStore{DB: db, Control: p}
 	m := &metadata.Service{DB: db, Provider: &metadata.TVMaze{Control: p}}
 	a := auth.New(db, c)
-	c = (settings.Store{DB: db}).LegacyDefaults(ctx, c)
 	hub := live.New()
 	m.OnChange = hub.Publish
 	j := jobs.New(ctx, db, c, m, p, b)

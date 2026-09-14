@@ -1,7 +1,6 @@
 package config
 
 import (
-	"path/filepath"
 	"testing"
 	"time"
 )
@@ -22,33 +21,5 @@ func TestDefaultsAndValidation(t *testing.T) {
 				t.Fatal("invalid configuration accepted")
 			}
 		})
-	}
-}
-
-func TestRemovedUIEnvironmentDoesNotBlockStartup(t *testing.T) {
-	t.Setenv("JOB_METADATA_CRON", "invalid")
-	t.Setenv("WEBHOOK_URL", "invalid")
-	t.Setenv("TORZNAB_PROVIDERS", "invalid")
-	t.Setenv("BACKUP_ENABLED", "invalid")
-	t.Setenv("BACKUP_KEEP", "invalid")
-	t.Setenv("BACKUP_PATH", "obsolete")
-	t.Setenv("LOCAL_PASSWORD_ALLOW_NUMERIC_ONLY", "invalid")
-	t.Setenv("TZ", "UTC")
-	if _, e := Load(); e != nil {
-		t.Fatal("removed UI settings still validated as infrastructure", e)
-	}
-}
-
-func TestBackupLocationAndMetadataDefaults(t *testing.T) {
-	t.Setenv("TZ", "UTC")
-	t.Setenv("APP_DATA_DIR", t.TempDir())
-	t.Setenv("BACKUP_PATH", "ignored-custom-directory")
-	t.Setenv("BACKUP_KEEP", "100")
-	c, err := Load()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if c.BackupPath != filepath.Join(c.DataDir, "backups") || c.BackupKeep != 10 || c.MetadataCron != "0 * * * *" {
-		t.Fatal("wrong application defaults")
 	}
 }

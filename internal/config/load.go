@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -60,18 +59,11 @@ func Load() (Config, error) {
 	c.ResetCooldown = d("LOCAL_PASSWORD_RESET_COOLDOWN", "60s")
 	c.SessionIdle = d("SESSION_IDLE_TIMEOUT", "30d")
 	c.SessionAbsolute = d("SESSION_ABSOLUTE_TIMEOUT", "180d")
-	c.MetadataCron = "0 * * * *"
-	c.MaintenanceCron = "30 3 * * *"
-	c.BackupCron = "0 3 * * *"
 	c.JobConcurrency = i("JOB_MAX_CONCURRENCY", 4, 1, 32)
 	c.JobRetries = i("JOB_MAX_RETRIES", 3, 0, 5)
 	c.BatchSize = i("JOB_MAX_BATCH_SIZE", 50, 1, 500)
 	c.ProviderConcurrency = i("PROVIDER_MAX_CONCURRENCY", 2, 1, 16)
 	c.JobRuntime = d("JOB_MAX_RUNTIME", "5m")
-	c.BackupEnabled = true
-	c.BackupKeep = 10
-	c.BackupPath = filepath.Join(c.DataDir, "backups")
-	c.TorznabName = "Torznab"
 	c.OIDCIssuer = s("OIDC_ISSUER_URL", "")
 	c.OIDCClientID = s("OIDC_CLIENT_ID", "")
 	c.OIDCSecret = s("OIDC_CLIENT_SECRET", "")

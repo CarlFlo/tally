@@ -11,9 +11,9 @@ func (s *Service) initializeSchedules() error {
 		key, spec, fallback string
 		enabled             bool
 	}{
-		{"metadata", s.Config.MetadataCron, "0 * * * *", true},
-		{"maintenance", s.Config.MaintenanceCron, "30 3 * * *", true},
-		{"backup", s.Config.BackupCron, "0 3 * * *", s.Config.BackupEnabled},
+		{"metadata", "0 * * * *", "0 * * * *", true},
+		{"maintenance", "30 3 * * *", "30 3 * * *", true},
+		{"backup", "0 3 * * *", "0 3 * * *", true},
 	} {
 		spec := entry.spec
 		if spec == "" {

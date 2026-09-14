@@ -22,7 +22,7 @@ func TestJackettSearchNormalizesResultsWithoutLeakingURL(t *testing.T) {
 		fmt.Fprintf(w, `<rss xmlns:torznab="http://torznab.com/schemas/2015/feed"><channel><item><title>Linux release</title><guid>one</guid><jackettindexer>Fixture Indexer</jackettindexer><pubDate>Sun, 13 Sep 2026 10:00:00 +0000</pubDate><enclosure url="magnet:?xt=urn:btih:%s" length="1024"/><torznab:attr name="seeders" value="20"/><torznab:attr name="leechers" value="4"/></item></channel></rss>`, strings.Repeat("a", 40))
 	}))
 	defer jackett.Close()
-	if err := s.settingsStore().Ensure(context.Background(), s.Config); err != nil {
+	if err := s.settingsStore().Ensure(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	_, err := s.settingsStore().Save(context.Background(), "search", settings.Search{BaseURL: jackett.URL, APIKey: "PRIVATE-KEY", Enabled: true}, 1)
@@ -77,7 +77,7 @@ func TestJackettTorrentFileSelectionIsFetchedAndSent(t *testing.T) {
 	}))
 	defer client.Close()
 	ctx := context.Background()
-	if err := s.settingsStore().Ensure(ctx, s.Config); err != nil {
+	if err := s.settingsStore().Ensure(ctx); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.settingsStore().Save(ctx, "search", settings.Search{BaseURL: jackett.URL, APIKey: "PRIVATE-KEY", Enabled: true}, 1); err != nil {

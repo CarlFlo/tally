@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/config"
 	"github.com/CarlFlo/mediaManager/internal/database"
 	"github.com/CarlFlo/mediaManager/internal/settings"
 )
@@ -18,7 +17,7 @@ func TestMasterSwitchInvalidatesAlreadySelectedPendingMessages(t *testing.T) {
 	}
 	defer db.Close()
 	store := settings.Store{DB: db}
-	if err = store.Ensure(ctx, config.Config{}); err != nil {
+	if err = store.Ensure(ctx); err != nil {
 		t.Fatal(err)
 	}
 	saved := settings.Webhook{Enabled: true, URL: "http://fixture.invalid/private", Events: []string{"system_error", "episode_released"}}

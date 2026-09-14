@@ -18,7 +18,7 @@ func TestSchedulesPersistPauseAfterFailuresAndResume(t *testing.T) {
 		t.Fatal(e)
 	}
 	defer db.Close()
-	s := New(ctx, db, config.Config{BackupEnabled: true}, nil, nil, nil)
+	s := New(ctx, db, config.Config{}, nil, nil, nil)
 	defer s.Stop(ctx)
 	if e = s.initializeSchedules(); e != nil {
 		t.Fatal(e)

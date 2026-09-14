@@ -9,28 +9,28 @@ import (
 )
 
 func (s *Server) settings(w http.ResponseWriter, r *http.Request, session auth.Session) error {
-	c := s.Config
+	backupKeep := 10
 	var retention settings.Backups
 	if _, err := s.settingsStore().Load(r.Context(), "backups", &retention); err == nil {
-		c.BackupKeep = retention.Keep
+		backupKeep = retention.Keep
 	}
+	webhookConfigured := false
 	var webhook settings.Webhook
 	if _, e := s.settingsStore().Load(r.Context(), "notifications", &webhook); e == nil {
-		c.WebhookURL = ""
-		if webhook.Enabled {
-			c.WebhookURL = webhook.URL
-		}
+		webhookConfigured = webhook.Enabled && webhook.URL != ""
 	}
+	metadataCron, maintenanceCron, backupCron := "0 * * * *", "30 3 * * *", "0 3 * * *"
+	backupEnabled := true
 	rows, _ := s.DB.Rows(r.Context(), "SELECT key,schedule,enabled FROM jobs")
 	for _, row := range rows {
 		switch row["key"] {
 		case "metadata":
-			c.MetadataCron = row["schedule"].(string)
+			metadataCron = row["schedule"].(string)
 		case "maintenance":
-			c.MaintenanceCron = row["schedule"].(string)
+			maintenanceCron = row["schedule"].(string)
 		case "backup":
-			c.BackupCron = row["schedule"].(string)
-			c.BackupEnabled = row["enabled"].(int64) == 1
+			backupCron = row["schedule"].(string)
+			backupEnabled = row["enabled"].(int64) == 1
 		}
 	}
 	backups := []map[string]any{}
@@ -45,6 +45,7 @@ func (s *Server) settings(w http.ResponseWriter, r *http.Request, session auth.S
 	if e != nil {
 		return e
 	}
-	jsonResponse(w, 200, map[string]any{"auth_mode": c.AuthMode, "max_profiles": c.MaxProfiles, "timezone": c.Timezone, "language": c.Language, "downloader": client.Adapter, "downloader_configured": client.Configured(), "jackett_configured": s.jackettConfigured(), "oidc_secret_configured": c.OIDCSecret != "", "webhook_configured": c.WebhookURL != "", "backup_enabled": c.BackupEnabled, "backup_keep": c.BackupKeep, "backup_cron": c.BackupCron, "metadata_cron": c.MetadataCron, "maintenance_cron": c.MaintenanceCron, "job_concurrency": c.JobConcurrency, "provider_concurrency": c.ProviderConcurrency, "operator": s.operator(session) == nil, "backups": backups, "schema_version": database.Version})
+	c := s.Config
+	jsonResponse(w, 200, map[string]any{"auth_mode": c.AuthMode, "max_profiles": c.MaxProfiles, "timezone": c.Timezone, "language": c.Language, "downloader": client.Adapter, "downloader_configured": client.Configured(), "jackett_configured": s.jackettConfigured(), "oidc_secret_configured": c.OIDCSecret != "", "webhook_configured": webhookConfigured, "backup_enabled": backupEnabled, "backup_keep": backupKeep, "backup_cron": backupCron, "metadata_cron": metadataCron, "maintenance_cron": maintenanceCron, "job_concurrency": c.JobConcurrency, "provider_concurrency": c.ProviderConcurrency, "operator": s.operator(session) == nil, "backups": backups, "schema_version": database.Version})
 	return nil
 }

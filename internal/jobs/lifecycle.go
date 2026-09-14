@@ -7,7 +7,7 @@ import (
 )
 
 func (s *Service) Start() error {
-	if e := (settings.Store{DB: s.DB}).Ensure(s.ctx, s.Config); e != nil {
+	if e := (settings.Store{DB: s.DB}).Ensure(s.ctx); e != nil {
 		return e
 	}
 	if e := s.initializeSchedules(); e != nil {
