@@ -17,11 +17,11 @@ func TestLiveRestoreAppliesBackupWithoutRestartAndKeepsRelationshipsAndPreferenc
 	}
 	defer db.Close()
 	service := Service{DB: db, DataDir: dir, Path: filepath.Join(dir, "backups"), Keep: 2}
-	if _, err = db.Exec(`INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('user0','My profile','violet',1);
-UPDATE profiles SET display_name='From backup' WHERE id='user0';
+	if _, err = db.Exec(`INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-owner','My profile','violet',1);
+UPDATE profiles SET display_name='From backup' WHERE id='profile-owner';
 INSERT INTO shows(id,name) VALUES('restore-show','Restore show');
-INSERT INTO profile_shows(profile_id,show_id,added_at,favorite) VALUES('user0','restore-show',1,1);
-INSERT INTO profile_preferences(profile_id,data) VALUES('user0','{"theme":"dark","calendar_view":"agenda"}');
+INSERT INTO profile_shows(profile_id,show_id,added_at,favorite) VALUES('profile-owner','restore-show',1,1);
+INSERT INTO profile_preferences(profile_id,data) VALUES('profile-owner','{"theme":"dark","calendar_view":"agenda"}');
 INSERT INTO browser_preferences VALUES('restore-browser','dark',1);`); err != nil {
 		t.Fatal(err)
 	}
@@ -33,9 +33,9 @@ INSERT INTO browser_preferences VALUES('restore-browser','dark',1);`); err != ni
 	if err = db.QueryRow("SELECT id FROM backup_records WHERE filename=?", filename).Scan(&id); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = db.Exec(`UPDATE profiles SET display_name='Current state' WHERE id='user0';
+	if _, err = db.Exec(`UPDATE profiles SET display_name='Current state' WHERE id='profile-owner';
 DELETE FROM shows WHERE id='restore-show';
-UPDATE profile_preferences SET data='{"theme":"light","calendar_view":"month"}' WHERE profile_id='user0';
+UPDATE profile_preferences SET data='{"theme":"light","calendar_view":"month"}' WHERE profile_id='profile-owner';
 UPDATE browser_preferences SET theme='light' WHERE id='restore-browser';`); err != nil {
 		t.Fatal(err)
 	}
@@ -44,14 +44,14 @@ UPDATE browser_preferences SET theme='light' WHERE id='restore-browser';`); err 
 		t.Fatal(err)
 	}
 	var name, preference, browserTheme string
-	if err = db.QueryRow("SELECT display_name FROM profiles WHERE id='user0'").Scan(&name); err != nil || name != "From backup" {
+	if err = db.QueryRow("SELECT display_name FROM profiles WHERE id='profile-owner'").Scan(&name); err != nil || name != "From backup" {
 		t.Fatal("running database did not switch to restored state", name, err)
 	}
 	var followed int
-	if err = db.QueryRow("SELECT COUNT(*) FROM profile_shows WHERE profile_id='user0' AND show_id='restore-show' AND favorite=1").Scan(&followed); err != nil || followed != 1 {
+	if err = db.QueryRow("SELECT COUNT(*) FROM profile_shows WHERE profile_id='profile-owner' AND show_id='restore-show' AND favorite=1").Scan(&followed); err != nil || followed != 1 {
 		t.Fatal("restored follow relationship was lost", followed, err)
 	}
-	if err = db.QueryRow("SELECT data FROM profile_preferences WHERE profile_id='user0'").Scan(&preference); err != nil || preference != `{"theme":"dark","calendar_view":"agenda"}` {
+	if err = db.QueryRow("SELECT data FROM profile_preferences WHERE profile_id='profile-owner'").Scan(&preference); err != nil || preference != `{"theme":"dark","calendar_view":"agenda"}` {
 		t.Fatal("profile preferences were not restored", preference, err)
 	}
 	if err = db.QueryRow("SELECT theme FROM browser_preferences WHERE id='restore-browser'").Scan(&browserTheme); err != nil || browserTheme != "dark" {
@@ -75,7 +75,7 @@ func TestLiveRestoreRollsBackDatabaseChangesOnApplyFailure(t *testing.T) {
 	}
 	defer db.Close()
 	service := Service{DB: db, DataDir: dir, Path: filepath.Join(dir, "backups"), Keep: 2}
-	if _, err = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('user0','From backup','violet',1)"); err != nil {
+	if _, err = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-owner','From backup','violet',1)"); err != nil {
 		t.Fatal(err)
 	}
 	filename, err := service.Create(ctx, "manual")
@@ -84,7 +84,7 @@ func TestLiveRestoreRollsBackDatabaseChangesOnApplyFailure(t *testing.T) {
 	}
 	var id string
 	_ = db.QueryRow("SELECT id FROM backup_records WHERE filename=?", filename).Scan(&id)
-	if _, err = db.Exec(`UPDATE profiles SET display_name='Keep current' WHERE id='user0';
+	if _, err = db.Exec(`UPDATE profiles SET display_name='Keep current' WHERE id='profile-owner';
 CREATE TRIGGER prevent_restore BEFORE DELETE ON profiles BEGIN SELECT RAISE(ABORT,'fixture restore failure'); END;`); err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +92,7 @@ CREATE TRIGGER prevent_restore BEFORE DELETE ON profiles BEGIN SELECT RAISE(ABOR
 		t.Fatal("restore unexpectedly succeeded")
 	}
 	var name string
-	if err = db.QueryRow("SELECT display_name FROM profiles WHERE id='user0'").Scan(&name); err != nil || name != "Keep current" {
+	if err = db.QueryRow("SELECT display_name FROM profiles WHERE id='profile-owner'").Scan(&name); err != nil || name != "Keep current" {
 		t.Fatal("failed restore changed current data", name, err)
 	}
 }
