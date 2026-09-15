@@ -25,6 +25,7 @@ jobs:
       - run: npm run build
         working-directory: frontend
       - run: go vet ./... && go test -race ./...
+      - run: git diff -- go.sum
       - run: go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
       - run: npx playwright install --with-deps chromium && npm run test:e2e
         working-directory: frontend
