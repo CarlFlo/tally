@@ -46,6 +46,11 @@ func testServer(t *testing.T, mode string) (*Server, http.Handler, *fakeTV) {
 		t.Fatal(e)
 	}
 	t.Cleanup(func() { db.Close() })
+	// Most API tests use the historical fixture names for readability. Production
+	// databases start empty; this test-only insert is promoted by the role trigger.
+	if _, e = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('user0','My profile','violet',?)", time.Now().Unix()); e != nil {
+		t.Fatal(e)
+	}
 	c := config.Config{DataDir: dir, AuthMode: mode, MaxProfiles: 3, PasswordMin: 4, PasswordMax: 128, Timezone: "UTC", Theme: "system", SessionIdle: 30 * 24 * time.Hour, SessionAbsolute: 180 * 24 * time.Hour, ResetCooldown: time.Minute}
 	p, e := providers.New(context.Background(), db, dir, 2, 0)
 	if e != nil {
