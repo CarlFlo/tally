@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 
@@ -15,8 +16,12 @@ func resolveProfile(ctx context.Context, db *database.Store, reference string) (
 	}
 
 	var id string
-	if err := db.QueryRowContext(ctx, "SELECT id FROM profiles WHERE id=?", reference).Scan(&id); err == nil {
+	err := db.QueryRowContext(ctx, "SELECT id FROM profiles WHERE id=?", reference).Scan(&id)
+	if err == nil {
 		return id, nil
+	}
+	if err != sql.ErrNoRows {
+		return "", err
 	}
 
 	rows, err := db.QueryContext(ctx, "SELECT id FROM profiles WHERE display_name=? ORDER BY created_at,id LIMIT 2", reference)
