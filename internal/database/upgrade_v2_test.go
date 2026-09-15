@@ -36,6 +36,9 @@ func TestVersionOneUpgradePreservesDataAndSnapshot(t *testing.T) {
 	if version != Version || count != 1 {
 		t.Fatal("client settings migration incomplete")
 	}
+	if err := upgraded.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='counters'").Scan(&count); err != nil || count != 0 {
+		t.Fatal("obsolete profile counter survived schema 6", err)
+	}
 	paths, _ := filepath.Glob(filepath.Join(dir, "pre-upgrade-v1-*.db"))
 	if len(paths) != 1 {
 		t.Fatal("pre-upgrade snapshot missing")
