@@ -16,8 +16,9 @@ type SchedulePreview struct {
 }
 
 // PreviewSchedule describes the exact schedule parsed by the scheduler.
-func PreviewSchedule(spec string, now time.Time) (SchedulePreview, error) {
-	parsed, err := scheduling.Parse(spec)
+func PreviewSchedule(spec string, now time.Time, timezone string) (SchedulePreview, error) {
+	timezone = scheduling.TimezoneName(timezone)
+	parsed, err := scheduling.ParseInTimezone(spec, timezone)
 	if err != nil {
 		return SchedulePreview{}, err
 	}
@@ -36,9 +37,9 @@ func PreviewSchedule(spec string, now time.Time) (SchedulePreview, error) {
 	if fields[2] != "*" && fields[2] != "?" && fields[4] != "*" && fields[4] != "?" {
 		description += "; runs when either the day-of-month or weekday matches"
 	}
-	preview := SchedulePreview{Expression: spec, Description: description, Timezone: "UTC"}
+	preview := SchedulePreview{Expression: spec, Description: description, Timezone: timezone}
 	for range 3 {
-		now = parsed.Next(now.UTC())
+		now = parsed.Next(now)
 		if now.IsZero() {
 			break
 		}

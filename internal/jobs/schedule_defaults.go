@@ -1,10 +1,6 @@
 package jobs
 
-import (
-	"time"
-
-	"github.com/CarlFlo/mediaManager/internal/scheduling"
-)
+import "time"
 
 func (s *Service) initializeSchedules() error {
 	for _, entry := range []struct {
@@ -19,13 +15,13 @@ func (s *Service) initializeSchedules() error {
 		if spec == "" {
 			spec = entry.fallback
 		}
-		parsed, e := scheduling.Parse(spec)
+		nextRun, e := s.nextScheduledRun(spec, time.Now())
 		if e != nil {
 			return e
 		}
 		var next int64
 		if entry.enabled {
-			next = parsed.Next(time.Now().UTC()).Unix()
+			next = nextRun.Unix()
 		}
 		if _, e = s.DB.ExecContext(s.ctx, "INSERT INTO jobs(key,type,schedule,next_run,enabled) VALUES(?,?,?,?,?) ON CONFLICT DO NOTHING", entry.key, entry.key, spec, next, entry.enabled); e != nil {
 			return e

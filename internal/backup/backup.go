@@ -13,8 +13,8 @@ var (
 )
 
 type Service struct {
-	DB            *database.Store
-	DataDir, Path string
-	Keep          int
-	mu            sync.Mutex
+	DB                      *database.Store
+	DataDir, Path, Timezone string
+	Keep                    int
+	mu                      sync.Mutex
 }

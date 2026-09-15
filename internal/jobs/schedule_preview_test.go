@@ -10,7 +10,7 @@ import (
 
 func TestPreviewScheduleUsesSchedulerDialect(t *testing.T) {
 	now := time.Date(2026, time.December, 31, 4, 0, 0, 0, time.UTC)
-	preview, err := PreviewSchedule("0 3 1 1 1", now)
+	preview, err := PreviewSchedule("0 3 1 1 1", now, "UTC")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +36,7 @@ func TestScheduleSemanticsAndUTCPreviews(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			preview, err := PreviewSchedule(tc.spec, tc.now)
+			preview, err := PreviewSchedule(tc.spec, tc.now, "UTC")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -45,6 +45,31 @@ func TestScheduleSemanticsAndUTCPreviews(t *testing.T) {
 				t.Fatalf("first run %v, want %v", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestPreviewUsesConfiguredTimezoneAcrossDST(t *testing.T) {
+	location, err := time.LoadLocation("Europe/Stockholm")
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, time.March, 27, 12, 0, 0, 0, time.UTC)
+	preview, err := PreviewSchedule("0 3 * * *", now, "Europe/Stockholm")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preview.Timezone != "Europe/Stockholm" {
+		t.Fatalf("timezone = %q", preview.Timezone)
+	}
+	first := time.Unix(preview.NextRuns[0], 0).In(location)
+	second := time.Unix(preview.NextRuns[1], 0).In(location)
+	if first.Hour() != 3 || second.Hour() != 3 {
+		t.Fatalf("local cron time shifted across DST: %v, %v", first, second)
+	}
+	_, firstOffset := first.Zone()
+	_, secondOffset := second.Zone()
+	if firstOffset == secondOffset {
+		t.Fatalf("test did not cross DST boundary: %v, %v", first, second)
 	}
 }
 
@@ -57,5 +82,8 @@ func TestParseScheduleRequiresFiveFields(t *testing.T) {
 	}
 	if _, err := scheduling.Parse("60 * * * *"); err == nil || !strings.Contains(err.Error(), "maximum (59)") {
 		t.Fatalf("expected clear minute validation error, got %v", err)
+	}
+	if _, err := scheduling.ParseInTimezone("0 3 * * *", "Not/A_Zone"); err == nil || !strings.Contains(err.Error(), "timezone") {
+		t.Fatalf("expected timezone validation error, got %v", err)
 	}
 }

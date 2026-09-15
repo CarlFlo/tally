@@ -86,6 +86,11 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
   expect(previewBox).not.toBeNull();
   expect(previewBox!.x).toBeGreaterThan(fieldsBox!.x + fieldsBox!.width);
   expect(Math.abs(previewBox!.y - fieldsBox!.y)).toBeLessThan(8);
+  const previewPanel = editor.locator(".schedule-preview");
+  await expect(previewPanel.getByText("Cron expression", { exact: true })).toHaveCount(0);
+  await expect(previewPanel.getByText("Timezone", { exact: true })).toHaveCount(0);
+  await expect(previewPanel).toContainText("Description");
+  await expect(previewPanel).toContainText("Next 3 runs · UTC");
 
   await page.setViewportSize({ width: 1000, height: 1000 });
   const stackedFieldsBox = await editor.locator(".schedule-fields").boundingBox();

@@ -1,10 +1,6 @@
 package jobs
 
-import (
-	"time"
-
-	"github.com/CarlFlo/mediaManager/internal/scheduling"
-)
+import "time"
 
 func (s *Service) finishSchedule(key, status string) {
 	s.mu.Lock()
@@ -20,8 +16,8 @@ func (s *Service) finishSchedule(key, status string) {
 	if s.DB.QueryRow("SELECT schedule,enabled,paused FROM jobs WHERE key=?", key).Scan(&spec, &enabled, &paused) == nil {
 		var next int64
 		if enabled && !paused {
-			if parsed, e := scheduling.Parse(spec); e == nil {
-				next = parsed.Next(time.Now().UTC()).Unix()
+			if nextRun, e := s.nextScheduledRun(spec, time.Now()); e == nil {
+				next = nextRun.Unix()
 			}
 		}
 		_, _ = s.DB.Exec("UPDATE jobs SET next_run=? WHERE key=?", next, key)

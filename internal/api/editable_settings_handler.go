@@ -21,7 +21,7 @@ func (s *Server) editableSettings(w http.ResponseWriter, r *http.Request, sessio
 		if e != nil {
 			return e
 		}
-		addSchedulePreviews(rows)
+		addSchedulePreviews(rows, s.Config.Timezone)
 		jsonResponse(w, 200, rows)
 		return nil
 	}

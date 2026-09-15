@@ -18,7 +18,7 @@ func (s *Server) schedulePreview(w http.ResponseWriter, r *http.Request, session
 	if err := decode(r, &input); err != nil {
 		return err
 	}
-	preview, err := jobs.PreviewSchedule(input.Schedule, time.Now().UTC())
+	preview, err := jobs.PreviewSchedule(input.Schedule, time.Now(), s.Config.Timezone)
 	if err != nil {
 		return bad(err.Error())
 	}

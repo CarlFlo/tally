@@ -8,7 +8,7 @@ import (
 	"github.com/CarlFlo/mediaManager/internal/scheduling"
 )
 
-func prepareStagedDatabase(ctx context.Context, dir string) error {
+func prepareStagedDatabase(ctx context.Context, dir, timezone string) error {
 	db, err := database.Open(ctx, dir)
 	if err != nil {
 		return err
@@ -42,13 +42,13 @@ func prepareStagedDatabase(ctx context.Context, dir string) error {
 		return err
 	}
 	for _, item := range saved {
-		parsed, parseErr := scheduling.Parse(item.spec)
+		parsed, parseErr := scheduling.ParseInTimezone(item.spec, timezone)
 		if parseErr != nil {
 			return parseErr
 		}
 		var next int64
 		if item.enabled && !item.paused {
-			next = parsed.Next(time.Now().UTC()).Unix()
+			next = parsed.Next(time.Now()).Unix()
 		}
 		if _, err = db.ExecContext(ctx, "UPDATE jobs SET next_run=? WHERE key=?", next, item.key); err != nil {
 			return err

@@ -6,10 +6,10 @@ import (
 	"github.com/CarlFlo/mediaManager/internal/jobs"
 )
 
-func addSchedulePreviews(rows []map[string]any) {
+func addSchedulePreviews(rows []map[string]any, timezone string) {
 	for _, row := range rows {
 		spec, _ := row["schedule"].(string)
-		preview, err := jobs.PreviewSchedule(spec, time.Now().UTC())
+		preview, err := jobs.PreviewSchedule(spec, time.Now(), timezone)
 		if err != nil {
 			continue
 		}

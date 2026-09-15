@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/CarlFlo/mediaManager/internal/activity"
-	"github.com/CarlFlo/mediaManager/internal/scheduling"
 	"github.com/CarlFlo/mediaManager/internal/settings"
 )
 
@@ -24,11 +23,10 @@ func (s *Service) SaveSchedule(ctx context.Context, in Schedule) error {
 	if len(in.Schedule) > 100 {
 		return fmt.Errorf("cron schedule is too long")
 	}
-	parsed, e := scheduling.Parse(in.Schedule)
+	next, e := s.nextScheduledRun(in.Schedule, time.Now())
 	if e != nil {
 		return e
 	}
-	next := parsed.Next(time.Now().UTC())
 	if next.IsZero() {
 		return fmt.Errorf("schedule has no next occurrence")
 	}
@@ -67,7 +65,8 @@ func (s *Service) SaveSchedule(ctx context.Context, in Schedule) error {
 			verb = "Disabled"
 		}
 	}
-	if e = activity.Record(ctx, tx, activity.Event{Action: "schedule_updated", Profile: "user0", Message: fmt.Sprintf("%s %s schedule (%s UTC)", verb, in.Key, in.Schedule)}); e != nil {
+	message := fmt.Sprintf("%s %s schedule (%s %s)", verb, in.Key, in.Schedule, s.scheduleTimezone())
+	if e = activity.Record(ctx, tx, activity.Event{Action: "schedule_updated", Profile: "user0", Message: message}); e != nil {
 		return e
 	}
 	return tx.Commit()
@@ -80,10 +79,10 @@ func (s *Service) Resume(ctx context.Context, key string) error {
 	if e := s.DB.QueryRowContext(ctx, "SELECT schedule FROM jobs WHERE key=?", key).Scan(&spec); e != nil {
 		return fmt.Errorf("unknown job")
 	}
-	parsed, e := scheduling.Parse(spec)
+	next, e := s.nextScheduledRun(spec, time.Now())
 	if e != nil {
 		return e
 	}
-	_, e = s.DB.ExecContext(ctx, "UPDATE jobs SET paused=0,failures=0,next_run=CASE WHEN enabled=1 THEN ? ELSE 0 END,revision=revision+1 WHERE key=?", parsed.Next(time.Now().UTC()).Unix(), key)
+	_, e = s.DB.ExecContext(ctx, "UPDATE jobs SET paused=0,failures=0,next_run=CASE WHEN enabled=1 THEN ? ELSE 0 END,revision=revision+1 WHERE key=?", next.Unix(), key)
 	return e
 }

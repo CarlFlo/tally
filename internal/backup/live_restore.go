@@ -49,7 +49,7 @@ func (s *Service) restoreLive(ctx context.Context, archive string) (Manifest, er
 	if err != nil {
 		return manifest, fmt.Errorf("validate backup: %w", err)
 	}
-	if err = prepareStagedDatabase(ctx, stage); err != nil {
+	if err = prepareStagedDatabase(ctx, stage, s.Timezone); err != nil {
 		return manifest, fmt.Errorf("prepare backup: %w", err)
 	}
 	created, err := installRestoredAvatars(stage, s.DataDir)

@@ -57,7 +57,7 @@ func Run(args []string) error {
 		return err
 	}
 	defer db.Close()
-	b := &backup.Service{DB: db, DataDir: c.DataDir, Path: filepath.Join(c.DataDir, "backups")}
+	b := &backup.Service{DB: db, DataDir: c.DataDir, Path: filepath.Join(c.DataDir, "backups"), Timezone: c.Timezone}
 	switch command {
 	case "link-identity":
 		return linkIdentity(ctx, db, args)

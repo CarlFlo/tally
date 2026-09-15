@@ -1,12 +1,8 @@
 package jobs
 
-import (
-	"time"
+import "time"
 
-	"github.com/CarlFlo/mediaManager/internal/scheduling"
-)
-
-// refreshScheduleTimes applies the same UTC parser to schedules saved by older versions.
+// refreshScheduleTimes reapplies the deployment timezone to persisted schedules.
 func (s *Service) refreshScheduleTimes() error {
 	rows, err := s.DB.QueryContext(s.ctx, "SELECT key,schedule,enabled,paused FROM jobs")
 	if err != nil {
@@ -35,11 +31,11 @@ func (s *Service) refreshScheduleTimes() error {
 	for _, saved := range schedules {
 		var next int64
 		if saved.enabled && !saved.paused {
-			parsed, parseErr := scheduling.Parse(saved.spec)
-			if parseErr != nil {
-				return parseErr
+			nextRun, nextErr := s.nextScheduledRun(saved.spec, time.Now())
+			if nextErr != nil {
+				return nextErr
 			}
-			next = parsed.Next(time.Now().UTC()).Unix()
+			next = nextRun.Unix()
 		}
 		if _, err = s.DB.ExecContext(s.ctx, "UPDATE jobs SET next_run=? WHERE key=?", next, saved.key); err != nil {
 			return err
