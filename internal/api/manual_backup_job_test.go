@@ -30,12 +30,14 @@ func TestManualBackupJobCompletesForGeneratedAdministrator(t *testing.T) {
 
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
-		var count int
-		if err := s.DB.QueryRow("SELECT COUNT(*) FROM backup_records WHERE kind='manual' AND verified=1").Scan(&count); err != nil {
+		archives, err := s.Backup.Archives(context.Background())
+		if err != nil {
 			t.Fatal(err)
 		}
-		if count > 0 {
-			return
+		for _, archive := range archives {
+			if archive.Kind == "manual" {
+				return
+			}
 		}
 		time.Sleep(25 * time.Millisecond)
 	}
