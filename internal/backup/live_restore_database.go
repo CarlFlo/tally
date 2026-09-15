@@ -48,6 +48,13 @@ func replaceDatabaseState(ctx context.Context, db *database.Store, stagedPath st
 	// Keep normal FK enforcement enabled and insert parents before children.
 	for _, table := range order {
 		name := quoteIdentifier(table)
+		if table == "profile_roles" {
+			// Inserting profiles fires the first-admin role trigger. Replace those
+			// generated rows with the exact role state from the staged backup.
+			if _, err = tx.ExecContext(ctx, "DELETE FROM main.profile_roles"); err != nil {
+				return err
+			}
+		}
 		if _, err = tx.ExecContext(ctx, "INSERT INTO main."+name+" SELECT * FROM restore."+name); err != nil {
 			return err
 		}
