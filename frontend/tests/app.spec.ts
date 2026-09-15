@@ -75,7 +75,7 @@ test("profile settings use browser history and signing out stays signed out with
   await page.goBack();
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.locator(".app-shell")).toHaveCount(0);
-  await page.getByRole("button", { name: "M My profile" }).click();
+  await page.getByRole("button", { name: "MY My profile" }).click();
   await expect(page).toHaveURL(/\/calendar$/);
   await expect(
     page.getByRole("heading", { name: "Your calendar." }),
@@ -211,7 +211,7 @@ test("library, calendar, episode state, profiles, jobs and responsive layout", a
   await openProfile(page);
   await signOut(page);
   await expect(page).toHaveURL(/\/login$/);
-  await page.getByRole("button", { name: "A Alex" }).click();
+  await page.getByRole("button", { name: "AL Alex" }).click();
   await expect(
     page.getByRole("heading", { name: "Your calendar." }),
   ).toBeVisible();
@@ -224,7 +224,7 @@ test("library, calendar, episode state, profiles, jobs and responsive layout", a
     "Alex",
   );
   await signOut(page);
-  await page.getByRole("button", { name: "M My profile" }).click();
+  await page.getByRole("button", { name: "MY My profile" }).click();
   await expect(page.locator(".agenda-episode").first()).toBeVisible();
   await openProfileMenu(page);
   await page.getByRole("link", { name: "System", exact: true }).click();
