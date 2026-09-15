@@ -13,7 +13,7 @@ func TestVersionOneUpgradePreservesDataAndSnapshot(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if _, e = raw.Exec(schema + "\nPRAGMA user_version=1; UPDATE profiles SET display_name='Keep this profile' WHERE id='user0'; INSERT INTO profile_preferences VALUES('user0','{\"theme\":\"light\"}')"); e != nil {
+	if _, e = raw.Exec(schema + "\nPRAGMA user_version=1; INSERT INTO profiles VALUES('user0','Keep this profile','violet',1); INSERT INTO profile_preferences VALUES('user0','{\"theme\":\"light\"}')"); e != nil {
 		t.Fatal(e)
 	}
 	raw.Close()
@@ -22,9 +22,13 @@ func TestVersionOneUpgradePreservesDataAndSnapshot(t *testing.T) {
 		t.Fatal(e)
 	}
 	defer upgraded.Close()
-	var name, prefs string
-	if e = upgraded.QueryRow("SELECT display_name,data FROM profiles JOIN profile_preferences ON profile_id=id WHERE id='user0'").Scan(&name, &prefs); e != nil || name != "Keep this profile" || prefs != "{\"theme\":\"light\"}" {
-		t.Fatal("upgrade lost personal state", e)
+	var id, name, prefs string
+	if e = upgraded.QueryRow("SELECT p.id,p.display_name,pp.data FROM profiles p JOIN profile_preferences pp ON pp.profile_id=p.id WHERE p.display_name='Keep this profile'").Scan(&id, &name, &prefs); e != nil || name != "Keep this profile" || prefs != "{\"theme\":\"light\"}" || id == "user0" {
+		t.Fatal("upgrade lost or failed to migrate personal state", id, e)
+	}
+	var alias string
+	if e = upgraded.QueryRow("SELECT profile_id FROM profile_id_aliases WHERE alias='user0'").Scan(&alias); e != nil || alias != id {
+		t.Fatal("legacy profile alias was not preserved", alias, e)
 	}
 	var version, count int
 	_ = upgraded.QueryRow("PRAGMA user_version").Scan(&version)
