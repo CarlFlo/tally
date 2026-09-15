@@ -80,13 +80,29 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
   await expect(profileDelete).toContainText("Delete");
   await expect(profileDelete).toHaveClass(/button/);
   await expect(profileDelete).toHaveClass(/danger/);
-  await page.request.delete(`/api/profiles/${profileFixture.id}`, { headers });
+  await page.locator("html").evaluate((element) => {
+    element.dataset.profileDeletePageMarker = "stable";
+  });
+  await profileDelete.click();
+  await expect(
+    page.getByRole("dialog", { name: "Delete Delete style fixture?" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Confirm", exact: true }).click();
+  await expect(page).toHaveURL(/\/settings\/profiles$/);
   await expect(page.locator(".profile-settings-list")).not.toContainText(
-    /user\d+/,
+    "Delete style fixture",
+  );
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-profile-delete-page-marker",
+    "stable",
   );
   await expect(page.locator(".profile-settings-list")).toContainText(
     "admin · Current profile",
   );
+  const profileStillExists = (
+    await (await page.request.get("/api/bootstrap")).json()
+  ).profiles.some((profile: any) => profile.id === profileFixture.id);
+  expect(profileStillExists).toBe(false);
   await expect(page.locator(".sidebar").getByRole("link")).toHaveCount(4);
   await expect(page.locator(".footer")).toContainText(
     "Tally · Your little TV universe",
