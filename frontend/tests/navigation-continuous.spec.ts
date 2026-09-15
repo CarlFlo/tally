@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { openProfileMenu } from "./navigation";
+import { openProfileMenu, selectProfileByName } from "./navigation";
 
 async function section(page: Page, name: string) {
   await openProfileMenu(page);
@@ -10,9 +10,7 @@ test("continuous pointer navigation stays responsive without reloading", async (
   test.setTimeout(180_000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.request.post("/api/profiles/select", {
-    headers: { "X-Tally-CSRF": "1" }, data: { profile: "user0" },
-  });
+  await selectProfileByName(page, "My profile");
   await page.setViewportSize({ width: 1100, height: 740 });
   await page.goto("/settings");
   await expect(page.locator(".schedule-editor")).toHaveCount(3);

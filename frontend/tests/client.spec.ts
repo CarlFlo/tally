@@ -1,14 +1,12 @@
 import { test, expect } from "@playwright/test";
+import { selectProfileByName } from "./navigation";
 
 test("configure, test, save and use a shared torrent client with visible API key controls and protected general APIs", async ({
   page,
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.request.post("/api/profiles/select", {
-    headers: { "X-Tally-CSRF": "1" },
-    data: { profile: "user0" },
-  });
+  await selectProfileByName(page, "My profile");
   const initial = await (await page.request.get("/api/downloader")).json();
   const clientURL = initial.settings.fields.url;
   await page.goto("/settings/torrent");

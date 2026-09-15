@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { selectProfileByName } from "./navigation";
 
 test("discovery focus, inside clicks, queued add/undo, retry notice, favorites and episode toggles", async ({
   page,
@@ -6,10 +7,7 @@ test("discovery focus, inside clicks, queued add/undo, retry notice, favorites a
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   const headers = { "X-Tally-CSRF": "1" };
-  await page.request.post("/api/profiles/select", {
-    headers,
-    data: { profile: "user0" },
-  });
+  await selectProfileByName(page, "My profile");
   const candidates = [70, 71, 72, 73].map((id) => ({
     show: {
       id,
@@ -208,10 +206,7 @@ test("settings categories persist connections, schedules, debug previews and sta
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   const headers = { "X-Tally-CSRF": "1" };
-  await page.request.post("/api/profiles/select", {
-    headers,
-    data: { profile: "user0" },
-  });
+  await selectProfileByName(page, "My profile");
   const deploymentSettings = await (await page.request.get("/api/settings")).json();
   const notificationSettings = await (
     await page.request.get("/api/settings/notifications")

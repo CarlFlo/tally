@@ -1,9 +1,8 @@
 import { test, expect } from "@playwright/test";
+import { selectProfileByName } from "./navigation";
 
 test("abandoned connection tests cannot disable or overwrite the next tab", async ({ page }) => {
-  await page.request.post("/api/profiles/select", {
-    headers: { "X-Tally-CSRF": "1" }, data: { profile: "user0" },
-  });
+  await selectProfileByName(page, "My profile");
   let release!: () => void;
   const gate = new Promise<void>((resolve) => { release = resolve; });
   await page.route("**/api/settings/search/test", async (route) => {
@@ -28,9 +27,7 @@ test("abandoned connection tests cannot disable or overwrite the next tab", asyn
 });
 
 test("leaving a tab aborts its pending request and a later mount still loads", async ({ page }) => {
-  await page.request.post("/api/profiles/select", {
-    headers: { "X-Tally-CSRF": "1" }, data: { profile: "user0" },
-  });
+  await selectProfileByName(page, "My profile");
   let release!: () => void;
   const gate = new Promise<void>((resolve) => { release = resolve; });
   let held = false;

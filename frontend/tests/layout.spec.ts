@@ -1,12 +1,10 @@
 import { test, expect } from "@playwright/test";
+import { selectProfileByName } from "./navigation";
 
 test("shared page headers align and scrollbars do not move content", async ({
   page,
 }) => {
-  await page.request.post("/api/profiles/select", {
-    headers: { "X-Tally-CSRF": "1" },
-    data: { profile: "user0" },
-  });
+  await selectProfileByName(page, "My profile");
   for (const width of [2400, 1440, 390]) {
     await page.setViewportSize({ width, height: 1000 });
     let left: number | undefined;
@@ -37,10 +35,7 @@ test("shared page headers align and scrollbars do not move content", async ({
 });
 
 test("header remains visible while scrolling", async ({ page }) => {
-  await page.request.post("/api/profiles/select", {
-    headers: { "X-Tally-CSRF": "1" },
-    data: { profile: "user0" },
-  });
+  await selectProfileByName(page, "My profile");
   await page.goto("/system/logs");
   const header = page.locator(".topbar");
   await expect(header).toBeVisible();

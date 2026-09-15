@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { selectProfileByName } from "./navigation";
 
 test("200 route changes remain interactive with bounded resources and no cooldown", async ({ page }) => {
   test.setTimeout(180_000);
@@ -30,9 +31,7 @@ test("200 route changes remain interactive with bounded resources and no cooldow
     }) as typeof interval;
     window.clearInterval = (id) => { state.intervals.delete(id!); clear(id); };
   });
-  await page.request.post("/api/profiles/select", {
-    headers: { "X-Tally-CSRF": "1" }, data: { profile: "user0" },
-  });
+  await selectProfileByName(page, "My profile");
   await page.goto("/settings");
   await expect(page.locator(".schedule-editor")).toHaveCount(3);
   const original = await page.evaluateHandle(() => document);

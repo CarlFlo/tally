@@ -1,10 +1,9 @@
 import { test, expect } from "@playwright/test";
+import { selectProfileByName } from "./navigation";
 
 test("populated System pages remain responsive across rapid navigation", async ({ page }) => {
   test.setTimeout(120_000);
-  await page.request.post("/api/profiles/select", {
-    headers: { "X-Tally-CSRF": "1" }, data: { profile: "user0" },
-  });
+  await selectProfileByName(page, "My profile");
   await page.addInitScript(() => {
     const original = Intl.DateTimeFormat;
     (window as any).formatterCount = 0;

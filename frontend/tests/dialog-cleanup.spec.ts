@@ -1,9 +1,8 @@
 import { test, expect } from "@playwright/test";
+import { selectProfileByName } from "./navigation";
 
 test("navigation closes the actual modal element before discarding it", async ({ page }) => {
-  await page.request.post("/api/profiles/select", {
-    headers: { "X-Tally-CSRF": "1" }, data: { profile: "user0" },
-  });
+  await selectProfileByName(page, "My profile");
   await page.goto("/calendar");
   await page.locator('.sidebar nav a[href="/shows"]').click();
   await page.getByRole("button", { name: "Add show", exact: true }).click();
