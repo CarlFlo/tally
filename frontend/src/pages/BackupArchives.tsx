@@ -30,12 +30,29 @@ export function BackupArchives() {
   });
   const rows = archives.data?.records || [];
 
+  async function waitForBackupJob(id: string) {
+    const deadline = Date.now() + 60_000;
+    while (Date.now() < deadline) {
+      const jobs = await api<any>("/jobs?kind=backup&status=all");
+      const run = jobs.runs?.find((item: any) => item.id === id);
+      if (run && run.status !== "running") {
+        if (run.status !== "success")
+          throw new Error(run.error || "Backup could not be completed");
+        return;
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 500));
+    }
+    throw new Error("Backup is still running. Check Jobs for its status.");
+  }
+
   async function create() {
     setBusy(true);
     try {
-      await api("/backups", "POST", {});
-      notify("Backup started. The archive will appear here when ready.");
-      await invalidateResources(cache, ["backups"]);
+      const started = await api<{ id: string }>("/backups", "POST", {});
+      notify("Backup started.");
+      await waitForBackupJob(started.id);
+      await invalidateResources(cache, ["backups", "jobs"]);
+      notify("Backup created");
     } catch (error) {
       notify((error as Error).message, true);
     } finally {
