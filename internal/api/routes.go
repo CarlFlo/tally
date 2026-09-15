@@ -32,6 +32,8 @@ func (s *Server) Handler() http.Handler {
 		{"GET /api/capabilities", s.capabilities, false},
 		{"GET /api/backups", s.backups, false},
 		{"GET /api/backups/{id}/download", s.downloadBackup, false},
+		{"POST /api/backups/{id}/restore", s.restoreBackup, false},
+		{"DELETE /api/backups/{id}", s.deleteBackup, false},
 		{"GET /api/inbox", s.inbox, false},
 		{"POST /api/inbox/{action}", s.markInbox, false},
 		{"DELETE /api/inbox/{id}", s.dismissInbox, false},

@@ -38,7 +38,7 @@ func serve(ctx context.Context, c config.Config, db *database.Store, b *backup.S
 	if e = j.Start(); e != nil {
 		return e
 	}
-	s := &api.Server{DB: db, Config: c, Auth: a, OIDC: auth.NewOIDC(a, p), Metadata: m, Control: p, Jobs: j, Events: hub, Clients: clients, Assets: web.Assets()}
+	s := &api.Server{DB: db, Backup: b, Config: c, Auth: a, OIDC: auth.NewOIDC(a, p), Metadata: m, Control: p, Jobs: j, Events: hub, Clients: clients, Assets: web.Assets()}
 	server := &http.Server{Addr: c.Addr, Handler: s.Handler(), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 20 * time.Second, WriteTimeout: 120 * time.Second, IdleTimeout: 90 * time.Second, MaxHeaderBytes: 32 << 10}
 	errors := make(chan error, 1)
 	go func() {

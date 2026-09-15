@@ -40,7 +40,7 @@ export function BackupRetention({ saved }: { saved: any }) {
     <form className="panel settings-card compact-retention" onSubmit={save}>
       <h3>Retention</h3>
       <p className="muted">
-        Older automatic backups are removed after the next successful backup.
+        Older automatic backups are removed <strong>after</strong> the next successful backup.{" "}
         Manual backups are kept until you remove them.
       </p>
       <div className="schedule-fields">

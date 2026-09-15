@@ -11,6 +11,8 @@ import (
 )
 
 func (s *Service) Create(ctx context.Context, kind string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if e := os.MkdirAll(s.Path, 0700); e != nil {
 		return "", e
 	}

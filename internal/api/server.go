@@ -4,6 +4,7 @@ import (
 	"io/fs"
 
 	"github.com/CarlFlo/mediaManager/internal/auth"
+	"github.com/CarlFlo/mediaManager/internal/backup"
 	"github.com/CarlFlo/mediaManager/internal/config"
 	"github.com/CarlFlo/mediaManager/internal/database"
 	"github.com/CarlFlo/mediaManager/internal/jobs"
@@ -15,6 +16,7 @@ import (
 
 type Server struct {
 	DB         *database.Store
+	Backup     *backup.Service
 	Config     config.Config
 	Auth       *auth.Service
 	OIDC       *auth.OIDC

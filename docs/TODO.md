@@ -18,7 +18,7 @@ Blockers: none.
 - [x] Subtle favorite/star animation and centered detail star.
 - [x] Compact schedules, immediate toggles, logged changes, hourly metadata default.
 - [x] Animated three-mode login appearance, Add profile, first-use password setup, simplified password policy.
-- [x] UI backup controls, fixed internal backup path, archive downloads, visible failures.
+- [x] UI backup controls, fixed internal backup path, archive downloads, in-app restore/delete, version visibility, and visible failures.
 - [x] Schema/backup/access/onboarding tests, full verification, documentation, and local deployment.
 
 ## Refactor acceptance criteria
@@ -96,7 +96,7 @@ Remote calls use one coordinator, including integrations. No automatic torrent s
 - Current native and Docker builds pass; Linux tests run during the image build. Local readiness, schema 3, private database permissions, pre-upgrade snapshot, 12 routes, current assets, retained profiles, and general API secret redaction are verified.
 - No personal qBittorrent, Torznab, or webhook connection was tested or modified during verification.
 - OIDC has fixture coverage; operators must verify their real identity-provider configuration.
-- Backup downloads require the administrator. Restore and deletion remain offline operator commands; archives include durable connection credentials.
+- Backup download, restore, and deletion require the administrator. Web restore validates and migrates in staging, applies durable SQLite state transactionally without a process restart, and preserves the current archive inventory; archives include durable connection credentials.
 - DEFERRED as specified: additional downloader adapters. No movies, playback, automatic downloads, scanning/renaming, or torrent lifecycle management.
 
 Features are DONE only after their meaningful failure paths and acceptance checks are implemented.
@@ -119,3 +119,5 @@ Features are DONE only after their meaningful failure paths and acceptance check
 # Completed: Matched Jackett search helper text spacing to the torrent client settings fields.
 # Completed: Moved the executable entrypoint to the repository-root main.go and grouped command/deployment operations under internal/commands; build and run documentation now use the root package.
 # Completed: Removed legacy environment-variable migration and obsolete environment references; UI-managed settings now seed from SQLite defaults only.
+
+# Completed: Backup archives now expose Manual/Automatic type and source Tally/schema versions, support confirmed in-app restore and deletion, preserve current state on failed restore, migrate compatible older backups in staging, and apply restored SQLite state without restarting Tally.

@@ -7,11 +7,18 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/CarlFlo/mediaManager/internal/appversion"
 	"github.com/CarlFlo/mediaManager/internal/database"
 )
 
 func (s *Service) snapshotFiles(ctx context.Context, snapshot string) (Manifest, map[string]string, error) {
-	manifest := Manifest{1, database.Version, time.Now().UTC().Format(time.RFC3339), map[string]string{}}
+	manifest := Manifest{
+		Format:     1,
+		Schema:     database.Version,
+		AppVersion: appversion.Version,
+		Created:    time.Now().UTC().Format(time.RFC3339),
+		Files:      map[string]string{},
+	}
 	files := map[string]string{"app.db": snapshot}
 	avatarDB, e := sql.Open("sqlite", filepath.ToSlash(snapshot))
 	if e != nil {
