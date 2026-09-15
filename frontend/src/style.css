@@ -2497,6 +2497,13 @@ td .table-error {
   font-size: 10px;
   color: var(--dim);
 }
+.profile-role-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
 .backup-row {
   display: flex;
   align-items: center;
