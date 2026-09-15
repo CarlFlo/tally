@@ -52,10 +52,10 @@ func (s *Service) deliver(ctx context.Context, now time.Time) error {
 		}
 	}
 	if statsChanged {
-		s.changedProfile("user0", "statistics")
+		s.changedProfile("", "statistics")
 	}
 	if adminActivityChanged {
-		s.changedProfile("user0", "logs", "inbox")
+		s.changedProfile("", "logs", "inbox")
 	}
 	return nil
 }

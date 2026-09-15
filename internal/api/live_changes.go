@@ -18,8 +18,10 @@ func update(profile string, resources ...string) liveUpdate {
 
 func profileAndAdmin(profile string, profileResources []string, adminResources ...string) []liveUpdate {
 	updates := []liveUpdate{update(profile, profileResources...)}
-	if profile != "user0" && len(adminResources) > 0 {
-		updates = append(updates, update("user0", adminResources...))
+	if len(adminResources) > 0 {
+		// Administrator membership is dynamic, so shared admin-facing resources
+		// are invalidated globally and authorization still filters the data.
+		updates = append(updates, update("", adminResources...))
 	}
 	return updates
 }

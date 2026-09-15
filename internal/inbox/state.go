@@ -5,11 +5,11 @@ import (
 	"fmt"
 )
 
-func (s Store) Mark(ctx context.Context, profile string, through int64, clear bool) error {
+func (s Store) Mark(ctx context.Context, profile string, admin bool, through int64, clear bool) error {
 	if through < 0 {
 		return fmt.Errorf("invalid notification marker")
 	}
-	scope, args := visibility(profile)
+	scope, args := visibility(profile, admin)
 	var latest int64
 	if err := s.DB.QueryRowContext(ctx, "SELECT COALESCE(MAX(l.id),0) FROM activity_log l WHERE "+scope, args...).Scan(&latest); err != nil {
 		return err
@@ -25,8 +25,8 @@ func (s Store) Mark(ctx context.Context, profile string, through int64, clear bo
 	return err
 }
 
-func (s Store) Dismiss(ctx context.Context, profile string, id int64) error {
-	scope, args := visibility(profile)
+func (s Store) Dismiss(ctx context.Context, profile string, admin bool, id int64) error {
+	scope, args := visibility(profile, admin)
 	result, err := s.DB.ExecContext(ctx, "INSERT INTO inbox_dismissals(profile_id,activity_id) SELECT ?,l.id FROM activity_log l WHERE l.id=? AND "+scope+" ON CONFLICT DO NOTHING", append([]any{profile, id}, args...)...)
 	if err != nil {
 		return err

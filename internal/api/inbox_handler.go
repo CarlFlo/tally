@@ -8,7 +8,7 @@ import (
 )
 
 func (s *Server) inbox(w http.ResponseWriter, r *http.Request, session auth.Session) error {
-	result, err := (inbox.Store{DB: s.DB}).List(r.Context(), session.Profile)
+	result, err := (inbox.Store{DB: s.DB}).List(r.Context(), session.Profile, session.Admin)
 	if err != nil {
 		return err
 	}
@@ -29,7 +29,7 @@ func (s *Server) markInbox(w http.ResponseWriter, r *http.Request, session auth.
 	if in.Through < 0 {
 		return bad("invalid notification marker")
 	}
-	if err := (inbox.Store{DB: s.DB}).Mark(r.Context(), session.Profile, in.Through, r.PathValue("action") == "clear"); err != nil {
+	if err := (inbox.Store{DB: s.DB}).Mark(r.Context(), session.Profile, session.Admin, in.Through, r.PathValue("action") == "clear"); err != nil {
 		return err
 	}
 	jsonResponse(w, 200, map[string]bool{"ok": true})
@@ -41,7 +41,7 @@ func (s *Server) dismissInbox(w http.ResponseWriter, r *http.Request, session au
 	if err != nil || id < 1 {
 		return bad("invalid notification")
 	}
-	if err = (inbox.Store{DB: s.DB}).Dismiss(r.Context(), session.Profile, id); err != nil {
+	if err = (inbox.Store{DB: s.DB}).Dismiss(r.Context(), session.Profile, session.Admin, id); err != nil {
 		return err
 	}
 	jsonResponse(w, 200, map[string]bool{"ok": true})

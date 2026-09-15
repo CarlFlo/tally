@@ -9,7 +9,7 @@ import (
 	"github.com/CarlFlo/mediaManager/internal/backup"
 )
 
-func (s *Server) restoreBackup(w http.ResponseWriter, r *http.Request, _ auth.Session) error {
+func (s *Server) restoreBackup(w http.ResponseWriter, r *http.Request, session auth.Session) error {
 	if s.Backup == nil {
 		return apiError{500, "backup service is unavailable"}
 	}
@@ -22,9 +22,9 @@ func (s *Server) restoreBackup(w http.ResponseWriter, r *http.Request, _ auth.Se
 	}
 	if err != nil {
 		message := "backup: restore failed: " + err.Error()
-		_ = activity.Record(r.Context(), s.DB, activity.Event{Action: "job_failed", Profile: "user0", Message: message})
+		_ = activity.Record(r.Context(), s.DB, activity.Event{Action: "job_failed", Profile: session.Profile, Message: message})
 		if s.Events != nil {
-			s.Events.Publish("user0", "logs", "inbox")
+			s.Events.Publish("", "logs", "inbox")
 		}
 		return apiError{409, "backup restore failed: " + err.Error()}
 	}

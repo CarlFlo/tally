@@ -13,15 +13,15 @@ type Page struct {
 	Latest  int64            `json:"latest_id"`
 }
 
-func visibility(profile string) (string, []any) {
-	if profile == "user0" {
+func visibility(profile string, admin bool) (string, []any) {
+	if admin {
 		return "1=1", nil
 	}
 	return "l.profile_id=?", []any{profile}
 }
 
-func (s Store) List(ctx context.Context, profile string) (Page, error) {
-	scope, args := visibility(profile)
+func (s Store) List(ctx context.Context, profile string, admin bool) (Page, error) {
+	scope, args := visibility(profile, admin)
 	base := ` FROM activity_log l WHERE ` + scope + ` AND ` + categoryFilter(s.categories(ctx, profile))
 	unread := base + ` AND l.id>COALESCE((SELECT MAX(seen_id,cleared_id) FROM inbox_state WHERE profile_id=?),0) AND NOT EXISTS(SELECT 1 FROM inbox_dismissals d WHERE d.profile_id=? AND d.activity_id=l.id)`
 	var page Page

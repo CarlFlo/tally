@@ -22,7 +22,7 @@ func (s *Server) logs(w http.ResponseWriter, r *http.Request, session auth.Sessi
 		return bad("invalid page")
 	}
 	where, args := " WHERE 1=1", []any{}
-	if session.Profile != "user0" {
+	if !session.Admin {
 		where += " AND l.profile_id=?"
 		args = append(args, session.Profile)
 	}
@@ -44,7 +44,7 @@ func (s *Server) logs(w http.ResponseWriter, r *http.Request, session auth.Sessi
 		return err
 	}
 	actionQuery, actionArgs := "SELECT DISTINCT action FROM activity_log", []any{}
-	if session.Profile != "user0" {
+	if !session.Admin {
 		actionQuery += " WHERE profile_id=?"
 		actionArgs = append(actionArgs, session.Profile)
 	}
