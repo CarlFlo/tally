@@ -132,3 +132,5 @@ Features are DONE only after their meaningful failure paths and acceptance check
 
 
 # Completed 2026-09-15: Profile/permissions refactor complete. Sequential `userN` identities were replaced by opaque generated IDs and explicit administrator roles. No account is permanent; the first profile in an empty deployment becomes admin, admin rights are transferable, and the backend/database prevent existing profiles from being left without an administrator. Local-auth admin demotion/deletion requires the acting administrator's own password. Profile access changes are logged and available as one notification subscription. Profile avatars support validated HTML colors and two-character initials.
+
+# Completed 2026-09-15: Backup archive inventory is filesystem-backed. Any regular `.zip` placed directly in the `backups` directory is discovered without a database record; archives are validated before restore, imported filenames are labelled separately, and download/delete/automatic retention operate on the filesystem inventory.
