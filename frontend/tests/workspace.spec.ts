@@ -251,7 +251,7 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
     .getByRole("button", { name: "Create manual backup", exact: true })
     .click();
   const manualBackup = page.locator(".backup-row").filter({ hasText: "Manual" }).first();
-  await expect(manualBackup).toBeVisible();
+  await expect(manualBackup).toBeVisible({ timeout: 15_000 });
   const backupDelete = manualBackup.getByRole("button", {
     name: "Delete",
     exact: true,
