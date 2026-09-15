@@ -85,13 +85,6 @@ function App() {
   const notify = (message: string, error = false, retry?: () => void) =>
     setToast({ message, error, retry });
   useEffect(() => {
-    if (toast) {
-      if (toast.retry) return;
-      const timer = setTimeout(() => setToast(null), 4500);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
-  useEffect(() => {
     setMobile(false);
     setAdd(false);
   }, [location.key]);

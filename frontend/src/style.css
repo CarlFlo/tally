@@ -1526,6 +1526,33 @@ code {
   max-width: calc(100vw - 30px);
   font-size: 12px;
   min-width: 200px;
+  opacity: 1;
+  animation: toast-enter 160ms ease-out;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+.toast.is-leaving {
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  pointer-events: none;
+  animation: none;
+}
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+    transition: none;
+  }
 }
 .toast > svg {
   color: var(--mint);

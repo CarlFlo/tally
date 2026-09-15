@@ -250,11 +250,16 @@ test("settings categories persist connections, schedules, debug previews and sta
   await page
     .getByRole("button", { name: "Save settings", exact: true })
     .click();
-  await expect(page.getByRole("status")).toContainText(
-    "Notification settings saved",
-  );
+  const savedNotice = page.getByRole("status");
+  await expect(savedNotice).toContainText("Notification settings saved");
+  await savedNotice.getByRole("button", { name: "Dismiss notification" }).click();
+  await expect(savedNotice).toHaveClass(/is-leaving/);
+  await expect(savedNotice).toHaveCount(0, { timeout: 1000 });
+
   await page.getByRole("switch", { name: "Enable all notifications" }).check();
-  await expect(page.getByRole("status")).toContainText("Notifications enabled");
+  const enabledNotice = page.getByRole("status");
+  await expect(enabledNotice).toContainText("Notifications enabled");
+  await expect(enabledNotice).toHaveCount(0, { timeout: 3000 });
   await page.reload();
   await expect(
     page.getByRole("switch", { name: "Enable all notifications" }),
