@@ -289,7 +289,7 @@ test("settings categories persist connections, schedules, debug previews and sta
       return boot.preferences.debug_mode;
     })
     .toBe(true);
-  await page.goto("/jobs");
+  await page.goto("/system/jobs");
   await expect(
     page.getByRole("button", { name: "Preview paused", exact: true }),
   ).toBeVisible();
