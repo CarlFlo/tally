@@ -15,7 +15,7 @@ FROM jobs j ORDER BY key`)
 	if e != nil {
 		return e
 	}
-	addSchedulePreviews(schedule)
+	addSchedulePreviews(schedule, s.Config.Timezone)
 	kind, status := r.URL.Query().Get("kind"), r.URL.Query().Get("status")
 	if kind != "" && kind != "all" && kind != "metadata" && kind != "maintenance" && kind != "backup" {
 		return bad("invalid job filter")
