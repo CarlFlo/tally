@@ -55,9 +55,7 @@ func (s *Service) collectBellReleases(ctx context.Context, now time.Time) error 
 	}
 	for profile := range changedProfiles {
 		s.changedProfile(profile, "logs", "inbox")
-		if profile != "user0" {
-			s.changedProfile("user0", "logs", "inbox")
-		}
+		s.changedProfile("", "logs", "inbox")
 	}
 	return nil
 }
