@@ -1,5 +1,5 @@
 import { Clock3, Star } from "lucide-react";
-import type { ReactNode } from "react";
+import type { CSSProperties } from "react";
 import {
   episodeCode,
   episodeDay,
@@ -15,13 +15,13 @@ export function CalendarHorizon({
   prefs,
   today,
   select,
-  overview,
+  maxHeight,
 }: {
   episodes: Episode[];
   prefs: Prefs;
   today: string;
   select: (episode: Episode) => void;
-  overview: ReactNode;
+  maxHeight?: number;
 }) {
   const now = useNow();
   const days = new Map<string, Episode[]>();
@@ -31,16 +31,26 @@ export function CalendarHorizon({
   }
   const sortedDays = [...days.entries()].sort(([a], [b]) => a.localeCompare(b));
   return (
-    <aside className="calendar-rail">
-      {overview}
-      <section className="rail-section">
+    <aside
+      className="calendar-rail"
+      style={
+        maxHeight
+          ? ({ "--calendar-rail-height": `${maxHeight}px` } as CSSProperties)
+          : undefined
+      }
+    >
+      <section className="rail-section horizon-section">
         <div className="section-heading">
           <h3>On the horizon</h3>
           <span className="tiny-label">NEXT UP</span>
         </div>
         {episodes.length ? (
-          sortedDays.map(([day, entries], index) => (
-              <section className={`horizon-day${index === sortedDays.length - 1 ? " horizon-day-last" : ""}`} key={day}>
+          <div className="horizon-scroll">
+            {sortedDays.map(([day, entries], index) => (
+              <section
+                className={`horizon-day${index === sortedDays.length - 1 ? " horizon-day-last" : ""}`}
+                key={day}
+              >
                 <h4 className="tiny-label">
                   {day === today
                     ? "TODAY"
@@ -84,7 +94,8 @@ export function CalendarHorizon({
                   </button>
                 ))}
               </section>
-            ))
+            ))}
+          </div>
         ) : (
           <div className="rail-empty">
             <div className="orbit-art">
