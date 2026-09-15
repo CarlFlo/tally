@@ -44,6 +44,7 @@ import { JackettSettings } from "./JackettSettings";
 import { DownloaderSettings } from "./DownloaderSettings";
 import { NotificationSettings } from "./NotificationSettings";
 import { invalidateResources } from "../queryInvalidation";
+import { queryKeys } from "../queryKeys";
 
 export { JobsPage } from "./Jobs";
 
@@ -804,9 +805,24 @@ export function SettingsPage({
           message="This permanently removes this profile, preferences, follows, and episode progress. Other profiles keep their data."
           onClose={() => setDeleting(null)}
           onConfirm={async () => {
-            await api("/profiles/" + deleting.id, "DELETE");
-            resetSession();
-            notify("Profile deleted");
+            const deletedProfileId = deleting.id;
+            await api("/profiles/" + deletedProfileId, "DELETE");
+            if (deletedProfileId === boot.profile?.id) {
+              resetSession();
+              return;
+            }
+            cache.setQueryData(
+              queryKeys.bootstrap(),
+              (current: typeof boot | undefined) =>
+                current
+                  ? {
+                      ...current,
+                      profiles: current.profiles.filter(
+                        (profile) => profile.id !== deletedProfileId,
+                      ),
+                    }
+                  : current,
+            );
           }}
         />
       )}
