@@ -14,6 +14,7 @@ import (
 
 	"github.com/CarlFlo/mediaManager/internal/auth"
 	"github.com/CarlFlo/mediaManager/internal/backup"
+	"github.com/CarlFlo/mediaManager/internal/database"
 	"github.com/CarlFlo/mediaManager/internal/jobs"
 	"github.com/CarlFlo/mediaManager/internal/metadata"
 	"github.com/CarlFlo/mediaManager/internal/settings"
