@@ -72,6 +72,9 @@ func serve(ctx context.Context, c config.Config, db *database.Store, b *backup.S
 	slog.Info("Shutdown: stopping background jobs")
 	j.Stop(shutdown)
 
+	slog.Info("Shutdown: closing live connections")
+	hub.Close()
+
 	slog.Info("Shutdown: draining HTTP connections")
 	if err := server.Shutdown(shutdown); err != nil {
 		slog.Warn("Shutdown: HTTP drain did not finish; forcing close", "error", err)
