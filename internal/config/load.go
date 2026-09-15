@@ -19,15 +19,15 @@ func Load() (Config, error) {
 		return fallback
 	}
 	i := func(key string, fallback, min, max int) int {
-		v, e := strconv.Atoi(s(key, strconv.Itoa(fallback)))
-		if e != nil || v < min || v > max {
+		v, err := strconv.Atoi(s(key, strconv.Itoa(fallback)))
+		if err != nil || v < min || v > max {
 			errors = append(errors, fmt.Sprintf("%s must be %d–%d", key, min, max))
 		}
 		return v
 	}
 	b := func(key string, fallback bool) bool {
-		v, e := strconv.ParseBool(s(key, strconv.FormatBool(fallback)))
-		if e != nil {
+		v, err := strconv.ParseBool(s(key, strconv.FormatBool(fallback)))
+		if err != nil {
 			errors = append(errors, key+" must be true or false")
 		}
 		return v
@@ -35,13 +35,13 @@ func Load() (Config, error) {
 	d := func(key, fallback string) time.Duration {
 		raw := s(key, fallback)
 		if strings.HasSuffix(raw, "d") {
-			n, e := strconv.Atoi(strings.TrimSuffix(raw, "d"))
-			if e == nil {
+			n, err := strconv.Atoi(strings.TrimSuffix(raw, "d"))
+			if err == nil {
 				raw = strconv.Itoa(n*24) + "h"
 			}
 		}
-		v, e := time.ParseDuration(raw)
-		if e != nil || v <= 0 {
+		v, err := time.ParseDuration(raw)
+		if err != nil || v <= 0 {
 			errors = append(errors, key+" must be a positive duration")
 		}
 		return v
@@ -54,7 +54,7 @@ func Load() (Config, error) {
 	c.Language = s("APP_LANGUAGE", "en")
 	c.Theme = s("APP_THEME_DEFAULT", "system")
 	c.MaxProfiles = i("APP_MAX_PROFILES", 8, 1, 100)
-	c.PasswordMin = i("LOCAL_PASSWORD_MIN_LENGTH", 4, 1, 128)
+	c.PasswordMin = i("LOCAL_PASSWORD_MIN_LENGTH", 6, 1, 128)
 	c.PasswordMax = i("LOCAL_PASSWORD_MAX_LENGTH", 128, 4, 1024)
 	c.ResetCooldown = d("LOCAL_PASSWORD_RESET_COOLDOWN", "60s")
 	c.SessionIdle = d("SESSION_IDLE_TIMEOUT", "30d")
@@ -84,13 +84,13 @@ func Load() (Config, error) {
 	if c.SessionIdle > c.SessionAbsolute {
 		errors = append(errors, "idle session timeout exceeds absolute timeout")
 	}
-	if _, e := time.LoadLocation(c.Timezone); e != nil {
+	if _, err := time.LoadLocation(c.Timezone); err != nil {
 		errors = append(errors, "TZ must be an IANA timezone")
 	}
 	for key, v := range map[string]string{"APP_PUBLIC_URL": c.PublicURL, "OIDC_ISSUER_URL": c.OIDCIssuer, "OIDC_REDIRECT_URL": c.OIDCRedirect} {
 		if v != "" {
-			if e := ValidateURL(v); e != nil {
-				errors = append(errors, key+": "+e.Error())
+			if err := ValidateURL(v); err != nil {
+				errors = append(errors, key+": "+err.Error())
 			}
 		}
 	}
@@ -98,14 +98,14 @@ func Load() (Config, error) {
 		errors = append(errors, "OIDC issuer, client ID, and redirect URL are required")
 	}
 	if c.OIDCRedirect != "" {
-		u, e := url.Parse(c.OIDCRedirect)
-		if e == nil && (u.Path != "/auth/oidc/callback" || u.RawQuery != "") {
+		u, err := url.Parse(c.OIDCRedirect)
+		if err == nil && (u.Path != "/auth/oidc/callback" || u.RawQuery != "") {
 			errors = append(errors, "OIDC_REDIRECT_URL must end in /auth/oidc/callback with no query")
 		}
 	}
 	if c.PublicURL != "" {
-		u, e := url.Parse(c.PublicURL)
-		if e == nil && ((u.Path != "" && u.Path != "/") || u.RawQuery != "") {
+		u, err := url.Parse(c.PublicURL)
+		if err == nil && ((u.Path != "" && u.Path != "/") || u.RawQuery != "") {
 			errors = append(errors, "APP_PUBLIC_URL must be the root HTTP(S) origin")
 		}
 	}

@@ -15,6 +15,12 @@ Tally is a modern, self-hosted TV show tracker for keeping up with shows, upcomi
 - Local or OIDC authentication
 - Responsive web interface with light and dark themes
 
+## Network model
+
+Tally is designed for a trusted self-hosted environment or local network. The provided Compose configuration binds to loopback by default. To make Tally reachable from other devices on the LAN, set `APP_BIND=0.0.0.0` or bind it to a specific LAN address.
+
+Do not port-forward Tally's application port directly to the public internet. For remote access, prefer a private-network/VPN solution or place Tally behind an HTTPS reverse proxy with local or OIDC authentication enabled. When authentication is disabled, anyone who can reach Tally can use the available profiles.
+
 ## Docker Compose
 
 ```yaml
@@ -24,7 +30,7 @@ services:
     image: tally:local
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-8080}:8080"
     environment:
       APP_DATA_DIR: /config
       APP_ADDR: :8080
@@ -42,7 +48,7 @@ Start Tally:
 docker compose up -d --build
 ```
 
-Then open **http://localhost:8080**.
+Then open **http://localhost:8080**. For LAN access, set `APP_BIND` as described above and use the host's LAN address.
 
 ## Commands
 
@@ -94,7 +100,7 @@ docker compose up -d
 Requirements:
 
 - Go 1.27.1+
-- Node.js 22+
+- Node.js 24 LTS recommended
 
 Build the frontend:
 
@@ -117,3 +123,5 @@ Run it:
 ```sh
 ./tally
 ```
+
+CI additionally runs the race detector, browser regressions, Go vulnerability analysis, npm vulnerability auditing, a production container build, and a high/critical container vulnerability scan.
