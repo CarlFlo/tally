@@ -49,26 +49,26 @@ func TestOpaquePasswordHashAndPolicy(t *testing.T) {
 func TestRecoveryExpiryRestartAndForcedReplacement(t *testing.T) {
 	s := testAuth(t)
 	hash, _ := Hash("original")
-	if _, err := s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('user0','Fixture','violet',1)"); err != nil {
+	if _, err := s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-fixture','Fixture','violet',1)"); err != nil {
 		t.Fatal(err)
 	}
-	_, _ = s.DB.Exec("INSERT INTO local_credentials VALUES('user0',?,0)", hash)
+	_, _ = s.DB.Exec("INSERT INTO local_credentials VALUES('profile-fixture',?,0)", hash)
 	ctx := context.Background()
-	if e := s.Recover(ctx, "user0"); e != nil {
+	if e := s.Recover(ctx, "profile-fixture"); e != nil {
 		t.Fatal(e)
 	}
-	if e := s.Recover(ctx, "user0"); e == nil {
+	if e := s.Recover(ctx, "profile-fixture"); e == nil {
 		t.Fatal("cooldown not enforced")
 	}
-	var permanent string
-	_ = s.DB.QueryRow("SELECT hash FROM local_credentials WHERE profile_id='user0'").Scan(&permanent)
-	if !Verify(permanent, "original") {
-		t.Fatal("recovery invalidated permanent password")
+	var stored string
+	_ = s.DB.QueryRow("SELECT hash FROM local_credentials WHERE profile_id='profile-fixture'").Scan(&stored)
+	if !Verify(stored, "original") {
+		t.Fatal("recovery invalidated stored password")
 	}
-	s.recovery["user0"] = recovery{Digest("temporary"), time.Now().Add(time.Minute), time.Now()}
+	s.recovery["profile-fixture"] = recovery{Digest("temporary"), time.Now().Add(time.Minute), time.Now()}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "http://example.com", nil)
-	if e := s.Login(ctx, w, r, "user0", "temporary"); e != nil {
+	if e := s.Login(ctx, w, r, "profile-fixture", "temporary"); e != nil {
 		t.Fatal(e)
 	}
 	request := httptest.NewRequest("GET", "http://example.com", nil)
@@ -77,11 +77,11 @@ func TestRecoveryExpiryRestartAndForcedReplacement(t *testing.T) {
 	if e != nil || !session.Restricted {
 		t.Fatal("recovery did not restrict session")
 	}
-	if _, ok := s.recovery["user0"]; ok {
+	if _, ok := s.recovery["profile-fixture"]; ok {
 		t.Fatal("temporary credential not consumed")
 	}
-	s.recovery["user0"] = recovery{Digest("expired"), time.Now().Add(-time.Second), time.Now()}
-	if e = s.Login(ctx, httptest.NewRecorder(), r, "user0", "expired"); e == nil {
+	s.recovery["profile-fixture"] = recovery{Digest("expired"), time.Now().Add(-time.Second), time.Now()}
+	if e = s.Login(ctx, httptest.NewRecorder(), r, "profile-fixture", "expired"); e == nil {
 		t.Fatal("expired credential accepted")
 	}
 	restarted := New(s.DB, s.Config)
@@ -91,9 +91,9 @@ func TestRecoveryExpiryRestartAndForcedReplacement(t *testing.T) {
 	if e = restarted.Change(ctx, httptest.NewRecorder(), r, session, "", "changed"); e != nil {
 		t.Fatal(e)
 	}
-	_ = s.DB.QueryRow("SELECT hash FROM local_credentials WHERE profile_id='user0'").Scan(&permanent)
-	if !Verify(permanent, "changed") || Verify(permanent, "original") {
-		t.Fatal("permanent replacement failed")
+	_ = s.DB.QueryRow("SELECT hash FROM local_credentials WHERE profile_id='profile-fixture'").Scan(&stored)
+	if !Verify(stored, "changed") || Verify(stored, "original") {
+		t.Fatal("password replacement failed")
 	}
 }
 func TestOIDCIdentityIsIssuerAndSubject(t *testing.T) {
@@ -101,7 +101,7 @@ func TestOIDCIdentityIsIssuerAndSubject(t *testing.T) {
 	o := NewOIDC(s, nil)
 	ctx := context.Background()
 	first, e := o.MapIdentity(ctx, "https://issuer.example", "abc", "Same Name")
-	if e != nil || len(first) != 32 || first == "user0" {
+	if e != nil || len(first) != 32 || first == "profile-fixture" {
 		t.Fatalf("first identity is not generated: %s %v", first, e)
 	}
 	same, e := o.MapIdentity(ctx, "https://issuer.example", "abc", "Changed Name")
