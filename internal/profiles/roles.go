@@ -33,11 +33,12 @@ func (r Repository) SetAdmin(ctx context.Context, actor, target string, admin bo
 	if _, err = tx.ExecContext(ctx, "UPDATE profile_roles SET is_admin=? WHERE profile_id=?", admin, target); err != nil {
 		return roleError(err)
 	}
-	action, verb := "admin_revoked", "Removed administrator access from "
+	action, verb := "admin_revoked", " removed administrator access from "
 	if admin {
-		action, verb = "admin_granted", "Granted administrator access to "
+		action, verb = "admin_granted", " granted administrator access to "
 	}
-	if err = activity.Record(ctx, tx, activity.Event{Action: action, Profile: actor, Message: verb + name}); err != nil {
+	actorName := profileDisplayName(ctx, tx, actor)
+	if err = activity.Record(ctx, tx, activity.Event{Action: action, Profile: actor, Message: actorName + verb + name}); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -56,10 +57,14 @@ func (r Repository) Delete(ctx context.Context, actor, target string) (string, b
 		FROM profiles p JOIN profile_roles r ON r.profile_id=p.id WHERE p.id=?`, target).Scan(&name, &admin); err != nil {
 		return "", false, ErrNotFound
 	}
+	actorName := name
+	if actor != target {
+		actorName = profileDisplayName(ctx, tx, actor)
+	}
 	if _, err = tx.ExecContext(ctx, "DELETE FROM profiles WHERE id=?", target); err != nil {
 		return "", false, roleError(err)
 	}
-	if err = activity.Record(ctx, tx, activity.Event{Action: "profile_deleted", Profile: actor, Message: "Deleted profile " + name}); err != nil {
+	if err = activity.Record(ctx, tx, activity.Event{Action: "profile_deleted", Profile: actor, Message: actorName + " deleted profile " + name}); err != nil {
 		return "", false, err
 	}
 	if err = tx.Commit(); err != nil {
