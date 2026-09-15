@@ -22,8 +22,8 @@ func (s *Server) createProfile(w http.ResponseWriter, r *http.Request, session a
 	if err := profiles.ValidateName(in.Name); err != nil {
 		return bad(err.Error())
 	}
-	if !builtinAvatar(in.Avatar) {
-		in.Avatar = "violet"
+	if _, err := profiles.NormalizeAvatar(in.Avatar); err != nil {
+		return bad(err.Error())
 	}
 	hash := ""
 	if s.Config.AuthMode == "local" && in.Password != "" {
