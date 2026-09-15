@@ -34,6 +34,7 @@ export function JobsPage() {
   });
   const settings = useLocal<any>("settings", "/settings");
   const operator = settings.data?.operator;
+  const scheduleTimezone = settings.data?.timezone || "UTC";
   const [busy, setBusy] = useState("");
   async function preference(key: string, value: string) {
     try {
@@ -147,7 +148,7 @@ export function JobsPage() {
               </p>
               <dl>
                 <div>
-                  <dt>Schedule · UTC</dt>
+                  <dt>Schedule · {scheduleTimezone}</dt>
                   <dd title={job.schedule}>
                     {job.description || job.schedule}
                   </dd>
