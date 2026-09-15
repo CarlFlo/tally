@@ -51,23 +51,29 @@ func TestPublicProfileRegistrationIsBoundedAndRequiresPasswordInLocalMode(t *tes
 			expect(t, request(t, h, "POST", "/api/auth/register", map[string]any{"name": "bad\nname", "password": "Pass123!"}, signedOut), 400)
 			first := request(t, h, "POST", "/api/auth/register", map[string]any{"name": "  Alex  ", "password": "Pass123!"}, signedOut)
 			expect(t, first, 201)
-			if value(t, first, "id") != "user1" || value(t, first, "display_name") != "Alex" {
+			firstID := value(t, first, "id")
+			if len(firstID) != 32 || value(t, first, "display_name") != "Alex" {
 				t.Fatal("invalid profile identity")
 			}
 			expect(t, request(t, h, "POST", "/api/auth/register", map[string]any{"name": "Switch", "password": "Pass123!"}, first.Result().Cookies()...), 409)
 			second := request(t, h, "POST", "/api/auth/register", map[string]any{"name": "Sam", "password": "Pass123!"}, signedOut)
 			expect(t, second, 201)
+			secondID := value(t, second, "id")
+			if len(secondID) != 32 || secondID == firstID {
+				t.Fatal("profile IDs are not opaque and unique")
+			}
 			full := request(t, h, "POST", "/api/auth/register", map[string]any{"name": "Overflow", "password": "Pass123!"}, signedOut)
 			expect(t, full, 400)
 			if !strings.Contains(full.Body.String(), "maximum") {
 				t.Fatal("missing profile limit message")
 			}
-			if _, err := s.DB.Exec("DELETE FROM profiles WHERE id='user1'"); err != nil {
+			if _, err := s.DB.Exec("DELETE FROM profiles WHERE id=?", firstID); err != nil {
 				t.Fatal(err)
 			}
 			next := request(t, h, "POST", "/api/auth/register", map[string]any{"name": "New", "password": "Pass123!"}, signedOut)
 			expect(t, next, 201)
-			if value(t, next, "id") != "user3" {
+			nextID := value(t, next, "id")
+			if len(nextID) != 32 || nextID == firstID || nextID == secondID {
 				t.Fatal("reused immutable ID")
 			}
 		})

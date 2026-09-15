@@ -38,7 +38,7 @@ func TestLiveChangesScopesAndTargetsResources(t *testing.T) {
 			"user1",
 			[]liveUpdate{
 				update("user1", "shows", "show", "calendar", "logs"),
-				update("user0", "logs"),
+				update("", "logs"),
 			},
 		},
 		{
@@ -48,7 +48,7 @@ func TestLiveChangesScopesAndTargetsResources(t *testing.T) {
 			"user1",
 			[]liveUpdate{
 				update("user1", "torrent-history"),
-				update("user0", "statistics"),
+				update("", "statistics"),
 			},
 		},
 		{

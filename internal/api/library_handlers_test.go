@@ -12,8 +12,9 @@ func TestSharedMetadataAndPersonalEpisodeState(t *testing.T) {
 	w := request(t, h, "POST", "/api/shows", map[string]any{"tvmaze_id": 7}, zero)
 	expect(t, w, 201)
 	id := value(t, w, "id")
-	expect(t, request(t, h, "POST", "/api/profiles", map[string]any{"name": "Second"}, zero), 201)
-	one := &http.Cookie{Name: "tally_profile", Value: "user1"}
+	created := request(t, h, "POST", "/api/profiles", map[string]any{"name": "Second"}, zero)
+	expect(t, created, 201)
+	one := &http.Cookie{Name: "tally_profile", Value: value(t, created, "id")}
 	w = request(t, h, "POST", "/api/shows", map[string]any{"tvmaze_id": 7}, one)
 	expect(t, w, 201)
 	if value(t, w, "id") != id || tv.calls.Load() != 2 {

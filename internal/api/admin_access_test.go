@@ -6,42 +6,78 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/CarlFlo/mediaManager/internal/auth"
 )
 
-func TestAdministrationIsUserZeroOnlyInEveryAuthMode(t *testing.T) {
-	for _, mode := range []string{"disabled", "local"} {
-		t.Run(mode, func(t *testing.T) {
-			s, h, _ := testServer(t, mode)
-			if _, err := s.DB.Exec("INSERT INTO profiles VALUES('user1','Alex','mint',1); INSERT INTO profiles VALUES('user2','Sam','mint',2)"); err != nil {
-				t.Fatal(err)
-			}
-			cookies := []*http.Cookie{{Name: "tally_profile", Value: "user1"}}
-			if mode == "local" {
-				rec := httptest.NewRecorder()
-				if err := s.Auth.NewSession(context.Background(), rec, httptest.NewRequest("GET", "/", nil), "user1", false); err != nil {
-					t.Fatal(err)
-				}
-				cookies = rec.Result().Cookies()
-			}
-			for _, path := range []string{"/api/settings", "/api/settings/notifications", "/api/settings/search", "/api/jobs", "/api/statistics", "/api/backups", "/api/settings/backups", "/api/backups/example/download", "/api/alerts", "/api/downloader"} {
-				expect(t, request(t, h, "GET", path, nil, cookies...), 403)
-			}
-			expect(t, request(t, h, "POST", "/api/settings/notifications/test", map[string]any{}, cookies...), 403)
-			expect(t, request(t, h, "GET", "/api/capabilities", nil, cookies...), 200)
-			expect(t, request(t, h, "DELETE", "/api/profiles/user2", nil, cookies...), 403)
-			expect(t, request(t, h, "DELETE", "/api/profiles/user0", nil, cookies...), 400)
-			deleted := request(t, h, "DELETE", "/api/profiles/user1", nil, cookies...)
-			expect(t, deleted, 200)
-			var remaining int
-			_ = s.DB.QueryRow("SELECT COUNT(*) FROM profiles WHERE id='user1'").Scan(&remaining)
-			if remaining != 0 {
-				t.Fatal("profile still exists")
-			}
-			var message string
-			if err := s.DB.QueryRow("SELECT message FROM activity_log WHERE action='profile_deleted'").Scan(&message); err != nil || !strings.Contains(message, "Alex") {
-				t.Fatal("deletion activity lost", err)
-			}
-			expect(t, request(t, h, "GET", "/api/shows", nil, cookies...), 401)
-		})
+func TestAdministratorRoleIsTransferableWithBackendGuard(t *testing.T) {
+	s, h, _ := testServer(t, "disabled")
+	if _, err := s.DB.Exec("INSERT INTO profiles VALUES('user1','Alex','mint',1); INSERT INTO profiles VALUES('user2','Sam','mint',2)"); err != nil {
+		t.Fatal(err)
+	}
+	user1 := &http.Cookie{Name: "tally_profile", Value: "user1"}
+	admin := &http.Cookie{Name: "tally_profile", Value: "user0"}
+
+	expect(t, request(t, h, "GET", "/api/settings", nil, user1), 403)
+	expect(t, request(t, h, "DELETE", "/api/profiles/user2", nil, user1), 403)
+
+	expect(t, request(t, h, "PATCH", "/api/profiles/user1/admin", map[string]any{"is_admin": true}, admin), 200)
+	expect(t, request(t, h, "GET", "/api/settings", nil, user1), 200)
+	expect(t, request(t, h, "PATCH", "/api/profiles/user0/admin", map[string]any{"is_admin": false}, user1), 200)
+	expect(t, request(t, h, "GET", "/api/settings", nil, admin), 403)
+
+	// The only remaining admin cannot demote themselves while other profiles remain.
+	expect(t, request(t, h, "PATCH", "/api/profiles/user1/admin", map[string]any{"is_admin": false}, user1), 400)
+
+	expect(t, request(t, h, "PATCH", "/api/profiles/user2/admin", map[string]any{"is_admin": true}, user1), 200)
+	expect(t, request(t, h, "PATCH", "/api/profiles/user1/admin", map[string]any{"is_admin": false}, &http.Cookie{Name: "tally_profile", Value: "user2"}), 200)
+
+	var events int
+	if err := s.DB.QueryRow("SELECT COUNT(*) FROM activity_log WHERE action IN ('admin_granted','admin_revoked')").Scan(&events); err != nil || events < 4 {
+		t.Fatal("administrator changes were not audited", events, err)
+	}
+}
+
+func TestLocalAdminDemotionAndDeletionRequireActingAdminsPassword(t *testing.T) {
+	s, h, _ := testServer(t, "local")
+	adminHash, err := auth.Hash("admin-pass")
+	if err != nil {
+		t.Fatal(err)
+	}
+	userHash, err := auth.Hash("alex-pass")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.DB.Exec("INSERT INTO local_credentials VALUES('user0',?,0); INSERT INTO profiles VALUES('user1','Alex','mint',1); INSERT INTO local_credentials VALUES('user1',?,0)", adminHash, userHash); err != nil {
+		t.Fatal(err)
+	}
+
+	adminRecorder := httptest.NewRecorder()
+	if err = s.Auth.NewSession(context.Background(), adminRecorder, httptest.NewRequest("GET", "/", nil), "user0", false); err != nil {
+		t.Fatal(err)
+	}
+	adminCookies := adminRecorder.Result().Cookies()
+	expect(t, request(t, h, "PATCH", "/api/profiles/user1/admin", map[string]any{"is_admin": true}, adminCookies...), 200)
+
+	userRecorder := httptest.NewRecorder()
+	if err = s.Auth.NewSession(context.Background(), userRecorder, httptest.NewRequest("GET", "/", nil), "user1", false); err != nil {
+		t.Fatal(err)
+	}
+	userCookies := userRecorder.Result().Cookies()
+	expect(t, request(t, h, "PATCH", "/api/profiles/user0/admin", map[string]any{"is_admin": false, "password": "wrong"}, userCookies...), 401)
+	// Re-authentication is throttled after a bad attempt; use a fresh server-side
+	// attempt window for the success path without weakening production throttling.
+	delete(s.AuthAttemptsForTest(), "reauth:user1")
+	expect(t, request(t, h, "PATCH", "/api/profiles/user0/admin", map[string]any{"is_admin": false, "password": "alex-pass"}, userCookies...), 200)
+	expect(t, request(t, h, "GET", "/api/settings", nil, adminCookies...), 403)
+
+	expect(t, request(t, h, "PATCH", "/api/profiles/user0/admin", map[string]any{"is_admin": true}, userCookies...), 200)
+	expect(t, request(t, h, "DELETE", "/api/profiles/user0", map[string]any{"password": "wrong"}, userCookies...), 401)
+	delete(s.AuthAttemptsForTest(), "reauth:user1")
+	expect(t, request(t, h, "DELETE", "/api/profiles/user0", map[string]any{"password": "alex-pass"}, userCookies...), 200)
+
+	var message string
+	if err := s.DB.QueryRow("SELECT message FROM activity_log WHERE action='profile_deleted' ORDER BY id DESC LIMIT 1").Scan(&message); err != nil || !strings.Contains(message, "My profile") {
+		t.Fatal("administrator deletion activity lost", err)
 	}
 }

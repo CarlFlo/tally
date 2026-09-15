@@ -56,12 +56,14 @@ func TestExplicitSignOutPreventsSingleProfileAutoEntry(t *testing.T) {
 func TestChoosingAnotherProfileRequiresSignOut(t *testing.T) {
 	_, h, _ := testServer(t, "disabled")
 	current := &http.Cookie{Name: "tally_profile", Value: "user0"}
-	expect(t, request(t, h, "POST", "/api/profiles", map[string]string{"name": "Alex"}, current), 201)
-	expect(t, request(t, h, "POST", "/api/profiles/select", map[string]string{"profile": "user1"}, current), 409)
+	created := request(t, h, "POST", "/api/profiles", map[string]string{"name": "Alex"}, current)
+	expect(t, created, 201)
+	profileID := value(t, created, "id")
+	expect(t, request(t, h, "POST", "/api/profiles/select", map[string]string{"profile": profileID}, current), 409)
 	left := profileCookie(t, request(t, h, "POST", "/api/auth/logout", nil, current))
-	selected := request(t, h, "POST", "/api/profiles/select", map[string]string{"profile": "user1"}, left)
+	selected := request(t, h, "POST", "/api/profiles/select", map[string]string{"profile": profileID}, left)
 	expect(t, selected, 200)
-	if profileCookie(t, selected).Value != "user1" {
+	if profileCookie(t, selected).Value != profileID {
 		t.Fatal("could not choose another profile after signing out")
 	}
 }
