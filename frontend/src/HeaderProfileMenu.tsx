@@ -31,7 +31,7 @@ export function HeaderProfileMenu() {
             <UserRound size={17} />
             Profile
           </NavLink>
-          {profile.id === "user0" && (
+          {!!profile.is_admin && (
             <>
               <NavLink to="/system">
                 <Server size={17} />

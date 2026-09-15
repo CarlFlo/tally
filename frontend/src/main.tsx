@@ -251,7 +251,7 @@ function App() {
                   <Route
                     path="/logs"
                     element={
-                      boot.profile.id === "user0" ? (
+                      !!boot.profile.is_admin ? (
                         <Navigate to="/system/logs" replace />
                       ) : (
                         <LogsPage personal />

@@ -2,13 +2,17 @@ import { useState, type FormEvent } from "react";
 import { NavLink } from "react-router-dom";
 import { api, Avatar, Busy, resetSession, useApp } from "./lib";
 
+const htmlColor = /^#[0-9A-Fa-f]{6}$/;
+
 export function RegisterProfile() {
   const { boot, notify } = useApp();
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState("mint");
+  const [customColor, setCustomColor] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
+  const selectedAvatar = htmlColor.test(customColor) ? customColor : avatar;
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (password !== confirm) {
@@ -17,7 +21,11 @@ export function RegisterProfile() {
     }
     setBusy(true);
     try {
-      await api("/auth/register", "POST", { name, avatar, password });
+      await api("/auth/register", "POST", {
+        name,
+        avatar: selectedAvatar,
+        password,
+      });
       resetSession();
     } catch (e) {
       notify((e as Error).message, true);
@@ -54,12 +62,15 @@ export function RegisterProfile() {
             <div className="avatar-choices" aria-label="Choose avatar">
               {["mint", "violet", "amber", "rose", "blue"].map((color) => (
                 <button
-                  className={avatar === color ? "selected" : ""}
+                  className={!customColor && avatar === color ? "selected" : ""}
                   type="button"
                   key={color}
                   aria-label={`${color} avatar`}
-                  aria-pressed={avatar === color}
-                  onClick={() => setAvatar(color)}
+                  aria-pressed={!customColor && avatar === color}
+                  onClick={() => {
+                    setAvatar(color);
+                    setCustomColor("");
+                  }}
                 >
                   <Avatar
                     profile={{
@@ -71,6 +82,30 @@ export function RegisterProfile() {
                 </button>
               ))}
             </div>
+            <label>
+              Custom avatar color
+              <input
+                value={customColor}
+                pattern="#[0-9A-Fa-f]{6}"
+                maxLength={7}
+                placeholder="#4F46E5"
+                spellCheck={false}
+                onChange={(e) => setCustomColor(e.target.value)}
+              />
+              <small className="muted">Optional six-digit HTML color.</small>
+            </label>
+            {customColor && htmlColor.test(customColor) && (
+              <div className="profile-editor">
+                <Avatar
+                  profile={{
+                    id: "",
+                    display_name: name || "You",
+                    avatar: customColor,
+                  }}
+                  large
+                />
+              </div>
+            )}
             {boot.auth_mode === "local" && (
               <>
                 <label>

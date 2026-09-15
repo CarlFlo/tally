@@ -77,6 +77,7 @@ export type Profile = {
   display_name: string;
   avatar: string;
   has_password?: boolean | number;
+  is_admin?: boolean | number;
 };
 export type Prefs = {
   theme: string;
@@ -210,6 +211,15 @@ export function SignOutButton({
 }
 export const imageURL = (url: string) =>
   url ? "/api/images?url=" + encodeURIComponent(url) : "";
+function avatarTextColor(color: string) {
+  const value = color.slice(1);
+  const red = Number.parseInt(value.slice(0, 2), 16);
+  const green = Number.parseInt(value.slice(2, 4), 16);
+  const blue = Number.parseInt(value.slice(4, 6), 16);
+  return (red * 299 + green * 587 + blue * 114) / 1000 > 150
+    ? "#17141f"
+    : "#ffffff";
+}
 export function Avatar({
   profile,
   large = false,
@@ -217,12 +227,20 @@ export function Avatar({
   profile: Profile;
   large?: boolean;
 }) {
+  const customColor = /^#[0-9A-Fa-f]{6}$/.test(profile.avatar);
   return (
-    <span className={`avatar avatar-${profile.avatar} ${large ? "large" : ""}`}>
+    <span
+      className={`avatar ${customColor ? "avatar-custom" : "avatar-" + profile.avatar} ${large ? "large" : ""}`}
+      style={
+        customColor
+          ? { backgroundColor: profile.avatar, color: avatarTextColor(profile.avatar) }
+          : undefined
+      }
+    >
       {profile.avatar.endsWith(".png") ? (
         <img src={"/api/avatars/" + profile.avatar} alt="" />
       ) : (
-        profile.display_name.slice(0, 1).toUpperCase()
+        profile.display_name.trim().slice(0, 2).toUpperCase()
       )}
     </span>
   );

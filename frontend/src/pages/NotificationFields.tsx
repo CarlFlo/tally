@@ -9,6 +9,7 @@ export const notificationEvents = [
   ["show_added", "Shows added", "Immediately"],
   ["show_removed", "Shows removed", "Immediately"],
   ["watch_history_cleared", "Watch history cleared", "Immediately"],
+  ["profile_access_changed", "Profile access changes", "Immediately"],
   ["episode_released", "New episode releases", "At your selected time"],
 ];
 
