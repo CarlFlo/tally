@@ -81,7 +81,7 @@ test("passwordless profiles set their own password and signed-out visitors can a
   await page.goto("/logs");
   await expect(page).toHaveURL(/\/logs$/);
   await expect(page.locator(".activity-list")).toContainText(
-    "Created profile Robin",
+    "Robin created profile Robin",
   );
   await expect(page.locator(".activity-list")).not.toContainText("Eve");
   boot = await (await page.request.get("/api/bootstrap")).json();
