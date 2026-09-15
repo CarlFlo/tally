@@ -12,7 +12,7 @@ test("local sign-in follows browser history and switching requires sign-out", as
 
   await page.goto("/calendar");
   await expect(page).toHaveURL(/\/login$/);
-  await page.getByRole("button", { name: "M My profile" }).click();
+  await page.getByRole("button", { name: "MY My profile" }).click();
   await expect(page).toHaveURL(new RegExp("/login/" + adminID + "$"));
   await page
     .getByLabel("Password or PIN", { exact: true })
@@ -61,7 +61,7 @@ test("local sign-in follows browser history and switching requires sign-out", as
     page.getByRole("heading", { name: "Who's keeping up?" }),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "A Alex" }).click();
+  await page.getByRole("button", { name: "AL Alex" }).click();
   await page.getByLabel("Password or PIN", { exact: true }).fill("1234");
   await page.getByRole("button", { name: "Enter your space" }).click();
   await expect(page.locator(".header-profile strong")).toHaveText("Alex");
