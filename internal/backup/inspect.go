@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 )
 
 const maxManifestSize = 64 << 10
@@ -17,7 +18,30 @@ func (s *Service) Inspect(ctx context.Context, filename string) (Manifest, error
 	if err != nil {
 		return Manifest{}, err
 	}
-	return inspectArchive(ctx, path)
+	info, err := os.Stat(path)
+	if err != nil {
+		return Manifest{}, err
+	}
+	if cached, ok := s.inspections[filename]; ok &&
+		cached.size == info.Size() &&
+		cached.modifiedAt == info.ModTime().UnixNano() {
+		return cached.manifest, cached.err
+	}
+	manifest, inspectErr := inspectArchive(ctx, path)
+	s.rememberInspection(filename, info, manifest, inspectErr)
+	return manifest, inspectErr
+}
+
+func (s *Service) rememberInspection(filename string, info os.FileInfo, manifest Manifest, err error) {
+	if s.inspections == nil {
+		s.inspections = make(map[string]inspectionCache)
+	}
+	s.inspections[filename] = inspectionCache{
+		size:       info.Size(),
+		modifiedAt: info.ModTime().UnixNano(),
+		manifest:   manifest,
+		err:        err,
+	}
 }
 
 func inspectArchive(ctx context.Context, path string) (Manifest, error) {

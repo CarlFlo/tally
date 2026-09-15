@@ -1,6 +1,6 @@
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { AlertCircle, CalendarDays, Menu, Search, Tv, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   BrowserRouter,
@@ -28,11 +28,8 @@ import { Logo } from "./Logo";
 import { LiveUpdates } from "./LiveUpdates";
 import { Notice, type Toast } from "./Notice";
 import { CalendarPage } from "./pages/Calendar";
-import { LogsPage } from "./pages/Logs";
-import { SettingsPage } from "./pages/Operations";
 import { SearchPage } from "./pages/Search";
 import { AddShow, ShowPage, ShowsPage } from "./pages/Shows";
-import { SystemPage } from "./pages/System";
 import { PasswordGate } from "./PasswordGate";
 import { ProfilePicker } from "./ProfilePicker";
 import { RegisterProfile } from "./RegisterProfile";
@@ -42,6 +39,26 @@ import { invalidateResources } from "./queryInvalidation";
 import "./style.css";
 import "./activity.css";
 import "./workspace.css";
+
+const LogsPage = lazy(() =>
+  import("./pages/Logs").then((module) => ({ default: module.LogsPage })),
+);
+const SettingsPage = lazy(() =>
+  import("./pages/Operations").then((module) => ({
+    default: module.SettingsPage,
+  })),
+);
+const SystemPage = lazy(() =>
+  import("./pages/System").then((module) => ({ default: module.SystemPage })),
+);
+
+function RouteFallback() {
+  return (
+    <div className="page">
+      <Busy />
+    </div>
+  );
+}
 
 function App() {
   const bootstrap = useQuery<Boot>({
@@ -237,98 +254,100 @@ function App() {
                 </div>
               )}
               <main id="main">
-                <Routes key={location.pathname}>
-                  <Route
-                    path="/calendar"
-                    element={<CalendarPage onAdd={() => setAdd(true)} />}
-                  />
-                  <Route
-                    path="/shows"
-                    element={<ShowsPage onAdd={() => setAdd(true)} />}
-                  />
-                  <Route path="/shows/:id" element={<ShowPage />} />
-                  <Route path="/search" element={<SearchPage />} />
-                  <Route
-                    path="/logs"
-                    element={
-                      !!boot.profile.is_admin ? (
-                        <Navigate to="/system/logs" replace />
-                      ) : (
-                        <LogsPage personal />
-                      )
-                    }
-                  />
-                  <Route element={<AdminRoute />}>
-                    <Route path="/system/*" element={<SystemPage />} />
+                <Suspense fallback={<RouteFallback />}>
+                  <Routes>
                     <Route
-                      path="/jobs"
-                      element={<Navigate to="/system/jobs" replace />}
+                      path="/calendar"
+                      element={<CalendarPage onAdd={() => setAdd(true)} />}
                     />
                     <Route
-                      path="/statistics"
-                      element={<Navigate to="/system/statistics" replace />}
+                      path="/shows"
+                      element={<ShowsPage onAdd={() => setAdd(true)} />}
                     />
+                    <Route path="/shows/:id" element={<ShowPage />} />
+                    <Route path="/search" element={<SearchPage />} />
                     <Route
-                      path="/settings/backups"
-                      element={<Navigate to="/settings" replace />}
+                      path="/logs"
+                      element={
+                        !!boot.profile.is_admin ? (
+                          <Navigate to="/system/logs" replace />
+                        ) : (
+                          <LogsPage personal />
+                        )
+                      }
                     />
-                    <Route path="/settings" element={<SettingsPage />} />
-                    {(
-                      [
-                        "torrent",
-                        "search",
-                        "notifications",
-                        "bell",
-                        "debug",
-                      ] as const
-                    ).map((tab) => (
+                    <Route element={<AdminRoute />}>
+                      <Route path="/system/*" element={<SystemPage />} />
                       <Route
-                        key={tab}
-                        path={"/settings/" + tab}
-                        element={<SettingsPage tab={tab} />}
+                        path="/jobs"
+                        element={<Navigate to="/system/jobs" replace />}
                       />
-                    ))}
+                      <Route
+                        path="/statistics"
+                        element={<Navigate to="/system/statistics" replace />}
+                      />
+                      <Route
+                        path="/settings/backups"
+                        element={<Navigate to="/settings" replace />}
+                      />
+                      <Route path="/settings" element={<SettingsPage />} />
+                      {(
+                        [
+                          "torrent",
+                          "search",
+                          "notifications",
+                          "bell",
+                          "debug",
+                        ] as const
+                      ).map((tab) => (
+                        <Route
+                          key={tab}
+                          path={"/settings/" + tab}
+                          element={<SettingsPage tab={tab} />}
+                        />
+                      ))}
+                      <Route
+                        path="/settings/scheduling"
+                        element={<Navigate to="/settings" replace />}
+                      />
+                      <Route
+                        path="/settings/profiles"
+                        element={<SettingsPage tab="profiles" />}
+                      />
+                    </Route>
                     <Route
-                      path="/settings/scheduling"
-                      element={<Navigate to="/settings" replace />}
+                      path="/profile/danger"
+                      element={<SettingsPage tab="danger" />}
                     />
                     <Route
-                      path="/settings/profiles"
-                      element={<SettingsPage tab="profiles" />}
+                      path="/profile"
+                      element={<SettingsPage tab="personal" />}
                     />
-                  </Route>
-                  <Route
-                    path="/profile/danger"
-                    element={<SettingsPage tab="danger" />}
-                  />
-                  <Route
-                    path="/profile"
-                    element={<SettingsPage tab="personal" />}
-                  />
-                  <Route
-                    path="/profile/security"
-                    element={<SettingsPage tab="security" />}
-                  />
-                  <Route
-                    path="/login/*"
-                    element={<Navigate to="/calendar" replace />}
-                  />
-                  <Route
-                    path="/"
-                    element={<Navigate to="/calendar" replace />}
-                  />
-                  <Route
-                    path="*"
-                    element={
-                      <div className="page">
-                        <h1>Page not found</h1>
-                        <NavLink className="button" to="/calendar">
-                          Back to calendar
-                        </NavLink>
-                      </div>
-                    }
-                  />
-                </Routes>
+                    <Route
+                      path="/profile/security"
+                      element={<SettingsPage tab="security" />}
+                    />
+                    <Route
+                      path="/login/*"
+                      element={<Navigate to="/calendar" replace />}
+                    />
+                    <Route
+                      path="/"
+                      element={<Navigate to="/calendar" replace />}
+                    />
+                    <Route
+                      path="*"
+                      element={
+                        <div className="page">
+                          <h1>Page not found</h1>
+                          <NavLink className="button" to="/calendar">
+                            Back to calendar
+                          </NavLink>
+                        </div>
+                      }
+                    />
+                  </Routes>
+                </Suspense>
               </main>
               <footer className="footer">
                 <span>

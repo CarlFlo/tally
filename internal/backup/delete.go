@@ -22,5 +22,8 @@ func (s *Service) DeleteArchive(ctx context.Context, id string) error {
 	if err = os.Remove(path); os.IsNotExist(err) {
 		return ErrNotFound
 	}
+	if err == nil {
+		delete(s.inspections, archive.Filename)
+	}
 	return err
 }

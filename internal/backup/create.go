@@ -13,40 +13,43 @@ import (
 func (s *Service) Create(ctx context.Context, kind string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if e := os.MkdirAll(s.Path, 0700); e != nil {
-		return "", e
+	if err := os.MkdirAll(s.Path, 0700); err != nil {
+		return "", err
 	}
-	stage, e := os.MkdirTemp(s.Path, ".backup-")
-	if e != nil {
-		return "", e
+	stage, err := os.MkdirTemp(s.Path, ".backup-")
+	if err != nil {
+		return "", err
 	}
 	defer os.RemoveAll(stage)
 	snapshot := filepath.Join(stage, "app.db")
-	if e = s.DB.Snapshot(ctx, snapshot); e != nil {
-		return "", e
+	if err = s.DB.Snapshot(ctx, snapshot); err != nil {
+		return "", err
 	}
-	manifest, files, e := s.snapshotFiles(ctx, snapshot)
-	if e != nil {
-		return "", e
+	manifest, files, err := s.snapshotFiles(ctx, snapshot)
+	if err != nil {
+		return "", err
 	}
 	filename := fmt.Sprintf("tally-%s-%s-%s.zip", kind, time.Now().UTC().Format("20060102-150405"), database.ID()[:8])
 	temp := filepath.Join(stage, filename)
-	if e = writeArchive(ctx, temp, files, manifest); e != nil {
-		return "", e
+	if err = writeArchive(ctx, temp, files, manifest); err != nil {
+		return "", err
 	}
-	verify, e := os.MkdirTemp(stage, "verify-")
-	if e != nil {
-		return "", e
+	verify, err := os.MkdirTemp(stage, "verify-")
+	if err != nil {
+		return "", err
 	}
-	if _, e = Extract(ctx, temp, verify); e != nil {
-		return "", fmt.Errorf("backup validation failed: %w", e)
+	if _, err = Extract(ctx, temp, verify); err != nil {
+		return "", fmt.Errorf("backup validation failed: %w", err)
 	}
 	final := filepath.Join(s.Path, filename)
-	if e = os.Rename(temp, final); e != nil {
-		return "", e
+	if err = os.Rename(temp, final); err != nil {
+		return "", err
+	}
+	if info, statErr := os.Stat(final); statErr == nil {
+		s.rememberInspection(filename, info, manifest, nil)
 	}
 	if kind == "auto" {
-		e = s.Retain(ctx)
+		err = s.Retain(ctx)
 	}
-	return filename, e
+	return filename, err
 }
