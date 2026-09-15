@@ -194,7 +194,7 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
     .filter({ hasText: "Completed backup job" });
   const backupMessageCount = await backupMessages.count();
   expect(backupMessageCount).toBeGreaterThanOrEqual(2);
-  for (let i = 0; i < backupMessageCount; i++) {
+  for (let remaining = backupMessageCount - 1; remaining >= 0; remaining--) {
     await inbox
       .getByRole("button", {
         name: "Dismiss Completed backup job",
@@ -202,8 +202,8 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
       })
       .first()
       .click();
+    await expect(backupMessages).toHaveCount(remaining);
   }
-  await expect(backupMessages).toHaveCount(0);
   await page.reload();
   await bell.click();
   await expect(backupMessages).toHaveCount(0);
