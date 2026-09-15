@@ -240,7 +240,7 @@ export function Avatar({
       {profile.avatar.endsWith(".png") ? (
         <img src={"/api/avatars/" + profile.avatar} alt="" />
       ) : (
-        profile.display_name.trim().slice(0, 2).toUpperCase()
+        Array.from(profile.display_name.trim()).slice(0, 2).join("").toUpperCase()
       )}
     </span>
   );
