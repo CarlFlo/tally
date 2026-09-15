@@ -27,6 +27,9 @@ export function BackupArchives() {
   const archives = useQuery<{ records: BackupRecord[] }>({
     queryKey: queryKeys.backups(boot.profile!.id),
     queryFn: ({ signal }) => api("/backups", "GET", undefined, signal),
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
   const rows = archives.data?.records || [];
 
