@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-func (s *Service) RestoreRecord(ctx context.Context, id string) (Manifest, error) {
+func (s *Service) RestoreArchive(ctx context.Context, id string) (Manifest, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	item, err := s.FindArchive(ctx, id)
