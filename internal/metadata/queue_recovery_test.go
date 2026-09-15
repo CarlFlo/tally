@@ -14,12 +14,12 @@ func TestQueueSurvivesReopenAndSharesMetadataAcrossProfiles(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if _, e = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('user0','Fixture','violet',1)"); e != nil {
+	if _, e = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-a','Fixture','violet',1)"); e != nil {
 		t.Fatal(e)
 	}
 	p := &queueTV{}
 	s := &Service{DB: db, Provider: p}
-	if e = s.QueueFollow(ctx, "user0", 7, "Saved queue", true); e != nil {
+	if e = s.QueueFollow(ctx, "profile-a", 7, "Saved queue", true); e != nil {
 		t.Fatal(e)
 	}
 	db.Close()
@@ -32,8 +32,8 @@ func TestQueueSurvivesReopenAndSharesMetadataAcrossProfiles(t *testing.T) {
 	if _, e = s.ProcessNext(ctx); e != nil {
 		t.Fatal(e)
 	}
-	db.Exec("INSERT INTO profiles VALUES('user1','Second','mint',1)")
-	if e = s.QueueFollow(ctx, "user1", 7, "Saved queue", true); e != nil {
+	db.Exec("INSERT INTO profiles VALUES('profile-b','Second','mint',1)")
+	if e = s.QueueFollow(ctx, "profile-b", 7, "Saved queue", true); e != nil {
 		t.Fatal(e)
 	}
 	if _, e = s.ProcessNext(ctx); e != nil {
@@ -42,10 +42,10 @@ func TestQueueSurvivesReopenAndSharesMetadataAcrossProfiles(t *testing.T) {
 	if p.calls != 1 {
 		t.Fatal("second profile did not reuse metadata")
 	}
-	s.QueueFollow(ctx, "user0", 7, "Saved queue", false)
+	s.QueueFollow(ctx, "profile-a", 7, "Saved queue", false)
 	s.ProcessNext(ctx)
 	var profile string
-	if e = db.QueryRow("SELECT profile_id FROM profile_shows").Scan(&profile); e != nil || profile != "user1" {
+	if e = db.QueryRow("SELECT profile_id FROM profile_shows").Scan(&profile); e != nil || profile != "profile-b" {
 		t.Fatal("undo affected another profile", e)
 	}
 }
@@ -56,7 +56,7 @@ func TestQueueCommitFailureCanBeRetried(t *testing.T) {
 	if _, e := s.DB.Exec(`CREATE TRIGGER reject_follow BEFORE INSERT ON profile_shows BEGIN SELECT RAISE(ABORT, 'fixture storage failure'); END`); e != nil {
 		t.Fatal(e)
 	}
-	if e := s.QueueFollow(ctx, "user0", 7, "Queued show", true); e != nil {
+	if e := s.QueueFollow(ctx, "profile-a", 7, "Queued show", true); e != nil {
 		t.Fatal(e)
 	}
 	if _, e := s.ProcessNext(ctx); e == nil {
@@ -69,7 +69,7 @@ func TestQueueCommitFailureCanBeRetried(t *testing.T) {
 	if _, e := s.DB.Exec("DROP TRIGGER reject_follow"); e != nil {
 		t.Fatal(e)
 	}
-	if e := s.QueueFollow(ctx, "user0", 7, "Queued show", true); e != nil {
+	if e := s.QueueFollow(ctx, "profile-a", 7, "Queued show", true); e != nil {
 		t.Fatal(e)
 	}
 	if _, e := s.ProcessNext(ctx); e != nil {

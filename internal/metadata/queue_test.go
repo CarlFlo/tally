@@ -39,7 +39,7 @@ func queueService(t *testing.T) (*Service, *queueTV) {
 		t.Fatal(e)
 	}
 	t.Cleanup(func() { db.Close() })
-	if _, e = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('user0','Fixture','violet',1)"); e != nil {
+	if _, e = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-a','Fixture','violet',1)"); e != nil {
 		t.Fatal(e)
 	}
 	p := &queueTV{}
@@ -49,14 +49,14 @@ func queueService(t *testing.T) (*Service, *queueTV) {
 func TestQueuedFollowUndoWhileImportingAndRetry(t *testing.T) {
 	ctx := context.Background()
 	s, p := queueService(t)
-	if e := s.QueueFollow(ctx, "user0", 7, "Queued show", true); e != nil {
+	if e := s.QueueFollow(ctx, "profile-a", 7, "Queued show", true); e != nil {
 		t.Fatal(e)
 	}
 	if p.calls != 0 {
 		t.Fatal("enqueue performed metadata work")
 	}
 	p.before = func() {
-		if e := s.QueueFollow(ctx, "user0", 7, "Queued show", false); e != nil {
+		if e := s.QueueFollow(ctx, "profile-a", 7, "Queued show", false); e != nil {
 			t.Error(e)
 		}
 	}
@@ -77,7 +77,7 @@ func TestQueuedFollowUndoWhileImportingAndRetry(t *testing.T) {
 		t.Fatal("undo was not completed")
 	}
 	p.fail = true
-	s.QueueFollow(ctx, "user0", 8, "Failing show", true)
+	s.QueueFollow(ctx, "profile-a", 8, "Failing show", true)
 	if _, e := s.ProcessNext(ctx); e != nil {
 		t.Fatal(e)
 	}
@@ -86,7 +86,7 @@ func TestQueuedFollowUndoWhileImportingAndRetry(t *testing.T) {
 		t.Fatal("failed import not recorded")
 	}
 	p.fail = false
-	s.QueueFollow(ctx, "user0", 8, "Failing show", true)
+	s.QueueFollow(ctx, "profile-a", 8, "Failing show", true)
 	s.ProcessNext(ctx)
 	s.DB.QueryRow("SELECT COUNT(*) FROM profile_shows").Scan(&count)
 	if count != 1 {
