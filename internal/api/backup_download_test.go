@@ -18,10 +18,7 @@ func TestBackupDownloadRequiresOwnerAndConfinesArchivePaths(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var id string
-	if err = s.DB.QueryRow("SELECT id FROM backup_records WHERE filename=?", name).Scan(&id); err != nil {
-		t.Fatal(err)
-	}
+	id := backupIDByName(t, &service, name)
 	data, err := os.ReadFile(filepath.Join(service.Path, name))
 	if err != nil {
 		t.Fatal(err)
@@ -37,23 +34,25 @@ func TestBackupDownloadRequiresOwnerAndConfinesArchivePaths(t *testing.T) {
 	owner := &http.Cookie{Name: "tally_profile", Value: "profile-admin"}
 	member := &http.Cookie{Name: "tally_profile", Value: "profile-member"}
 	expect(t, request(t, h, "GET", "/api/backups/"+id+"/download", nil, member), 403)
-	if _, err = s.DB.Exec(`INSERT INTO backup_records VALUES('escape','../app.db','manual',1,1,1);
- INSERT INTO backup_records VALUES('failed','failed.zip','manual',1,1,0);
- INSERT INTO job_runs(id,job_key,trigger,started_at,status) VALUES('failed-job','backup','manual',1,'failed');`); err != nil {
+
+	corruptName := "copied-corrupt.zip"
+	if err = os.WriteFile(filepath.Join(service.Path, corruptName), []byte("corrupt"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	expect(t, request(t, h, "GET", "/api/backups/escape/download", nil, owner), 400)
-	expect(t, request(t, h, "GET", "/api/backups/failed/download", nil, owner), 409)
-	expect(t, request(t, h, "GET", "/api/backups/missing/download", nil, owner), 404)
+	corruptID := backupIDByName(t, &service, corruptName)
 	listing := request(t, h, "GET", "/api/backups", nil, owner)
 	expect(t, listing, 200)
-	if strings.Contains(listing.Body.String(), "failed-job") || strings.Contains(listing.Body.String(), "failed.zip") {
-		t.Fatal("failed backup state leaked into archive inventory")
+	if !strings.Contains(listing.Body.String(), corruptName) || !strings.Contains(listing.Body.String(), "Archive metadata could not be read") {
+		t.Fatal("filesystem zip was not exposed with validation state", listing.Body.String())
 	}
+	expect(t, request(t, h, "GET", "/api/backups/"+corruptID+"/download", nil, owner), 200)
+	expect(t, request(t, h, "GET", "/api/backups/missing/download", nil, owner), 404)
+
 	if err = os.Symlink(filepath.Join(s.Config.DataDir, "app.db"), filepath.Join(service.Path, "outside.zip")); err == nil {
-		if _, err = s.DB.Exec("INSERT INTO backup_records VALUES('symlink','outside.zip','manual',1,1,1)"); err != nil {
-			t.Fatal(err)
+		listing = request(t, h, "GET", "/api/backups", nil, owner)
+		expect(t, listing, 200)
+		if strings.Contains(listing.Body.String(), "outside.zip") {
+			t.Fatal("symlink archive leaked into filesystem inventory")
 		}
-		expect(t, request(t, h, "GET", "/api/backups/symlink/download", nil, owner), 404)
 	}
 }
