@@ -18,7 +18,7 @@ Blockers: none.
 - [x] Subtle favorite/star animation and centered detail star.
 - [x] Compact schedules, immediate toggles, logged changes, hourly metadata default.
 - [x] Animated three-mode login appearance, Add profile, first-use password setup, simplified password policy.
-- [x] UI backup controls, fixed internal backup path, archive downloads, in-app restore/delete, version visibility, and visible failures.
+- [x] UI backup controls, fixed internal backup path, archive downloads, in-app restore/delete, version visibility, and backup failures routed to Notifications/Logs.
 - [x] Schema/backup/access/onboarding tests, full verification, documentation, and local deployment.
 
 ## Refactor acceptance criteria
@@ -121,3 +121,5 @@ Features are DONE only after their meaningful failure paths and acceptance check
 # Completed: Removed legacy environment-variable migration and obsolete environment references; UI-managed settings now seed from SQLite defaults only.
 
 # Completed: Backup archives now expose Manual/Automatic type and source Tally/schema versions, support confirmed in-app restore and deletion, preserve current state on failed restore, migrate compatible older backups in staging, and apply restored SQLite state without restarting Tally.
+
+# Fixed 2026-09-15: Live restore now deletes all restorable tables before inserting snapshot rows so SQLite cascades cannot erase restored follows/preferences. Archive inventory no longer renders failed job runs; backup/restore failures are surfaced through Notifications and Logs.

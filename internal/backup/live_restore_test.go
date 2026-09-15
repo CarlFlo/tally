@@ -8,7 +8,7 @@ import (
 	"github.com/CarlFlo/mediaManager/internal/database"
 )
 
-func TestLiveRestoreAppliesBackupWithoutRestartAndKeepsInventory(t *testing.T) {
+func TestLiveRestoreAppliesBackupWithoutRestartAndKeepsRelationshipsAndPreferences(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	db, err := database.Open(ctx, dir)
@@ -17,7 +17,11 @@ func TestLiveRestoreAppliesBackupWithoutRestartAndKeepsInventory(t *testing.T) {
 	}
 	defer db.Close()
 	service := Service{DB: db, DataDir: dir, Path: filepath.Join(dir, "backups"), Keep: 2}
-	if _, err = db.Exec("UPDATE profiles SET display_name='From backup' WHERE id='user0'"); err != nil {
+	if _, err = db.Exec(`UPDATE profiles SET display_name='From backup' WHERE id='user0';
+INSERT INTO shows(id,name) VALUES('restore-show','Restore show');
+INSERT INTO profile_shows(profile_id,show_id,added_at,favorite) VALUES('user0','restore-show',1,1);
+INSERT INTO profile_preferences(profile_id,data) VALUES('user0','{"theme":"dark","calendar_view":"agenda"}');
+INSERT INTO browser_preferences VALUES('restore-browser','dark',1);`); err != nil {
 		t.Fatal(err)
 	}
 	filename, err := service.Create(ctx, "manual")
@@ -28,16 +32,29 @@ func TestLiveRestoreAppliesBackupWithoutRestartAndKeepsInventory(t *testing.T) {
 	if err = db.QueryRow("SELECT id FROM backup_records WHERE filename=?", filename).Scan(&id); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = db.Exec("UPDATE profiles SET display_name='Current state' WHERE id='user0'"); err != nil {
+	if _, err = db.Exec(`UPDATE profiles SET display_name='Current state' WHERE id='user0';
+DELETE FROM shows WHERE id='restore-show';
+UPDATE profile_preferences SET data='{"theme":"light","calendar_view":"month"}' WHERE profile_id='user0';
+UPDATE browser_preferences SET theme='light' WHERE id='restore-browser';`); err != nil {
 		t.Fatal(err)
 	}
 	manifest, err := service.RestoreRecord(ctx, id)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var name string
+	var name, preference, browserTheme string
 	if err = db.QueryRow("SELECT display_name FROM profiles WHERE id='user0'").Scan(&name); err != nil || name != "From backup" {
 		t.Fatal("running database did not switch to restored state", name, err)
+	}
+	var followed int
+	if err = db.QueryRow("SELECT COUNT(*) FROM profile_shows WHERE profile_id='user0' AND show_id='restore-show' AND favorite=1").Scan(&followed); err != nil || followed != 1 {
+		t.Fatal("restored follow relationship was lost", followed, err)
+	}
+	if err = db.QueryRow("SELECT data FROM profile_preferences WHERE profile_id='user0'").Scan(&preference); err != nil || preference != `{"theme":"dark","calendar_view":"agenda"}` {
+		t.Fatal("profile preferences were not restored", preference, err)
+	}
+	if err = db.QueryRow("SELECT theme FROM browser_preferences WHERE id='restore-browser'").Scan(&browserTheme); err != nil || browserTheme != "dark" {
+		t.Fatal("browser appearance was not restored", browserTheme, err)
 	}
 	if manifest.Schema != database.Version {
 		t.Fatalf("restored schema %d, want %d", manifest.Schema, database.Version)
@@ -127,7 +144,7 @@ UPDATE profiles SET display_name='Legacy profile' WHERE id='user0'`); err != nil
 	_ = targetDB.QueryRow("PRAGMA user_version").Scan(&version)
 	_ = targetDB.QueryRow("SELECT display_name FROM profiles WHERE id='user0'").Scan(&name)
 	if version != database.Version || name != "Legacy profile" {
-		t.Fatal("legacy backup was not migrated into the running database", version, name)
+		t.Fatal("old archive did not restore and upgrade")
 	}
 	if restoredManifest.Schema != 1 || restoredManifest.AppVersion != "0.1.0" {
 		t.Fatal("source backup metadata was not preserved", restoredManifest)

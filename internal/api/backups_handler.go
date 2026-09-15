@@ -9,7 +9,7 @@ import (
 )
 
 func (s *Server) backups(w http.ResponseWriter, r *http.Request, _ auth.Session) error {
-	records, err := s.DB.Rows(r.Context(), "SELECT * FROM backup_records ORDER BY created_at DESC,id DESC LIMIT 100")
+	records, err := s.DB.Rows(r.Context(), "SELECT * FROM backup_records WHERE verified=1 ORDER BY created_at DESC,id DESC LIMIT 100")
 	if err != nil {
 		return err
 	}
@@ -30,10 +30,6 @@ func (s *Server) backups(w http.ResponseWriter, r *http.Request, _ auth.Session)
 		record["different_version"] = manifest.AppVersion != "" && manifest.AppVersion != appversion.Version
 		record["compatible"] = manifest.Format == 1 && manifest.Schema >= 1 && manifest.Schema <= database.Version
 	}
-	failures, err := s.DB.Rows(r.Context(), "SELECT id,started_at,status,trigger FROM job_runs WHERE job_key='backup' AND status IN ('failed','interrupted') ORDER BY started_at DESC LIMIT 25")
-	if err != nil {
-		return err
-	}
-	jsonResponse(w, 200, map[string]any{"records": records, "failures": failures})
+	jsonResponse(w, 200, map[string]any{"records": records})
 	return nil
 }

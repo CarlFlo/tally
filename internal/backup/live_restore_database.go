@@ -30,14 +30,24 @@ func replaceDatabaseState(ctx context.Context, db *database.Store, stagedPath st
 	if err != nil {
 		return err
 	}
+
+	// Delete every restorable table before inserting any restored rows.
+	// SQLite ON DELETE CASCADE actions run immediately even when foreign-key
+	// checks are deferred. Interleaving delete+insert by table can therefore
+	// erase already-restored child rows when a parent table is deleted later.
+	for _, table := range tables {
+		if table == "backup_records" {
+			continue
+		}
+		if _, err = tx.ExecContext(ctx, "DELETE FROM main."+quoteIdentifier(table)); err != nil {
+			return err
+		}
+	}
 	for _, table := range tables {
 		if table == "backup_records" {
 			continue
 		}
 		name := quoteIdentifier(table)
-		if _, err = tx.ExecContext(ctx, "DELETE FROM main."+name); err != nil {
-			return err
-		}
 		if _, err = tx.ExecContext(ctx, "INSERT INTO main."+name+" SELECT * FROM restore."+name); err != nil {
 			return err
 		}

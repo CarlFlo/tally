@@ -16,6 +16,11 @@ import (
 
 func TestBackupManagementListsVersionRestoresLiveAndDeletes(t *testing.T) {
 	s, h, _ := testServer(t, "disabled")
+	if _, err := s.DB.Exec(`INSERT INTO shows(id,name) VALUES('restore-show','Restore show');
+INSERT INTO profile_shows(profile_id,show_id,added_at,favorite) VALUES('user0','restore-show',1,1);
+INSERT INTO profile_preferences(profile_id,data) VALUES('user0','{"theme":"dark"}');`); err != nil {
+		t.Fatal(err)
+	}
 	filename, err := s.Backup.Create(context.Background(), "manual")
 	if err != nil {
 		t.Fatal(err)
@@ -32,7 +37,9 @@ func TestBackupManagementListsVersionRestoresLiveAndDeletes(t *testing.T) {
 			t.Fatalf("backup metadata missing %s: %s", want, listing.Body.String())
 		}
 	}
-	if _, err = s.DB.Exec("UPDATE profiles SET display_name='Changed after backup' WHERE id='user0'"); err != nil {
+	if _, err = s.DB.Exec(`UPDATE profiles SET display_name='Changed after backup' WHERE id='user0';
+DELETE FROM shows WHERE id='restore-show';
+UPDATE profile_preferences SET data='{"theme":"light"}' WHERE profile_id='user0';`); err != nil {
 		t.Fatal(err)
 	}
 	expect(t, request(t, h, "POST", "/api/backups/"+id+"/restore", map[string]any{}, owner), 200)
@@ -40,13 +47,21 @@ func TestBackupManagementListsVersionRestoresLiveAndDeletes(t *testing.T) {
 	if err = s.DB.QueryRow("SELECT display_name FROM profiles WHERE id='user0'").Scan(&name); err != nil || name != "My profile" {
 		t.Fatal("restore did not apply without reopening the database", name, err)
 	}
+	var followed int
+	if err = s.DB.QueryRow("SELECT COUNT(*) FROM profile_shows WHERE profile_id='user0' AND show_id='restore-show'").Scan(&followed); err != nil || followed != 1 {
+		t.Fatal("restore lost followed shows", followed, err)
+	}
+	var theme string
+	if err = s.DB.QueryRow("SELECT json_extract(data,'$.theme') FROM profile_preferences WHERE profile_id='user0'").Scan(&theme); err != nil || theme != "dark" {
+		t.Fatal("restore lost profile theme", theme, err)
+	}
 	expect(t, request(t, h, "DELETE", "/api/backups/"+id, nil, owner), 200)
 	if _, err = os.Stat(filepath.Join(s.Backup.Path, filename)); !os.IsNotExist(err) {
 		t.Fatal("deleted backup file still exists")
 	}
 }
 
-func TestBackupManagementRequiresOperatorAndFailedRestorePreservesState(t *testing.T) {
+func TestBackupManagementRequiresOperatorAndFailedRestorePreservesStateAndNotifies(t *testing.T) {
 	s, h, _ := testServer(t, "disabled")
 	if _, err := s.DB.Exec("INSERT INTO profiles VALUES('user1','Alex','mint',?)", time.Now().Unix()); err != nil {
 		t.Fatal(err)
@@ -73,5 +88,15 @@ func TestBackupManagementRequiresOperatorAndFailedRestorePreservesState(t *testi
 	_ = s.DB.QueryRow("SELECT display_name FROM profiles WHERE id='user0'").Scan(&name)
 	if name != "Keep current" {
 		t.Fatal("failed restore changed current state")
+	}
+	logs := request(t, h, "GET", "/api/logs?q=restore%20failed", nil, owner)
+	expect(t, logs, 200)
+	if !strings.Contains(logs.Body.String(), "backup: restore failed") || !strings.Contains(logs.Body.String(), "job_failed") {
+		t.Fatal("restore failure was not saved in logs", logs.Body.String())
+	}
+	inbox := request(t, h, "GET", "/api/inbox", nil, owner)
+	expect(t, inbox, 200)
+	if !strings.Contains(inbox.Body.String(), "backup: restore failed") {
+		t.Fatal("restore failure was not shown in notifications", inbox.Body.String())
 	}
 }

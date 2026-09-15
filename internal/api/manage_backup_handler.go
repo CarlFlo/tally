@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/CarlFlo/mediaManager/internal/activity"
 	"github.com/CarlFlo/mediaManager/internal/auth"
 	"github.com/CarlFlo/mediaManager/internal/backup"
 )
@@ -20,6 +21,11 @@ func (s *Server) restoreBackup(w http.ResponseWriter, r *http.Request, _ auth.Se
 		return apiError{409, "this backup failed verification"}
 	}
 	if err != nil {
+		message := "backup: restore failed: " + err.Error()
+		_ = activity.Record(r.Context(), s.DB, activity.Event{Action: "job_failed", Profile: "user0", Message: message})
+		if s.Events != nil {
+			s.Events.Publish("user0", "logs", "inbox")
+		}
 		return apiError{409, "backup restore failed: " + err.Error()}
 	}
 	if s.Events != nil {

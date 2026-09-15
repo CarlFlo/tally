@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 const headers = { "X-Tally-CSRF": "1" };
 
-test("backup archives restore and delete from the UI without restarting Tally", async ({ page }) => {
+test("backup archives restore relationships/preferences and delete without fake failure rows", async ({ page }) => {
   await page.request.post("/api/profiles/select", {
     headers,
     data: { profile: "user0" },
@@ -10,13 +10,13 @@ test("backup archives restore and delete from the UI without restarting Tally", 
   await page.goto("/settings");
   await expect(page.locator(".compact-retention strong")).toHaveText("after");
 
-  // The existing settings test creates a verified manual backup with retention=3.
-  // Reuse it here so this final test does not depend on unrelated end-of-suite fixture state.
   const row = page.locator(".backup-row").filter({ hasText: "Manual" }).first();
   await expect(row.getByRole("button", { name: "Restore", exact: true })).toBeVisible();
   const filename = await row.locator("strong").innerText();
   const boot = await (await page.request.get("/api/bootstrap")).json();
   await expect(row).toContainText(`Tally ${boot.version}`);
+  await expect(page.getByText("Backup could not be completed", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Failed", { exact: true })).toHaveCount(0);
 
   const keep = page.getByLabel("Automatic backups to keep");
   await keep.fill("4");

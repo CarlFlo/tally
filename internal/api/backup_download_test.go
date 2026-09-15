@@ -47,8 +47,8 @@ func TestBackupDownloadRequiresOwnerAndConfinesArchivePaths(t *testing.T) {
 	expect(t, request(t, h, "GET", "/api/backups/missing/download", nil, owner), 404)
 	listing := request(t, h, "GET", "/api/backups", nil, owner)
 	expect(t, listing, 200)
-	if !strings.Contains(listing.Body.String(), "failed-job") {
-		t.Fatal("failed backup absent")
+	if strings.Contains(listing.Body.String(), "failed-job") || strings.Contains(listing.Body.String(), "failed.zip") {
+		t.Fatal("failed backup state leaked into archive inventory")
 	}
 	if err = os.Symlink(filepath.Join(s.Config.DataDir, "app.db"), filepath.Join(service.Path, "outside.zip")); err == nil {
 		if _, err = s.DB.Exec("INSERT INTO backup_records VALUES('symlink','outside.zip','manual',1,1,1)"); err != nil {

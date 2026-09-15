@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Archive, Download, Plus, RotateCcw, Trash2, XCircle } from "lucide-react";
+import { Archive, Download, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { api, Busy, bytes, Confirm, dateLabel, ErrorState, useApp } from "../lib";
 import { queryKeys } from "../queryKeys";
@@ -7,21 +7,16 @@ import { invalidateResources } from "../queryInvalidation";
 
 type BackupRecord = {
   id: string;
-  filename?: string;
+  filename: string;
   kind?: string;
   size?: number;
   created_at?: number;
-  started_at?: number;
-  trigger?: string;
-  verified?: number | boolean;
   schema?: number;
   app_version?: string;
   legacy_version?: boolean;
   different_version?: boolean;
   compatible?: boolean;
   archive_error?: string;
-  failed?: boolean;
-  time?: number;
 };
 
 export function BackupArchives() {
@@ -29,16 +24,11 @@ export function BackupArchives() {
   const cache = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<{ action: "restore" | "delete"; record: BackupRecord } | null>(null);
-  const archives = useQuery<{ records: BackupRecord[]; failures: BackupRecord[] }>({
+  const archives = useQuery<{ records: BackupRecord[] }>({
     queryKey: queryKeys.backups(boot.profile!.id),
     queryFn: ({ signal }) => api("/backups", "GET", undefined, signal),
   });
-  const rows = archives.data
-    ? [
-        ...archives.data.records.map((record) => ({ ...record, time: record.created_at, failed: !record.verified })),
-        ...archives.data.failures.map((failure) => ({ ...failure, time: failure.started_at, failed: true })),
-      ].sort((a, b) => (b.time || 0) - (a.time || 0))
-    : [];
+  const rows = archives.data?.records || [];
 
   async function create() {
     setBusy(true);
@@ -84,37 +74,32 @@ export function BackupArchives() {
       {rows.map((record) => {
         const kind = record.kind === "auto" ? "Automatic" : "Manual";
         return (
-          <div className={`backup-row ${record.failed ? "backup-failed" : ""}`} key={record.id}>
-            {record.failed ? <XCircle size={18} /> : <Archive size={18} />}
+          <div className="backup-row" key={record.id}>
+            <Archive size={18} />
             <div className="backup-main">
-              <strong>{record.filename || "Backup could not be completed"}</strong>
+              <strong>{record.filename}</strong>
               <div className="backup-meta">
-                <span>{dateLabel(record.time || 0)}</span>
+                <span>{dateLabel(record.created_at || 0)}</span>
                 {record.size ? <span>{bytes(record.size)}</span> : null}
-                {!record.failed && <span className={`backup-kind ${record.kind || "manual"}`}>{kind}</span>}
-                {!record.failed && record.app_version && <span>Tally {record.app_version}</span>}
-                {!record.failed && record.legacy_version && <span>Version unavailable</span>}
-                {!record.failed && record.schema && <span>Schema v{record.schema}</span>}
-                {!record.failed && record.different_version && <span className="backup-version-note">Different from Tally {boot.version}</span>}
-                {!record.failed && record.compatible === false && <span className="backup-version-note">Incompatible backup</span>}
+                <span className={`backup-kind ${record.kind || "manual"}`}>{kind}</span>
+                {record.app_version && <span>Tally {record.app_version}</span>}
+                {record.legacy_version && <span>Version unavailable</span>}
+                {record.schema && <span>Schema v{record.schema}</span>}
+                {record.different_version && <span className="backup-version-note">Different from Tally {boot.version}</span>}
+                {record.compatible === false && <span className="backup-version-note">Incompatible backup</span>}
                 {record.archive_error && <span className="backup-version-note">{record.archive_error}</span>}
-                {record.failed && <span>{record.trigger || "manual"}</span>}
               </div>
             </div>
-            {record.failed ? (
-              <span className="badge failed">Failed</span>
-            ) : (
-              <div className="backup-actions">
-                <a className="button small" href={`/api/backups/${record.id}/download`} download><Download size={16} />Download</a>
-                <button className="button small" disabled={record.compatible === false} onClick={() => setConfirm({ action: "restore", record })}><RotateCcw size={16} />Restore</button>
-                <button className="button small danger" onClick={() => setConfirm({ action: "delete", record })}><Trash2 size={16} />Delete</button>
-              </div>
-            )}
+            <div className="backup-actions">
+              <a className="button small" href={`/api/backups/${record.id}/download`} download><Download size={16} />Download</a>
+              <button className="button small" disabled={record.compatible === false} onClick={() => setConfirm({ action: "restore", record })}><RotateCcw size={16} />Restore</button>
+              <button className="button small danger" onClick={() => setConfirm({ action: "delete", record })}><Trash2 size={16} />Delete</button>
+            </div>
           </div>
         );
       })}
       {archives.data && !rows.length && <p className="muted">No backups yet.</p>}
-      <p className="small-text muted">Archives include saved connection credentials. Keep downloads private. Restore validates and migrates an archive before replacing current data.</p>
+      <p className="small-text muted">Archives include saved connection credentials. Keep downloads private. Backup failures appear in Notifications and Logs. Restore validates and migrates an archive before replacing current data.</p>
       {confirm && (
         <Confirm
           title={confirm.action === "restore" ? "Restore backup" : "Delete backup"}
