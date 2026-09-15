@@ -3,7 +3,6 @@ package profiles
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -11,13 +10,19 @@ import (
 	"github.com/CarlFlo/mediaManager/internal/database"
 )
 
-var ErrLimit = errors.New("maximum number of profiles reached")
+var (
+	ErrLimit     = errors.New("maximum number of profiles reached")
+	ErrNotFound  = errors.New("profile not found")
+	ErrLastAdmin = errors.New("at least one administrator is required while profiles remain")
+)
 
 type Profile struct {
 	ID     string `json:"id"`
 	Name   string `json:"display_name"`
 	Avatar string `json:"avatar"`
+	Admin  bool   `json:"is_admin"`
 }
+
 type Repository struct {
 	DB    *database.Store
 	Limit int
@@ -26,6 +31,11 @@ type Repository struct {
 func (r Repository) Create(ctx context.Context, name, avatar, hash, actor string) (Profile, error) {
 	name = strings.TrimSpace(name)
 	if err := ValidateName(name); err != nil {
+		return Profile{}, err
+	}
+	var err error
+	avatar, err = NormalizeAvatar(avatar)
+	if err != nil {
 		return Profile{}, err
 	}
 	tx, err := r.DB.BeginTx(ctx, nil)
@@ -40,18 +50,17 @@ func (r Repository) Create(ctx context.Context, name, avatar, hash, actor string
 	if count >= r.Limit {
 		return Profile{}, ErrLimit
 	}
-	var n int
-	if err = tx.QueryRowContext(ctx, "UPDATE counters SET value=value+1 WHERE key='profile' RETURNING value").Scan(&n); err != nil {
-		return Profile{}, err
-	}
-	profile := Profile{ID: fmt.Sprintf("user%d", n), Name: name, Avatar: avatar}
-	if _, err = tx.ExecContext(ctx, "INSERT INTO profiles VALUES(?,?,?,?)", profile.ID, name, avatar, time.Now().Unix()); err != nil {
+	profile := Profile{ID: database.ID(), Name: name, Avatar: avatar}
+	if _, err = tx.ExecContext(ctx, "INSERT INTO profiles(id,display_name,avatar,created_at) VALUES(?,?,?,?)", profile.ID, name, avatar, time.Now().Unix()); err != nil {
 		return Profile{}, err
 	}
 	if hash != "" {
 		if _, err = tx.ExecContext(ctx, "INSERT INTO local_credentials VALUES(?,?,0)", profile.ID, hash); err != nil {
 			return Profile{}, err
 		}
+	}
+	if err = tx.QueryRowContext(ctx, "SELECT is_admin FROM profile_roles WHERE profile_id=?", profile.ID).Scan(&profile.Admin); err != nil {
+		return Profile{}, err
 	}
 	if actor == "" {
 		actor = profile.ID

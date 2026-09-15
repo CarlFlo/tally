@@ -56,6 +56,18 @@ func ValidateSchema(ctx context.Context, db Querier) error {
 			rows.Close()
 		}
 	}
+	if version >= 6 {
+		for _, query := range []string{
+			"SELECT profile_id,is_admin FROM profile_roles LIMIT 0",
+			"SELECT alias,profile_id FROM profile_id_aliases LIMIT 0",
+		} {
+			rows, err := db.QueryContext(ctx, query)
+			if err != nil {
+				return fmt.Errorf("database profile role schema is incomplete: %w", err)
+			}
+			rows.Close()
+		}
+	}
 	if version >= 4 {
 		for _, query := range []string{
 			"SELECT id,action,profile_id,show_id,show_name,message,created_at FROM activity_log LIMIT 0",
