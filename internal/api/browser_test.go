@@ -78,7 +78,13 @@ func TestBrowserServer(t *testing.T) {
 			t.Fatal(err)
 		}
 		userID := database.ID()
-		if _, err = s.DB.Exec("INSERT INTO local_credentials VALUES(?,?,0); INSERT INTO profiles(id,display_name,avatar,created_at) VALUES(?,?,?,?); INSERT INTO local_credentials VALUES(?,?,0)", adminID, hash, userID, "Alex", "mint", time.Now().Unix(), userID, hash); err != nil {
+		if _, err = s.DB.Exec("INSERT INTO local_credentials VALUES(?,?,0)", adminID, hash); err != nil {
+			t.Fatal(err)
+		}
+		if _, err = s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES(?,?,?,?)", userID, "Alex", "mint", time.Now().Unix()); err != nil {
+			t.Fatal(err)
+		}
+		if _, err = s.DB.Exec("INSERT INTO local_credentials VALUES(?,?,0)", userID, hash); err != nil {
 			t.Fatal(err)
 		}
 	}
