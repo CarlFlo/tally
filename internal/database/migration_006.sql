@@ -50,7 +50,6 @@ END;
 CREATE TRIGGER profile_role_last_admin_update
 BEFORE UPDATE OF is_admin ON profile_roles
 WHEN OLD.is_admin=1 AND NEW.is_admin=0
- AND EXISTS(SELECT 1 FROM profiles WHERE id<>OLD.profile_id)
  AND NOT EXISTS(SELECT 1 FROM profile_roles WHERE profile_id<>OLD.profile_id AND is_admin=1)
 BEGIN
  SELECT RAISE(ABORT,'at least one administrator is required while profiles remain');
