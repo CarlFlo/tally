@@ -3,29 +3,33 @@ package commands
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/CarlFlo/tally/internal/backup"
-	"github.com/CarlFlo/tally/internal/database"
 )
 
-func deleteBackup(ctx context.Context, db *database.Store, b *backup.Service, args []string) error {
-	var e error
+func deleteBackup(ctx context.Context, b *backup.Service, args []string) error {
 	if len(args) != 1 {
 		return fmt.Errorf("usage: tally delete-backup <filename>")
 	}
 	name := args[0]
-	if filepath.Base(name) != name || !strings.HasSuffix(name, ".zip") {
+	if filepath.Base(name) != name || !strings.HasSuffix(strings.ToLower(name), ".zip") {
 		return fmt.Errorf("supply a backup filename, not a path")
 	}
-	if e = os.Remove(filepath.Join(b.Path, name)); e != nil {
-		return e
+	archives, err := b.Archives(ctx)
+	if err != nil {
+		return err
 	}
-	_, e = db.ExecContext(ctx, "DELETE FROM backup_records WHERE filename=?", name)
-	if e == nil {
+	for _, archive := range archives {
+		if archive.Filename != name {
+			continue
+		}
+		if err = b.DeleteArchive(ctx, archive.ID); err != nil {
+			return err
+		}
 		fmt.Println("Backup deleted")
+		return nil
 	}
-	return e
+	return backup.ErrNotFound
 }
