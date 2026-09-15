@@ -19,7 +19,7 @@ export function SchedulingBackupsSettings() {
           <div>
             <h2 id="schedule-group-title">Scheduling</h2>
             <p className="muted">
-              Cron schedules use the server timezone from <code>TZ</code>:{" "}
+              Cron schedules use the server timezone:{" "}
               <strong>{deployment.data?.timezone || "UTC"}</strong>.
             </p>
           </div>
