@@ -1,4 +1,4 @@
-import { openProfile, signOut, openProfileMenu } from "./navigation";
+import { openProfile, signOut, profileId } from "./navigation";
 import { test, expect } from "@playwright/test";
 
 test.use({ baseURL: "http://127.0.0.1:18082" });
@@ -8,10 +8,25 @@ test("local sign-in follows browser history and switching requires sign-out", as
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  const adminID = await profileId(page, "My profile");
   await page.goto("/calendar");
   await expect(page).toHaveURL(/\/login$/);
   await page.getByRole("button", { name: "M My profile" }).click();
-  await expect(page).toHaveURL(/\/login\/user0$/);
+  await expect(page).toHaveURL(new RegExp(`/login/${adminID}import { openProfile, signOut, profileId } from "./navigation";
+import { test, expect } from "@playwright/test";
+
+test.use({ baseURL: "http://127.0.0.1:18082" });
+
+test("local sign-in follows browser history and switching requires sign-out", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  const adminID = await profileId(page, "My profile");
+  await page.goto("/calendar");
+  await expect(page).toHaveURL(/\/login$/);
+  await page.getByRole("button", { name: "M My profile" }).click();
+));
   await page
     .getByLabel("Password or PIN", { exact: true })
     .fill("unsent-password");
@@ -21,7 +36,45 @@ test("local sign-in follows browser history and switching requires sign-out", as
     page.getByRole("heading", { name: "Who's keeping up?" }),
   ).toBeVisible();
   await page.goForward();
-  await expect(page).toHaveURL(/\/login\/user0$/);
+  await expect(page).toHaveURL(new RegExp(`/login/${adminID}import { openProfile, signOut, profileId } from "./navigation";
+import { test, expect } from "@playwright/test";
+
+test.use({ baseURL: "http://127.0.0.1:18082" });
+
+test("local sign-in follows browser history and switching requires sign-out", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  const adminID = await profileId(page, "My profile");
+  await page.goto("/calendar");
+  await expect(page).toHaveURL(/\/login$/);
+  await page.getByRole("button", { name: "M My profile" }).click();
+  await expect(page).toHaveURL(new RegExp(`/login/${adminID}import { openProfile, signOut, profileId } from "./navigation";
+import { test, expect } from "@playwright/test";
+
+test.use({ baseURL: "http://127.0.0.1:18082" });
+
+test("local sign-in follows browser history and switching requires sign-out", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  const adminID = await profileId(page, "My profile");
+  await page.goto("/calendar");
+  await expect(page).toHaveURL(/\/login$/);
+  await page.getByRole("button", { name: "M My profile" }).click();
+));
+  await page
+    .getByLabel("Password or PIN", { exact: true })
+    .fill("unsent-password");
+  await page.goBack();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(
+    page.getByRole("heading", { name: "Who's keeping up?" }),
+  ).toBeVisible();
+  await page.goForward();
+));
   await expect(page.getByLabel("Password or PIN", { exact: true })).toHaveValue(
     "",
   );
@@ -61,7 +114,7 @@ test("local sign-in follows browser history and switching requires sign-out", as
   await expect(page.locator(".header-profile strong")).toHaveText("Alex");
   await expect(otherTab).toHaveURL(/\/calendar$/);
   await expect(otherTab.locator(".header-profile strong")).toHaveText("Alex");
-  await page.goto("/login/user0");
+  await page.goto(`/login/${adminID}`);
   await expect(page).toHaveURL(/\/calendar$/);
   await expect(page.locator(".header-profile strong")).toHaveText("Alex");
   expect(errors).toEqual([]);

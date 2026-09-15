@@ -1,12 +1,10 @@
 import { test, expect } from "@playwright/test";
+import { selectProfileByName } from "./navigation";
 
 const headers = { "X-Tally-CSRF": "1" };
 
 test("backup archives restore relationships/preferences and delete without fake failure rows", async ({ page }) => {
-  await page.request.post("/api/profiles/select", {
-    headers,
-    data: { profile: "user0" },
-  });
+  await selectProfileByName(page, "My profile");
   await page.goto("/settings");
   await expect(page.locator(".compact-retention strong")).toHaveText("after");
 

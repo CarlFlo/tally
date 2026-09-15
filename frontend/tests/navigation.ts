@@ -20,3 +20,20 @@ export async function signOut(page: Page) {
   await openProfileMenu(page);
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
 }
+
+export async function profileId(page: Page, name: string) {
+  const boot = await (await page.request.get("/api/bootstrap")).json();
+  const profile = boot.profiles.find((item: any) => item.display_name === name);
+  if (!profile) throw new Error(`Profile not found: ${name}`);
+  return profile.id as string;
+}
+
+export async function selectProfileByName(page: Page, name: string) {
+  const id = await profileId(page, name);
+  const response = await page.request.post("/api/profiles/select", {
+    headers: { "X-Tally-CSRF": "1" },
+    data: { profile: id },
+  });
+  expect(response.ok()).toBe(true);
+  return id;
+}

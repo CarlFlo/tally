@@ -62,12 +62,22 @@ func TestBrowserServer(t *testing.T) {
 		mode, port = "local", "18082"
 	}
 	s, _, _ := testServer(t, mode)
+	// Browser tests deliberately avoid legacy userN IDs so UI authorization
+	// cannot accidentally pass by coupling administrator access to an ID.
+	if _, err := s.DB.Exec("DELETE FROM profiles WHERE id='user0'"); err != nil {
+		t.Fatal(err)
+	}
+	adminID := database.ID()
+	if _, err := s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES(?,?,?,?)", adminID, "My profile", "violet", time.Now().Unix()); err != nil {
+		t.Fatal(err)
+	}
 	if mode == "local" {
 		hash, err := auth.Hash("1234")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err = s.DB.Exec("INSERT INTO local_credentials VALUES('user0',?,0); INSERT INTO profiles VALUES('user1','Alex','mint',?); INSERT INTO local_credentials VALUES('user1',?,0); UPDATE counters SET value=1 WHERE key='profile'", hash, time.Now().Unix(), hash); err != nil {
+		userID := database.ID()
+		if _, err = s.DB.Exec("INSERT INTO local_credentials VALUES(?,?,0); INSERT INTO profiles(id,display_name,avatar,created_at) VALUES(?,?,?,?); INSERT INTO local_credentials VALUES(?,?,0)", adminID, hash, userID, "Alex", "mint", time.Now().Unix(), userID, hash); err != nil {
 			t.Fatal(err)
 		}
 	}

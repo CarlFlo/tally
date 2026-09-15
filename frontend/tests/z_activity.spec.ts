@@ -1,10 +1,8 @@
 import { test, expect } from "@playwright/test";
+import { selectProfileByName } from "./navigation";
 const headers = { "X-Tally-CSRF": "1" };
 async function selectAdmin(page: any) {
-  await page.request.post("/api/profiles/select", {
-    headers,
-    data: { profile: "user0" },
-  });
+  await selectProfileByName(page, "My profile");
 }
 
 test("show menus clear watched state, preserve downloads, support Shift removal and write searchable logs", async ({
@@ -196,9 +194,13 @@ test("login appearance persists on server, admin routes are private, and users c
   await selectAdmin(page);
   await page.goto("/profile/danger");
   await expect(
-    page.getByText(
-      "This is the permanent administrator account. It cannot be deleted.",
-    ),
+    page.getByRole("heading", { name: "Administrator access", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: "Remove my administrator access",
+      exact: true,
+    }),
   ).toBeVisible();
 });
 

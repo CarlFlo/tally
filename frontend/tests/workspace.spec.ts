@@ -1,12 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { openProfileMenu } from "./navigation";
+import { openProfileMenu, selectProfileByName } from "./navigation";
 const headers = { "X-Tally-CSRF": "1" };
 
 test.beforeEach(async ({ page }) => {
-  await page.request.post("/api/profiles/select", {
-    headers,
-    data: { profile: "user0" },
-  });
+  await selectProfileByName(page, "My profile");
   await page.request.patch("/api/preferences", {
     headers,
     data: {

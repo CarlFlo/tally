@@ -1,14 +1,15 @@
 import { test, expect } from "@playwright/test";
-import { signOut, openProfileMenu } from "./navigation";
+import { signOut, openProfileMenu, profileId } from "./navigation";
 test.use({ baseURL: "http://127.0.0.1:18082" });
 const headers = { "X-Tally-CSRF": "1" };
 
 test("passwordless profiles set their own password and signed-out visitors can add a profile", async ({
   page,
 }) => {
+  const adminID = await profileId(page, "My profile");
   await page.request.post("/api/auth/login", {
     headers,
-    data: { profile: "user0", password: "1234" },
+    data: { profile: adminID, password: "1234" },
   });
   await page.goto("/settings/profiles");
   await page.getByRole("button", { name: "New profile", exact: true }).click();
