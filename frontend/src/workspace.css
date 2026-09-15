@@ -338,7 +338,7 @@
 .schedule-heading p { margin: 5px 0 0; color: var(--muted); font-size: 11px; }
 .schedule-editor-body {
   display: grid;
-  grid-template-columns: minmax(360px, .95fr) minmax(320px, 1.05fr);
+  grid-template-columns: minmax(0, 3fr) minmax(240px, 1fr);
   gap: 18px;
   align-items: stretch;
   margin-top: 14px;
