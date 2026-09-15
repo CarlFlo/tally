@@ -56,6 +56,13 @@ func ValidateSchema(ctx context.Context, db Querier) error {
 			rows.Close()
 		}
 	}
+	if version < 6 {
+		rows, err := db.QueryContext(ctx, "SELECT key,value FROM counters LIMIT 0")
+		if err != nil {
+			return fmt.Errorf("database legacy counter schema is incomplete: %w", err)
+		}
+		rows.Close()
+	}
 	if version >= 6 {
 		for _, query := range []string{
 			"SELECT profile_id,is_admin FROM profile_roles LIMIT 0",
@@ -84,7 +91,6 @@ func ValidateSchema(ctx context.Context, db Querier) error {
 	}
 	for _, query := range []string{
 		"SELECT id,display_name,avatar,created_at FROM profiles LIMIT 0",
-		"SELECT key,value FROM counters LIMIT 0",
 		"SELECT profile_id,data FROM profile_preferences LIMIT 0",
 		"SELECT issuer,subject,profile_id FROM profile_identities LIMIT 0",
 		"SELECT profile_id,hash,must_change FROM local_credentials LIMIT 0",
