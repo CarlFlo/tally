@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/appversion"
-	"github.com/CarlFlo/mediaManager/internal/database"
+	"github.com/CarlFlo/tally/internal/appversion"
+	"github.com/CarlFlo/tally/internal/database"
 )
 
 func (s *Service) snapshotFiles(ctx context.Context, snapshot string) (Manifest, map[string]string, error) {

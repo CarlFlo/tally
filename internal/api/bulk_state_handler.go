@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/activity"
-	"github.com/CarlFlo/mediaManager/internal/auth"
+	"github.com/CarlFlo/tally/internal/activity"
+	"github.com/CarlFlo/tally/internal/auth"
 )
 
 func (s *Server) bulkState(w http.ResponseWriter, r *http.Request, session auth.Session) error {

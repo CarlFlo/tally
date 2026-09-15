@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/auth"
+	"github.com/CarlFlo/tally/internal/auth"
 )
 
 func TestAdministratorRoleIsTransferableWithBackendGuard(t *testing.T) {

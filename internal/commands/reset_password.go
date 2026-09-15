@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/CarlFlo/mediaManager/internal/auth"
-	"github.com/CarlFlo/mediaManager/internal/database"
+	"github.com/CarlFlo/tally/internal/auth"
+	"github.com/CarlFlo/tally/internal/database"
 )
 
 func resetPassword(ctx context.Context, db *database.Store, args []string) error {

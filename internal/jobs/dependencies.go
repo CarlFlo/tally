@@ -3,7 +3,7 @@ package jobs
 import (
 	"context"
 
-	"github.com/CarlFlo/mediaManager/internal/providers"
+	"github.com/CarlFlo/tally/internal/providers"
 )
 
 type MetadataSource interface {

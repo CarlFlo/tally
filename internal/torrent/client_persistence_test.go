@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/CarlFlo/mediaManager/internal/database"
+	"github.com/CarlFlo/tally/internal/database"
 )
 
 func TestClientSettingsPersistAcrossDatabaseReopen(t *testing.T) {

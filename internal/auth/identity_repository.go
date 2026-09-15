@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/activity"
-	"github.com/CarlFlo/mediaManager/internal/database"
+	"github.com/CarlFlo/tally/internal/activity"
+	"github.com/CarlFlo/tally/internal/database"
 )
 
 func (o *OIDC) MapIdentity(ctx context.Context, issuer, subject, name string) (string, error) {

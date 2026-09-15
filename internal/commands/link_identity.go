@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/CarlFlo/mediaManager/internal/config"
-	"github.com/CarlFlo/mediaManager/internal/database"
+	"github.com/CarlFlo/tally/internal/config"
+	"github.com/CarlFlo/tally/internal/database"
 )
 
 func linkIdentity(ctx context.Context, db *database.Store, args []string) error {

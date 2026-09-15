@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/config"
+	"github.com/CarlFlo/tally/internal/config"
 )
 
 func healthcheck(c config.Config) error {

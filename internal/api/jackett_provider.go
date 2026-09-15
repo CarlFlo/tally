@@ -3,8 +3,8 @@ package api
 import (
 	"context"
 
-	"github.com/CarlFlo/mediaManager/internal/settings"
-	"github.com/CarlFlo/mediaManager/internal/torrent"
+	"github.com/CarlFlo/tally/internal/settings"
+	"github.com/CarlFlo/tally/internal/torrent"
 )
 
 func (s *Server) jackett(ctx context.Context) *torrent.Jackett {

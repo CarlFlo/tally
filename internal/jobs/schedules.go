@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/activity"
-	"github.com/CarlFlo/mediaManager/internal/settings"
+	"github.com/CarlFlo/tally/internal/activity"
+	"github.com/CarlFlo/tally/internal/settings"
 )
 
 type Schedule struct {

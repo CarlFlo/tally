@@ -3,9 +3,9 @@ package api
 import (
 	"net/http"
 
-	"github.com/CarlFlo/mediaManager/internal/auth"
-	"github.com/CarlFlo/mediaManager/internal/database"
-	"github.com/CarlFlo/mediaManager/internal/settings"
+	"github.com/CarlFlo/tally/internal/auth"
+	"github.com/CarlFlo/tally/internal/database"
+	"github.com/CarlFlo/tally/internal/settings"
 )
 
 func (s *Server) settings(w http.ResponseWriter, r *http.Request, session auth.Session) error {
@@ -49,16 +49,16 @@ func (s *Server) settings(w http.ResponseWriter, r *http.Request, session auth.S
 	var environment map[string]any
 	if s.operator(session) == nil {
 		environment = map[string]any{
-			"TZ":                         c.Timezone,
-			"APP_AUTH_MODE":              c.AuthMode,
-			"APP_LANGUAGE":               c.Language,
-			"APP_THEME_DEFAULT":          c.Theme,
-			"APP_MAX_PROFILES":           c.MaxProfiles,
-			"JOB_MAX_CONCURRENCY":        c.JobConcurrency,
-			"JOB_MAX_RETRIES":            c.JobRetries,
-			"JOB_MAX_BATCH_SIZE":         c.BatchSize,
-			"PROVIDER_MAX_CONCURRENCY":   c.ProviderConcurrency,
-			"STATS_RAW_RETENTION_DAYS":   c.RawRetention,
+			"TZ":                             c.Timezone,
+			"APP_AUTH_MODE":                  c.AuthMode,
+			"APP_LANGUAGE":                   c.Language,
+			"APP_THEME_DEFAULT":              c.Theme,
+			"APP_MAX_PROFILES":               c.MaxProfiles,
+			"JOB_MAX_CONCURRENCY":            c.JobConcurrency,
+			"JOB_MAX_RETRIES":                c.JobRetries,
+			"JOB_MAX_BATCH_SIZE":             c.BatchSize,
+			"PROVIDER_MAX_CONCURRENCY":       c.ProviderConcurrency,
+			"STATS_RAW_RETENTION_DAYS":       c.RawRetention,
 			"STATS_AGGREGATE_RETENTION_DAYS": c.AggregateRetention,
 		}
 	}

@@ -1,10 +1,11 @@
 package api
 
 import (
-	"github.com/CarlFlo/mediaManager/internal/auth"
-	"github.com/CarlFlo/mediaManager/internal/inbox"
 	"net/http"
 	"strconv"
+
+	"github.com/CarlFlo/tally/internal/auth"
+	"github.com/CarlFlo/tally/internal/inbox"
 )
 
 func (s *Server) inbox(w http.ResponseWriter, r *http.Request, session auth.Session) error {

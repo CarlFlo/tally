@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/CarlFlo/mediaManager/internal/backup"
-	"github.com/CarlFlo/mediaManager/internal/config"
+	"github.com/CarlFlo/tally/internal/backup"
+	"github.com/CarlFlo/tally/internal/config"
 )
 
 func restoreBackup(ctx context.Context, c config.Config, args []string) error {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/database"
-	"github.com/CarlFlo/mediaManager/internal/scheduling"
+	"github.com/CarlFlo/tally/internal/database"
+	"github.com/CarlFlo/tally/internal/scheduling"
 )
 
 func prepareStagedDatabase(ctx context.Context, dir, timezone string) error {

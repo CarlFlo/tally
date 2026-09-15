@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/CarlFlo/mediaManager/internal/database"
+	"github.com/CarlFlo/tally/internal/database"
 )
 
 func validateSnapshot(ctx context.Context, dir string, m Manifest, seen map[string]bool) error {

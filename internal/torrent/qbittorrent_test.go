@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/CarlFlo/mediaManager/internal/providers"
+	"github.com/CarlFlo/tally/internal/providers"
 )
 
 const testAPIKey = "qbt_0123456789abcdefghijklmnopqr"

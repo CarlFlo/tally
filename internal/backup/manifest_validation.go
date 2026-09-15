@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/CarlFlo/mediaManager/internal/database"
+	"github.com/CarlFlo/tally/internal/database"
 )
 
 func readManifest(dir string, seen map[string]bool) (m Manifest, err error) {

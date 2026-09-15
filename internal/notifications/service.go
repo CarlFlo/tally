@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/database"
-	"github.com/CarlFlo/mediaManager/internal/providers"
-	"github.com/CarlFlo/mediaManager/internal/settings"
+	"github.com/CarlFlo/tally/internal/database"
+	"github.com/CarlFlo/tally/internal/providers"
+	"github.com/CarlFlo/tally/internal/settings"
 )
 
 type Service struct {

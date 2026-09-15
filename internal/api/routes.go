@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/CarlFlo/mediaManager/internal/live"
+	"github.com/CarlFlo/tally/internal/live"
 )
 
 func (s *Server) Handler() http.Handler {

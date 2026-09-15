@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/CarlFlo/mediaManager/internal/auth"
+	"github.com/CarlFlo/tally/internal/auth"
 )
 
 func (s *Server) revokeSession(w http.ResponseWriter, r *http.Request, session auth.Session) error {

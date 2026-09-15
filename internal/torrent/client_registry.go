@@ -1,7 +1,7 @@
 package torrent
 
 import (
-	"github.com/CarlFlo/mediaManager/internal/providers"
+	"github.com/CarlFlo/tally/internal/providers"
 )
 
 type ClientField struct {

@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/CarlFlo/mediaManager/internal/torrent"
+	"github.com/CarlFlo/tally/internal/torrent"
 )
 
 const fixtureClientKey = "qbt_0123456789abcdefghijklmnopqr"

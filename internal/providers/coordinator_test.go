@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/CarlFlo/mediaManager/internal/database"
+	"github.com/CarlFlo/tally/internal/database"
 )
 
 func control(t *testing.T) *Coordinator {

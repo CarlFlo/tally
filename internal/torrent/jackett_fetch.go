@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/CarlFlo/mediaManager/internal/providers"
+	"github.com/CarlFlo/tally/internal/providers"
 )
 
 func (j *Jackett) validTorrentURL(raw string) bool {

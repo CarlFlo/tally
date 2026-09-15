@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/appversion"
-	"github.com/CarlFlo/mediaManager/internal/database"
+	"github.com/CarlFlo/tally/internal/appversion"
+	"github.com/CarlFlo/tally/internal/database"
 )
 
 func TestBackupManagementListsVersionRestoresLiveAndDeletes(t *testing.T) {

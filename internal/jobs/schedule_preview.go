@@ -5,7 +5,7 @@ import (
 
 	descriptor "github.com/lnquy/cron"
 
-	"github.com/CarlFlo/mediaManager/internal/scheduling"
+	"github.com/CarlFlo/tally/internal/scheduling"
 )
 
 type SchedulePreview struct {

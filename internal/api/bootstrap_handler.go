@@ -3,8 +3,8 @@ package api
 import (
 	"net/http"
 
-	"github.com/CarlFlo/mediaManager/internal/appversion"
-	"github.com/CarlFlo/mediaManager/internal/auth"
+	"github.com/CarlFlo/tally/internal/appversion"
+	"github.com/CarlFlo/tally/internal/auth"
 )
 
 func (s *Server) bootstrap(w http.ResponseWriter, r *http.Request, _ auth.Session) error {

@@ -3,7 +3,7 @@ package api
 import (
 	"errors"
 
-	"github.com/CarlFlo/mediaManager/internal/torrent"
+	"github.com/CarlFlo/tally/internal/torrent"
 )
 
 func clientInputError(e error) error {

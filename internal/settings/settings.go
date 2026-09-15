@@ -7,8 +7,8 @@ import (
 	"errors"
 	"reflect"
 
-	"github.com/CarlFlo/mediaManager/internal/activity"
-	"github.com/CarlFlo/mediaManager/internal/database"
+	"github.com/CarlFlo/tally/internal/activity"
+	"github.com/CarlFlo/tally/internal/database"
 )
 
 type Store struct{ DB *database.Store }

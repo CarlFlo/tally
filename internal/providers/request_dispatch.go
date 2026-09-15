@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/CarlFlo/mediaManager/internal/config"
+	"github.com/CarlFlo/tally/internal/config"
 )
 
 func (c *Coordinator) Do(ctx context.Context, r Request) (Response, error) {

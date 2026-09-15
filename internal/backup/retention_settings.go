@@ -4,7 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/CarlFlo/mediaManager/internal/settings"
+
+	"github.com/CarlFlo/tally/internal/settings"
 )
 
 func (s *Service) retentionCount(ctx context.Context) (int, error) {

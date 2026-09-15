@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/CarlFlo/mediaManager/internal/database"
-	"github.com/CarlFlo/mediaManager/internal/settings"
+	"github.com/CarlFlo/tally/internal/database"
+	"github.com/CarlFlo/tally/internal/settings"
 )
 
 func TestProfileLifecycleActivityUsesSingleSubscriptionEvent(t *testing.T) {

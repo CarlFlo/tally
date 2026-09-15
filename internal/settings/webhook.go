@@ -3,9 +3,10 @@ package settings
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/CarlFlo/mediaManager/internal/config"
 	"time"
 	"unicode/utf8"
+
+	"github.com/CarlFlo/tally/internal/config"
 )
 
 // Webhook retains the legacy settings name and URL for seamless upgrades.

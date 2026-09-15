@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/CarlFlo/mediaManager/internal/commands"
+	"github.com/CarlFlo/tally/internal/commands"
 )
 
 func main() {

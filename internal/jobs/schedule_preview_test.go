@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/scheduling"
+	"github.com/CarlFlo/tally/internal/scheduling"
 )
 
 func TestPreviewScheduleUsesSchedulerDialect(t *testing.T) {

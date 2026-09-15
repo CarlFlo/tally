@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CarlFlo/mediaManager/internal/backup"
+	"github.com/CarlFlo/tally/internal/backup"
 )
 
 func TestBackupDownloadRequiresOwnerAndConfinesArchivePaths(t *testing.T) {

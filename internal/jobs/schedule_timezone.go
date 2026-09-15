@@ -3,7 +3,7 @@ package jobs
 import (
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/scheduling"
+	"github.com/CarlFlo/tally/internal/scheduling"
 )
 
 func (s *Service) scheduleTimezone() string {

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CarlFlo/mediaManager/internal/settings"
-	"github.com/CarlFlo/mediaManager/internal/torrent"
+	"github.com/CarlFlo/tally/internal/settings"
+	"github.com/CarlFlo/tally/internal/torrent"
 )
 
 func TestEditableSettingsPersistAndIgnoreLaterEnvironment(t *testing.T) {

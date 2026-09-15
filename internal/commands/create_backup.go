@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/CarlFlo/mediaManager/internal/backup"
+	"github.com/CarlFlo/tally/internal/backup"
 )
 
 func createBackup(ctx context.Context, b *backup.Service) error {

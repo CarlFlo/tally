@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/auth"
-	"github.com/CarlFlo/mediaManager/internal/providers"
+	"github.com/CarlFlo/tally/internal/auth"
+	"github.com/CarlFlo/tally/internal/providers"
 )
 
 func (s *Server) image(w http.ResponseWriter, r *http.Request, _ auth.Session) error {

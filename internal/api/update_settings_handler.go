@@ -4,9 +4,9 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/CarlFlo/mediaManager/internal/auth"
-	"github.com/CarlFlo/mediaManager/internal/jobs"
-	"github.com/CarlFlo/mediaManager/internal/settings"
+	"github.com/CarlFlo/tally/internal/auth"
+	"github.com/CarlFlo/tally/internal/jobs"
+	"github.com/CarlFlo/tally/internal/settings"
 )
 
 func (s *Server) updateSettings(w http.ResponseWriter, r *http.Request, session auth.Session) error {

@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/CarlFlo/mediaManager/internal/auth"
-	"github.com/CarlFlo/mediaManager/internal/profiles"
+	"github.com/CarlFlo/tally/internal/auth"
+	"github.com/CarlFlo/tally/internal/profiles"
 )
 
 func (s *Server) updateProfile(w http.ResponseWriter, r *http.Request, session auth.Session) error {

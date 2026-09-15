@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/auth"
-	"github.com/CarlFlo/mediaManager/internal/notifications"
+	"github.com/CarlFlo/tally/internal/auth"
+	"github.com/CarlFlo/tally/internal/notifications"
 )
 
 func (s *Server) notificationTimePreview(w http.ResponseWriter, r *http.Request, session auth.Session) error {
@@ -27,7 +27,7 @@ func (s *Server) notificationTimePreview(w http.ResponseWriter, r *http.Request,
 	}
 	next := notifications.DeliveryAt(time.Now(), input.DeliveryTime, location)
 	jsonResponse(w, http.StatusOK, map[string]any{
-		"next_delivery": next.Unix(),
+		"next_delivery":   next.Unix(),
 		"server_timezone": s.Config.Timezone,
 	})
 	return nil

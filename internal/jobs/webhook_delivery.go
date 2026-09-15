@@ -1,6 +1,6 @@
 package jobs
 
-import "github.com/CarlFlo/mediaManager/internal/notifications"
+import "github.com/CarlFlo/tally/internal/notifications"
 
 func (s *Service) deliverNotifications() {
 	defer s.wg.Done()

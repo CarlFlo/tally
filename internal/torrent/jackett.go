@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/providers"
+	"github.com/CarlFlo/tally/internal/providers"
 )
 
 const jackettTorznabPath = "/api/v2.0/indexers/all/results/torznab/api"

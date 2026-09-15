@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/CarlFlo/mediaManager/internal/auth"
+	"github.com/CarlFlo/tally/internal/auth"
 )
 
 type handler func(http.ResponseWriter, *http.Request, auth.Session) error

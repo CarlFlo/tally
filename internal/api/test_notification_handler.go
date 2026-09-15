@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/auth"
-	"github.com/CarlFlo/mediaManager/internal/notifications"
-	"github.com/CarlFlo/mediaManager/internal/settings"
+	"github.com/CarlFlo/tally/internal/auth"
+	"github.com/CarlFlo/tally/internal/notifications"
+	"github.com/CarlFlo/tally/internal/settings"
 )
 
 func (s *Server) testNotification(w http.ResponseWriter, r *http.Request, _ auth.Session) error {

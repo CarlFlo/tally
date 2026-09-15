@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/CarlFlo/mediaManager/internal/auth"
-	"github.com/CarlFlo/mediaManager/internal/metadata"
+	"github.com/CarlFlo/tally/internal/auth"
+	"github.com/CarlFlo/tally/internal/metadata"
 )
 
 func (s *Server) writeSearchResults(w http.ResponseWriter, r *http.Request, session auth.Session, results []metadata.SearchResult) error {

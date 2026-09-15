@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/auth"
-	"github.com/CarlFlo/mediaManager/internal/settings"
-	"github.com/CarlFlo/mediaManager/internal/torrent"
+	"github.com/CarlFlo/tally/internal/auth"
+	"github.com/CarlFlo/tally/internal/settings"
+	"github.com/CarlFlo/tally/internal/torrent"
 )
 
 func (s *Server) testJackett(w http.ResponseWriter, r *http.Request, session auth.Session) error {

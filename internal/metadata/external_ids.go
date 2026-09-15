@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/CarlFlo/mediaManager/internal/database"
+	"github.com/CarlFlo/tally/internal/database"
 )
 
 func externalID(ctx context.Context, tx *sql.Tx, kind, external string) (string, error) {

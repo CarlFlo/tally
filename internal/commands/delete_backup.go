@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/CarlFlo/mediaManager/internal/backup"
-	"github.com/CarlFlo/mediaManager/internal/database"
+	"github.com/CarlFlo/tally/internal/backup"
+	"github.com/CarlFlo/tally/internal/database"
 )
 
 func deleteBackup(ctx context.Context, db *database.Store, b *backup.Service, args []string) error {

@@ -3,7 +3,7 @@ package jobs
 import (
 	"context"
 
-	"github.com/CarlFlo/mediaManager/internal/settings"
+	"github.com/CarlFlo/tally/internal/settings"
 )
 
 func (s *Service) Start() error {

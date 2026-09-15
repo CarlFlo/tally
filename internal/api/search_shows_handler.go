@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/CarlFlo/mediaManager/internal/auth"
+	"github.com/CarlFlo/tally/internal/auth"
 )
 
 func (s *Server) searchShows(w http.ResponseWriter, r *http.Request, session auth.Session) error {

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/jobs"
+	"github.com/CarlFlo/tally/internal/jobs"
 )
 
 func TestManualBackupJobCompletesForGeneratedAdministrator(t *testing.T) {

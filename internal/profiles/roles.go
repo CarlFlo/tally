@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/CarlFlo/mediaManager/internal/activity"
+	"github.com/CarlFlo/tally/internal/activity"
 )
 
 func roleError(err error) error {

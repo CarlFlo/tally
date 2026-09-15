@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/metadata"
+	"github.com/CarlFlo/tally/internal/metadata"
 )
 
 func (s *Service) runMetadata(ctx context.Context, id, trigger, show string) (result runResult, err error) {

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/auth"
+	"github.com/CarlFlo/tally/internal/auth"
 )
 
 func (s *Server) readPreferences(r *http.Request, id string) map[string]any {

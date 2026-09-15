@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/CarlFlo/mediaManager/internal/config"
+	"github.com/CarlFlo/tally/internal/config"
 )
 
 // Indexer is retained only to read older multi-provider settings. New saves use

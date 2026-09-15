@@ -3,8 +3,8 @@ package api
 import (
 	"net/http"
 
-	"github.com/CarlFlo/mediaManager/internal/auth"
-	"github.com/CarlFlo/mediaManager/internal/database"
+	"github.com/CarlFlo/tally/internal/auth"
+	"github.com/CarlFlo/tally/internal/database"
 )
 
 func (s *Server) browserTheme(r *http.Request) string {

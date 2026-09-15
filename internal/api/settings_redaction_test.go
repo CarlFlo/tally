@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CarlFlo/mediaManager/internal/torrent"
+	"github.com/CarlFlo/tally/internal/torrent"
 )
 
 func TestSettingsSecretRedaction(t *testing.T) {

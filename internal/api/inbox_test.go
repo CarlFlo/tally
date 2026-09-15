@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CarlFlo/mediaManager/internal/inbox"
+	"github.com/CarlFlo/tally/internal/inbox"
 )
 
 func TestInboxMarkersDismissalsAndLogsAreProfileScoped(t *testing.T) {

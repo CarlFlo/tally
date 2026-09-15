@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/CarlFlo/mediaManager/internal/auth"
+	"github.com/CarlFlo/tally/internal/auth"
 )
 
 func TestLiveChangesScopesAndTargetsResources(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/activity"
+	"github.com/CarlFlo/tally/internal/activity"
 )
 
 // SetFollow records actual membership changes in the caller's transaction.

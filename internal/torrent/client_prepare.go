@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/CarlFlo/mediaManager/internal/config"
+	"github.com/CarlFlo/tally/internal/config"
 )
 
 func (s *ClientStore) Prepare(ctx context.Context, in ClientUpdate) (ClientConfig, error) {

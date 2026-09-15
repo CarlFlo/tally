@@ -12,14 +12,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/auth"
-	"github.com/CarlFlo/mediaManager/internal/backup"
-	"github.com/CarlFlo/mediaManager/internal/database"
-	"github.com/CarlFlo/mediaManager/internal/jobs"
-	"github.com/CarlFlo/mediaManager/internal/metadata"
-	"github.com/CarlFlo/mediaManager/internal/settings"
-	"github.com/CarlFlo/mediaManager/internal/torrent"
-	"github.com/CarlFlo/mediaManager/web"
+	"github.com/CarlFlo/tally/internal/auth"
+	"github.com/CarlFlo/tally/internal/backup"
+	"github.com/CarlFlo/tally/internal/database"
+	"github.com/CarlFlo/tally/internal/jobs"
+	"github.com/CarlFlo/tally/internal/metadata"
+	"github.com/CarlFlo/tally/internal/settings"
+	"github.com/CarlFlo/tally/internal/torrent"
+	"github.com/CarlFlo/tally/web"
 )
 
 type browserTV struct{ fakeTV }

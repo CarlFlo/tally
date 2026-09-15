@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/settings"
+	"github.com/CarlFlo/tally/internal/settings"
 )
 
 type Message struct {

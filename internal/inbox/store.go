@@ -3,7 +3,7 @@ package inbox
 import (
 	"context"
 
-	"github.com/CarlFlo/mediaManager/internal/database"
+	"github.com/CarlFlo/tally/internal/database"
 )
 
 type Store struct{ DB *database.Store }

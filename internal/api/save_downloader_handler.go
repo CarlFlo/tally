@@ -3,8 +3,8 @@ package api
 import (
 	"net/http"
 
-	"github.com/CarlFlo/mediaManager/internal/auth"
-	"github.com/CarlFlo/mediaManager/internal/torrent"
+	"github.com/CarlFlo/tally/internal/auth"
+	"github.com/CarlFlo/tally/internal/torrent"
 )
 
 func (s *Server) saveDownloader(w http.ResponseWriter, r *http.Request, session auth.Session) error {

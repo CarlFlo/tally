@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/activity"
+	"github.com/CarlFlo/tally/internal/activity"
 )
 
 func (s *Service) collectBellReleases(ctx context.Context, now time.Time) error {

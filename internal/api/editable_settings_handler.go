@@ -3,8 +3,8 @@ package api
 import (
 	"net/http"
 
-	"github.com/CarlFlo/mediaManager/internal/auth"
-	"github.com/CarlFlo/mediaManager/internal/settings"
+	"github.com/CarlFlo/tally/internal/auth"
+	"github.com/CarlFlo/tally/internal/settings"
 )
 
 func (s *Server) settingsStore() settings.Store { return settings.Store{DB: s.DB} }

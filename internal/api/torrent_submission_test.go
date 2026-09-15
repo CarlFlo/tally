@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/torrent"
+	"github.com/CarlFlo/tally/internal/torrent"
 )
 
 func TestTorrentSubmissionIdempotency(t *testing.T) {

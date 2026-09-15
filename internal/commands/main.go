@@ -11,9 +11,9 @@ import (
 
 	"github.com/gofrs/flock"
 
-	"github.com/CarlFlo/mediaManager/internal/backup"
-	"github.com/CarlFlo/mediaManager/internal/config"
-	"github.com/CarlFlo/mediaManager/internal/database"
+	"github.com/CarlFlo/tally/internal/backup"
+	"github.com/CarlFlo/tally/internal/config"
+	"github.com/CarlFlo/tally/internal/database"
 )
 
 func Run(args []string) error {

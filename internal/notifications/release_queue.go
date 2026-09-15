@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/settings"
+	"github.com/CarlFlo/tally/internal/settings"
 )
 
 func (s *Service) collectReleases(ctx context.Context, config settings.Webhook, now time.Time) error {

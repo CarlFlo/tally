@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CarlFlo/mediaManager/internal/library"
+	"github.com/CarlFlo/tally/internal/library"
 )
 
 func TestClearWatchHistoryPreservesDownloadsAndOtherProfiles(t *testing.T) {

@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/CarlFlo/mediaManager/internal/auth"
-	"github.com/CarlFlo/mediaManager/internal/library"
-	"github.com/CarlFlo/mediaManager/internal/metadata"
+	"github.com/CarlFlo/tally/internal/auth"
+	"github.com/CarlFlo/tally/internal/library"
+	"github.com/CarlFlo/tally/internal/metadata"
 )
 
 func (s *Server) addShow(w http.ResponseWriter, r *http.Request, session auth.Session) error {

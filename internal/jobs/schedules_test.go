@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/CarlFlo/mediaManager/internal/config"
-	"github.com/CarlFlo/mediaManager/internal/database"
-	"github.com/CarlFlo/mediaManager/internal/settings"
+	"github.com/CarlFlo/tally/internal/config"
+	"github.com/CarlFlo/tally/internal/database"
+	"github.com/CarlFlo/tally/internal/settings"
 )
 
 func TestSchedulesPersistPauseAfterFailuresAndResume(t *testing.T) {

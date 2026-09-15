@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/auth"
-	"github.com/CarlFlo/mediaManager/internal/jobs"
+	"github.com/CarlFlo/tally/internal/auth"
+	"github.com/CarlFlo/tally/internal/jobs"
 )
 
 func (s *Server) schedulePreview(w http.ResponseWriter, r *http.Request, session auth.Session) error {

@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/CarlFlo/mediaManager/internal/providers"
-	"github.com/CarlFlo/mediaManager/internal/settings"
+	"github.com/CarlFlo/tally/internal/providers"
+	"github.com/CarlFlo/tally/internal/settings"
 )
 
 func Send(ctx context.Context, requester providers.Requester, config settings.Webhook, message Message) error {

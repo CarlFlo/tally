@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/database"
+	"github.com/CarlFlo/tally/internal/database"
 )
 
 func TestResetPasswordAcceptsUniqueProfileName(t *testing.T) {

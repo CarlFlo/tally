@@ -1,6 +1,6 @@
 package api
 
-import "github.com/CarlFlo/mediaManager/internal/auth"
+import "github.com/CarlFlo/tally/internal/auth"
 
 func (s *Server) operator(session auth.Session) error {
 	if !session.Admin {

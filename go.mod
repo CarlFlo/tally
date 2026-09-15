@@ -1,4 +1,4 @@
-module github.com/CarlFlo/mediaManager
+module github.com/CarlFlo/tally
 
 go 1.27.1
 

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/CarlFlo/mediaManager/internal/activity"
+	"github.com/CarlFlo/tally/internal/activity"
 )
 
 func (s *Service) HashPassword(ctx context.Context, password string) (string, error) {

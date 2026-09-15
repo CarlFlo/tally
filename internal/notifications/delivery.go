@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/activity"
-	"github.com/CarlFlo/mediaManager/internal/settings"
+	"github.com/CarlFlo/tally/internal/activity"
+	"github.com/CarlFlo/tally/internal/settings"
 )
 
 func (s *Service) deliver(ctx context.Context, now time.Time) error {

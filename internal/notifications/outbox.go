@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/activity"
-	"github.com/CarlFlo/mediaManager/internal/database"
-	"github.com/CarlFlo/mediaManager/internal/settings"
+	"github.com/CarlFlo/tally/internal/activity"
+	"github.com/CarlFlo/tally/internal/database"
+	"github.com/CarlFlo/tally/internal/settings"
 )
 
 func enqueue(ctx context.Context, db activity.Execer, unique string, message Message, at time.Time) error {

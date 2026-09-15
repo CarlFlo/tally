@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/CarlFlo/mediaManager/internal/database"
+	"github.com/CarlFlo/tally/internal/database"
 )
 
 // Repository persists a complete metadata response in one transaction.
