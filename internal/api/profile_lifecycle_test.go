@@ -50,6 +50,7 @@ func TestProfileIDsAreOpaqueAndLastAdminIsProtected(t *testing.T) {
 func TestDeletingOnlyProfileAllowsCleanFirstAdminBootstrap(t *testing.T) {
 	s, h, _ := testServer(t, "disabled")
 	admin := &http.Cookie{Name: "tally_profile", Value: "profile-admin"}
+	expect(t, request(t, h, "PATCH", "/api/profiles/profile-admin/admin", map[string]any{"is_admin": false}, admin), 400)
 	deleted := request(t, h, "DELETE", "/api/profiles/profile-admin", nil, admin)
 	expect(t, deleted, 200)
 	var count int
