@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -35,8 +36,25 @@ func Run(args []string) error {
 	if err = os.MkdirAll(c.DataDir, 0700); err != nil {
 		return err
 	}
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer cancel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
+	defer func() {
+		signal.Stop(signals)
+		cancel()
+	}()
+	go func() {
+		select {
+		case sig := <-signals:
+			if command == "serve" {
+				slog.Info("Shutdown requested", "signal", sig.String())
+			}
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+
 	if command == "verify-backup" {
 		return verifyBackup(ctx, c, args)
 	}
@@ -60,8 +78,23 @@ func Run(args []string) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 	b := &backup.Service{DB: db, DataDir: c.DataDir, Path: filepath.Join(c.DataDir, "backups"), Timezone: c.Timezone}
+
+	if command == "serve" {
+		serveErr := serve(ctx, c, db, b)
+		slog.Info("Shutdown: closing database")
+		closeErr := db.Close()
+		if closeErr != nil {
+			slog.Error("Shutdown: database close failed", "error", closeErr)
+		}
+		slog.Info("Tally stopped")
+		if serveErr != nil {
+			return serveErr
+		}
+		return closeErr
+	}
+	defer db.Close()
+
 	switch command {
 	case "link-identity":
 		return linkIdentity(ctx, db, args)
@@ -70,6 +103,6 @@ func Run(args []string) error {
 	case "backup":
 		return createBackup(ctx, b)
 	default:
-		return serve(ctx, c, db, b)
+		return nil
 	}
 }
