@@ -85,3 +85,4 @@ Scope: implement the fixes and upgrades from the 2026-09-15 code audit while pre
 - [x] Removing the global route remount and adding lazy secondary routes passed the existing same-document navigation stress suite, including bounded listener/stream/request checks.
 
 - [x] Trivy found CVE-2026-14456 in the Alpine runtime's OpenSSL 3.5.7-r0 packages, with 3.5.8-r0 already available. The Docker build now upgrades runtime packages before installing CA certificates; the security gate remains strict for fixed HIGH/CRITICAL findings.
+- [x] Final cache review found that a cancelled backup-list request could otherwise cache `context.Canceled` for an unchanged archive. Cancellation/deadline errors are now excluded from the manifest cache and covered by a regression test.
