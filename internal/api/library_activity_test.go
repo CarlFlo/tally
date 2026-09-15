@@ -15,7 +15,7 @@ func TestClearWatchHistoryPreservesDownloadsAndOtherProfiles(t *testing.T) {
 	original := h
 	h = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if _, err := r.Cookie("tally_profile"); err != nil {
-			r.AddCookie(&http.Cookie{Name: "tally_profile", Value: "user0"})
+			r.AddCookie(&http.Cookie{Name: "tally_profile", Value: "profile-admin"})
 		}
 		original.ServeHTTP(w, r)
 	})
@@ -23,16 +23,16 @@ func TestClearWatchHistoryPreservesDownloadsAndOtherProfiles(t *testing.T) {
 	expect(t, added, 201)
 	id := value(t, added, "id")
 	expect(t, request(t, h, "POST", "/api/shows/"+id+"/bulk", map[string]any{"watched": true, "downloaded": true}), 200)
-	if _, err := s.DB.Exec(`INSERT INTO profiles VALUES('user1','Alex','mint',1); INSERT INTO profile_episode_state SELECT 'user1',id,1,0,1 FROM episodes`); err != nil {
+	if _, err := s.DB.Exec(`INSERT INTO profiles VALUES('profile-member','Alex','mint',1); INSERT INTO profile_episode_state SELECT 'profile-member',id,1,0,1 FROM episodes`); err != nil {
 		t.Fatal(err)
 	}
-	expect(t, request(t, h, "DELETE", "/api/shows/"+id+"/watch-history", nil, &http.Cookie{Name: "tally_profile", Value: "user1"}), 404)
+	expect(t, request(t, h, "DELETE", "/api/shows/"+id+"/watch-history", nil, &http.Cookie{Name: "tally_profile", Value: "profile-member"}), 404)
 	expect(t, request(t, h, "DELETE", "/api/shows/"+id+"/watch-history", nil), 200)
 	var watched, downloaded, other int
-	if err := s.DB.QueryRow("SELECT SUM(watched),SUM(downloaded) FROM profile_episode_state WHERE profile_id='user0'").Scan(&watched, &downloaded); err != nil {
+	if err := s.DB.QueryRow("SELECT SUM(watched),SUM(downloaded) FROM profile_episode_state WHERE profile_id='profile-admin'").Scan(&watched, &downloaded); err != nil {
 		t.Fatal(err)
 	}
-	_ = s.DB.QueryRow("SELECT SUM(watched) FROM profile_episode_state WHERE profile_id='user1'").Scan(&other)
+	_ = s.DB.QueryRow("SELECT SUM(watched) FROM profile_episode_state WHERE profile_id='profile-member'").Scan(&other)
 	if watched != 0 || downloaded != 2 || other != 2 {
 		t.Fatal("state isolation failed", watched, downloaded, other)
 	}
@@ -49,7 +49,7 @@ func TestClearWatchHistoryPreservesDownloadsAndOtherProfiles(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err = library.SetFollow(context.Background(), tx, "user0", id, true); err != nil {
+		if err = library.SetFollow(context.Background(), tx, "profile-admin", id, true); err != nil {
 			t.Fatal(err)
 		}
 		if err = tx.Commit(); err != nil {

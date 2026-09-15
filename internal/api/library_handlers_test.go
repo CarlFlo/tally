@@ -8,7 +8,7 @@ import (
 
 func TestSharedMetadataAndPersonalEpisodeState(t *testing.T) {
 	s, h, tv := testServer(t, "disabled")
-	zero := &http.Cookie{Name: "tally_profile", Value: "user0"}
+	zero := &http.Cookie{Name: "tally_profile", Value: "profile-admin"}
 	w := request(t, h, "POST", "/api/shows", map[string]any{"tvmaze_id": 7}, zero)
 	expect(t, w, 201)
 	id := value(t, w, "id")

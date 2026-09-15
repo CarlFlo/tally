@@ -9,7 +9,7 @@ import (
 
 func TestProfileIDsAreOpaqueAndLastAdminIsProtected(t *testing.T) {
 	s, h, _ := testServer(t, "disabled")
-	admin := &http.Cookie{Name: "tally_profile", Value: "user0"}
+	admin := &http.Cookie{Name: "tally_profile", Value: "profile-admin"}
 
 	first := request(t, h, "POST", "/api/profiles", map[string]any{"name": "First"}, admin)
 	expect(t, first, 201)
@@ -23,13 +23,13 @@ func TestProfileIDsAreOpaqueAndLastAdminIsProtected(t *testing.T) {
 	expect(t, request(t, h, "POST", "/api/profiles", map[string]any{"name": "Over limit"}, admin), 400)
 
 	// Existing profiles must never be stranded without an administrator.
-	expect(t, request(t, h, "PATCH", "/api/profiles/user0/admin", map[string]any{"is_admin": false}, admin), 400)
-	expect(t, request(t, h, "DELETE", "/api/profiles/user0", nil, admin), 400)
+	expect(t, request(t, h, "PATCH", "/api/profiles/profile-admin/admin", map[string]any{"is_admin": false}, admin), 400)
+	expect(t, request(t, h, "DELETE", "/api/profiles/profile-admin", nil, admin), 400)
 
 	expect(t, request(t, h, "PATCH", "/api/profiles/"+secondID+"/admin", map[string]any{"is_admin": true}, admin), 200)
-	expect(t, request(t, h, "DELETE", "/api/profiles/user0", nil, admin), 200)
+	expect(t, request(t, h, "DELETE", "/api/profiles/profile-admin", nil, admin), 200)
 	var oldAdmin int
-	_ = s.DB.QueryRow("SELECT COUNT(*) FROM profiles WHERE id='user0'").Scan(&oldAdmin)
+	_ = s.DB.QueryRow("SELECT COUNT(*) FROM profiles WHERE id='profile-admin'").Scan(&oldAdmin)
 	if oldAdmin != 0 {
 		t.Fatal("former administrator was not removable")
 	}
@@ -49,8 +49,8 @@ func TestProfileIDsAreOpaqueAndLastAdminIsProtected(t *testing.T) {
 
 func TestDeletingOnlyProfileAllowsCleanFirstAdminBootstrap(t *testing.T) {
 	s, h, _ := testServer(t, "disabled")
-	admin := &http.Cookie{Name: "tally_profile", Value: "user0"}
-	deleted := request(t, h, "DELETE", "/api/profiles/user0", nil, admin)
+	admin := &http.Cookie{Name: "tally_profile", Value: "profile-admin"}
+	deleted := request(t, h, "DELETE", "/api/profiles/profile-admin", nil, admin)
 	expect(t, deleted, 200)
 	var count int
 	if err := s.DB.QueryRow("SELECT COUNT(*) FROM profiles").Scan(&count); err != nil || count != 0 {
@@ -64,7 +64,7 @@ func TestDeletingOnlyProfileAllowsCleanFirstAdminBootstrap(t *testing.T) {
 	if err := json.Unmarshal(created.Body.Bytes(), &body); err != nil {
 		t.Fatal(err)
 	}
-	if body["is_admin"] != true || body["id"] == "user0" {
+	if body["is_admin"] != true || body["id"] == "profile-admin" {
 		t.Fatal("first profile after an empty state must become a generated administrator")
 	}
 }

@@ -9,7 +9,7 @@ import (
 
 func TestPasswordlessProfileSetupCannotReplaceExistingCredentials(t *testing.T) {
 	s, h, _ := testServer(t, "local")
-	if _, err := s.DB.Exec("INSERT INTO profiles VALUES('user1','Alex','mint',1)"); err != nil {
+	if _, err := s.DB.Exec("INSERT INTO profiles VALUES('profile-member','Alex','mint',1)"); err != nil {
 		t.Fatal(err)
 	}
 	boot := request(t, h, "GET", "/api/bootstrap", nil)
@@ -25,19 +25,19 @@ func TestPasswordlessProfileSetupCannotReplaceExistingCredentials(t *testing.T) 
 		}
 	}
 	password := " Spaces,Symbols! 1234 "
-	result := request(t, h, "POST", "/api/auth/setup", map[string]any{"profile": "user1", "password": password})
+	result := request(t, h, "POST", "/api/auth/setup", map[string]any{"profile": "profile-member", "password": password})
 	expect(t, result, 200)
 	cookies := result.Result().Cookies()
 	expect(t, request(t, h, "GET", "/api/shows", nil, cookies...), 200)
-	expect(t, request(t, h, "POST", "/api/auth/setup", map[string]any{"profile": "user0", "password": "secret"}, cookies...), 409)
-	expect(t, request(t, h, "POST", "/api/auth/setup", map[string]any{"profile": "user1", "password": "replacement"}), 400)
-	expect(t, request(t, h, "POST", "/api/auth/login", map[string]any{"profile": "user1", "password": password}), 200)
+	expect(t, request(t, h, "POST", "/api/auth/setup", map[string]any{"profile": "profile-admin", "password": "secret"}, cookies...), 409)
+	expect(t, request(t, h, "POST", "/api/auth/setup", map[string]any{"profile": "profile-member", "password": "replacement"}), 400)
+	expect(t, request(t, h, "POST", "/api/auth/login", map[string]any{"profile": "profile-member", "password": password}), 200)
 	var count int
-	if err := s.DB.QueryRow("SELECT COUNT(*) FROM local_credentials WHERE profile_id='user0'").Scan(&count); err != nil || count != 0 {
+	if err := s.DB.QueryRow("SELECT COUNT(*) FROM local_credentials WHERE profile_id='profile-admin'").Scan(&count); err != nil || count != 0 {
 		t.Fatal("other profile was claimed", err)
 	}
 	expect(t, request(t, h, "POST", "/api/auth/setup", map[string]any{"profile": "missing", "password": "1234"}), 400)
-	expect(t, request(t, h, "POST", "/api/auth/setup", map[string]any{"profile": "user0", "password": "test\npassword"}), 400)
+	expect(t, request(t, h, "POST", "/api/auth/setup", map[string]any{"profile": "profile-admin", "password": "test\npassword"}), 400)
 }
 
 func TestPublicProfileRegistrationIsBoundedAndRequiresPasswordInLocalMode(t *testing.T) {
