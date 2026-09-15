@@ -30,7 +30,6 @@ import { dateTimeFormatter } from "../dateFormatting";
 import { CalendarGrid } from "./CalendarGrid";
 import { CalendarFilter } from "./CalendarFilter";
 import { CalendarHorizon } from "./CalendarHorizon";
-import { CalendarOverview } from "./CalendarOverview";
 import { ReleaseGroupDialog } from "./ReleaseGroupDialog";
 import { queryKeys } from "../queryKeys";
 import { invalidateResources } from "../queryInvalidation";
@@ -50,6 +49,8 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
   const [selected, setSelected] = useState<Episode | null>(null);
   const [filter, setFilter] = useState("all");
   const [expanded, setExpanded] = useState<string[]>([]);
+  const calendarSection = useRef<HTMLElement | null>(null);
+  const [calendarHeight, setCalendarHeight] = useState<number>();
   const shows = useLocal<Show[]>("shows", "/shows");
   const { start, end, days } = useMemo(() => {
     const start = new Date(
@@ -84,6 +85,15 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
     placeholderData: (prev) => prev,
   });
   useEffect(() => {
+    const node = calendarSection.current;
+    if (!node) return;
+    const updateHeight = () => setCalendarHeight(node.getBoundingClientRect().height);
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [view, episodes.data?.length, shows.data?.length]);
+  useEffect(() => {
     const from = new Date(end);
     const to = new Date(end);
     to.setDate(to.getDate() + 42);
@@ -114,9 +124,9 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
     const key = episodeDay(e, prefs.timezone);
     return key >= localDay(start) && key < localDay(end);
   });
-  const upcoming = inRange
-    .filter((e) => episodeDay(e, prefs.timezone) >= todayKey)
-    .slice(0, 12);
+  const upcoming = inRange.filter(
+    (e) => episodeDay(e, prefs.timezone) >= todayKey,
+  );
   function move(direction: number) {
     const next = new Date(date);
     if (view === "month") {
@@ -162,7 +172,7 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
         </div>
       </div>
       <div className="calendar-layout">
-        <section className="calendar-section">
+        <section className="calendar-section" ref={calendarSection}>
           <div className="calendar-toolbar">
             <div className="month-controls">
               <div className="arrows">
@@ -347,13 +357,7 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
           prefs={prefs}
           today={todayKey}
           select={setSelected}
-          overview={
-            <CalendarOverview
-              shows={shows.data?.length || 0}
-              episodes={inRange.length}
-              watched={inRange.filter((episode) => !!episode.watched).length}
-            />
-          }
+          maxHeight={calendarHeight}
         />
       </div>
       {!!group.length && (
