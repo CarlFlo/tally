@@ -66,7 +66,7 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
     });
   const deploymentSettings = await (await page.request.get("/api/settings")).json();
   await expect(page.getByText(
-    `Cron schedules use the server timezone from TZ: ${deploymentSettings.timezone}.`,
+    `Cron schedules use the server timezone: ${deploymentSettings.timezone}.`,
     { exact: true },
   )).toBeVisible();
   const stored = (
