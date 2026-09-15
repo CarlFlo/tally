@@ -24,8 +24,8 @@ func (s *Server) wrap(fn handler, public bool) http.HandlerFunc {
 				jsonResponse(w, 403, map[string]string{"error": "replace the temporary password before continuing", "code": "password_change_required"})
 				return
 			}
-			if adminPath(r.URL.Path) && session.Profile != "user0" {
-				jsonResponse(w, 403, map[string]string{"error": "Only the administrator can access this page."})
+			if adminPath(r.URL.Path) && !session.Admin {
+				jsonResponse(w, 403, map[string]string{"error": "Only administrators can access this page."})
 				return
 			}
 		}

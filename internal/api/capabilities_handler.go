@@ -11,6 +11,6 @@ func (s *Server) capabilities(w http.ResponseWriter, r *http.Request, session au
 	if err != nil {
 		return err
 	}
-	jsonResponse(w, 200, map[string]any{"operator": session.Profile == "user0", "downloader": client.Adapter, "downloader_configured": client.Configured(), "jackett_configured": s.jackettConfigured()})
+	jsonResponse(w, 200, map[string]any{"operator": session.Admin, "downloader": client.Adapter, "downloader_configured": client.Configured(), "jackett_configured": s.jackettConfigured()})
 	return nil
 }
