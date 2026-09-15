@@ -3988,3 +3988,10 @@ td .table-error {
     display: grid;
   }
 }
+
+
+/* Keep horizon microcopy readable without increasing the rail's footprint. */
+.calendar-rail .tiny-label {
+  font-size: 8px;
+  letter-spacing: 0.7px;
+}
