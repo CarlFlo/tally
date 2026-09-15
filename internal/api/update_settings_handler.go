@@ -60,7 +60,7 @@ func (s *Server) updateSettings(w http.ResponseWriter, r *http.Request, session 
 		if e := decode(r, &in); e != nil {
 			return e
 		}
-		if e := s.Jobs.SaveSchedule(r.Context(), in); e != nil {
+		if e := s.Jobs.SaveSchedule(r.Context(), in, session.Profile); e != nil {
 			if errors.Is(e, settings.ErrConflict) {
 				return apiError{409, e.Error()}
 			}
@@ -75,7 +75,7 @@ func (s *Server) updateSettings(w http.ResponseWriter, r *http.Request, session 
 	default:
 		return apiError{404, "unknown settings section"}
 	}
-	rev, e := s.settingsStore().Save(r.Context(), section, value, revision)
+	rev, e := s.settingsStore().Save(r.Context(), section, value, revision, session.Profile)
 	if e != nil {
 		if errors.Is(e, settings.ErrConflict) {
 			return apiError{409, e.Error()}

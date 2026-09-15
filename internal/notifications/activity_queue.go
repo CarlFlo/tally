@@ -41,8 +41,13 @@ func (s *Service) collectActivity(ctx context.Context, config settings.Webhook) 
 		return err
 	}
 	for _, e := range entries {
-		if config.Subscribed(e.event) && e.event != "system_error" && e.event != "job_failed" && e.event != "episode_released" {
-			msg := Message{Event: e.event, Text: e.text, Show: e.show, Time: time.Unix(e.at, 0), Level: "info"}
+		event := e.event
+		switch event {
+		case "profile_created", "profile_deleted", "admin_granted", "admin_revoked":
+			event = "profile_access_changed"
+		}
+		if config.Subscribed(event) && event != "system_error" && event != "job_failed" && event != "episode_released" {
+			msg := Message{Event: event, Text: e.text, Show: e.show, Time: time.Unix(e.at, 0), Level: "info"}
 			if err = enqueue(ctx, tx, fmt.Sprintf("activity:%d", e.id), msg, msg.Time); err != nil {
 				return err
 			}

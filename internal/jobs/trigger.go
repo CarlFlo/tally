@@ -87,7 +87,7 @@ func (s *Service) Trigger(kind, trigger, show string) (string, error) {
 			if show != "" {
 				_ = s.DB.QueryRow("SELECT name FROM shows WHERE id=?", show).Scan(&label)
 			}
-			if err := activity.Record(s.ctx, s.DB, activity.Event{Action: "job_succeeded", Profile: "user0", Message: "Completed " + label + " job"}); err != nil {
+			if err := activity.Record(s.ctx, s.DB, activity.Event{Action: "job_succeeded", Message: "Completed " + label + " job"}); err != nil {
 				slog.Error("record job activity", "error", err)
 			}
 		}
@@ -96,7 +96,7 @@ func (s *Service) Trigger(kind, trigger, show string) (string, error) {
 		if kind == "backup" { resources = append(resources, "backups") }
 		s.changed(resources...)
 		if status == "success" && (kind == "backup" || trigger == "manual" || trigger == "manual_refresh") {
-			s.changedProfile("user0", "inbox")
+			s.changedProfile("", "inbox")
 		}
 	}()
 	return id, nil

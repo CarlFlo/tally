@@ -99,7 +99,7 @@ func ValidateWebhook(w Webhook, defaultTimezone ...string) error {
 	}
 	for _, event := range w.Events {
 		switch event {
-		case "system_error", "job_failed", "show_added", "show_removed", "watch_history_cleared", "episode_released":
+		case "system_error", "job_failed", "show_added", "show_removed", "watch_history_cleared", "episode_released", "profile_access_changed":
 		default:
 			return fmt.Errorf("unknown notification event")
 		}

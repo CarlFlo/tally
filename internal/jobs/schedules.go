@@ -16,7 +16,7 @@ type Schedule struct {
 	Revision int64  `json:"revision"`
 }
 
-func (s *Service) SaveSchedule(ctx context.Context, in Schedule) error {
+func (s *Service) SaveSchedule(ctx context.Context, in Schedule, actor string) error {
 	if in.Key != "metadata" && in.Key != "maintenance" && in.Key != "backup" {
 		return fmt.Errorf("unknown job")
 	}
@@ -66,7 +66,7 @@ func (s *Service) SaveSchedule(ctx context.Context, in Schedule) error {
 		}
 	}
 	message := fmt.Sprintf("%s %s schedule (%s %s)", verb, in.Key, in.Schedule, s.scheduleTimezone())
-	if e = activity.Record(ctx, tx, activity.Event{Action: "schedule_updated", Profile: "user0", Message: message}); e != nil {
+	if e = activity.Record(ctx, tx, activity.Event{Action: "schedule_updated", Profile: actor, Message: message}); e != nil {
 		return e
 	}
 	return tx.Commit()

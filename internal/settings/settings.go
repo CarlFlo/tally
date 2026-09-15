@@ -25,7 +25,7 @@ func (s Store) Load(ctx context.Context, key string, out any) (int64, error) {
 	return rev, json.Unmarshal([]byte(raw), out)
 }
 
-func (s Store) Save(ctx context.Context, key string, value any, revision int64) (int64, error) {
+func (s Store) Save(ctx context.Context, key string, value any, revision int64, actor string) (int64, error) {
 	raw, e := json.Marshal(value)
 	if e != nil {
 		return 0, e
@@ -87,7 +87,7 @@ func (s Store) Save(ctx context.Context, key string, value any, revision int64) 
 			}
 		}
 	}
-	if e = activity.Record(ctx, tx, activity.Event{Action: "settings_updated", Profile: "user0", Message: "Updated " + key + " settings"}); e != nil {
+	if e = activity.Record(ctx, tx, activity.Event{Action: "settings_updated", Profile: actor, Message: "Updated " + key + " settings"}); e != nil {
 		return 0, e
 	}
 	if e = tx.Commit(); e != nil {
