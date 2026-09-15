@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/CarlFlo/mediaManager/internal/auth"
 )
@@ -48,7 +49,13 @@ func TestLocalAdminDemotionAndDeletionRequireActingAdminsPassword(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = s.DB.Exec("INSERT INTO local_credentials VALUES('user0',?,0); INSERT INTO profiles VALUES('user1','Alex','mint',1); INSERT INTO local_credentials VALUES('user1',?,0)", adminHash, userHash); err != nil {
+	if _, err = s.DB.Exec("INSERT INTO local_credentials VALUES('user0',?,0)", adminHash); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.DB.Exec("INSERT INTO profiles VALUES('user1','Alex','mint',1)"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.DB.Exec("INSERT INTO local_credentials VALUES('user1',?,0)", userHash); err != nil {
 		t.Fatal(err)
 	}
 
@@ -64,13 +71,16 @@ func TestLocalAdminDemotionAndDeletionRequireActingAdminsPassword(t *testing.T) 
 		t.Fatal(err)
 	}
 	userCookies := userRecorder.Result().Cookies()
-	expect(t, request(t, h, "PATCH", "/api/profiles/user0/admin", map[string]any{"is_admin": false, "password": "wrong"}, userCookies...), 401)
-	expect(t, request(t, h, "PATCH", "/api/profiles/user0/admin", map[string]any{"is_admin": false, "password": "admin-pass"}, adminCookies...), 200)
+	// Admin B must authenticate as B. Admin A's password must not authorize B's action.
+	expect(t, request(t, h, "PATCH", "/api/profiles/user0/admin", map[string]any{"is_admin": false, "password": "admin-pass"}, userCookies...), 401)
+	time.Sleep(1100 * time.Millisecond)
+	expect(t, request(t, h, "PATCH", "/api/profiles/user0/admin", map[string]any{"is_admin": false, "password": "alex-pass"}, userCookies...), 200)
 	expect(t, request(t, h, "GET", "/api/settings", nil, adminCookies...), 403)
 
 	expect(t, request(t, h, "PATCH", "/api/profiles/user0/admin", map[string]any{"is_admin": true}, userCookies...), 200)
-	expect(t, request(t, h, "DELETE", "/api/profiles/user0", map[string]any{"password": "wrong"}, userCookies...), 401)
-	expect(t, request(t, h, "DELETE", "/api/profiles/user0", map[string]any{"password": "admin-pass"}, adminCookies...), 200)
+	expect(t, request(t, h, "DELETE", "/api/profiles/user0", map[string]any{"password": "admin-pass"}, userCookies...), 401)
+	time.Sleep(1100 * time.Millisecond)
+	expect(t, request(t, h, "DELETE", "/api/profiles/user0", map[string]any{"password": "alex-pass"}, userCookies...), 200)
 
 	var message string
 	if err := s.DB.QueryRow("SELECT message FROM activity_log WHERE action='profile_deleted' ORDER BY id DESC LIMIT 1").Scan(&message); err != nil || !strings.Contains(message, "My profile") {
