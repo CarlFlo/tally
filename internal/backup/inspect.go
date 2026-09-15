@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -28,7 +29,9 @@ func (s *Service) Inspect(ctx context.Context, filename string) (Manifest, error
 		return cached.manifest, cached.err
 	}
 	manifest, inspectErr := inspectArchive(ctx, path)
-	s.rememberInspection(filename, info, manifest, inspectErr)
+	if !errors.Is(inspectErr, context.Canceled) && !errors.Is(inspectErr, context.DeadlineExceeded) {
+		s.rememberInspection(filename, info, manifest, inspectErr)
+	}
 	return manifest, inspectErr
 }
 
