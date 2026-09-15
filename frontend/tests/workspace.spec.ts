@@ -95,6 +95,9 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
   expect(previewBox).not.toBeNull();
   expect(previewBox!.x).toBeGreaterThan(fieldsBox!.x + fieldsBox!.width);
   expect(Math.abs(previewBox!.y - fieldsBox!.y)).toBeLessThan(8);
+  const desktopContentWidth = fieldsBox!.width + previewBox!.width;
+  expect(previewBox!.width / desktopContentWidth).toBeGreaterThan(0.2);
+  expect(previewBox!.width / desktopContentWidth).toBeLessThan(0.3);
   const previewPanel = editor.locator(".schedule-preview");
   await expect(previewPanel.getByText("Cron expression", { exact: true })).toHaveCount(0);
   await expect(previewPanel.getByText("Timezone", { exact: true })).toHaveCount(0);
