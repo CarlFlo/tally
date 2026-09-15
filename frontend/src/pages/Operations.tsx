@@ -673,11 +673,12 @@ export function SettingsPage({
                   (boot.auth_mode === "disabled" ||
                     p.id === boot.profile!.id) && (
                     <button
-                      className="icon-button"
+                      className="button small danger"
                       aria-label={"Delete " + p.display_name}
                       onClick={() => setDeleting(p)}
                     >
-                      <Trash2 size={17} />
+                      <Trash2 size={16} />
+                      Delete
                     </button>
                   )
                 )}
