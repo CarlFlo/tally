@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-func (s *Service) DeleteRecord(ctx context.Context, id string) error {
+func (s *Service) DeleteArchive(ctx context.Context, id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	archive, err := s.FindArchive(ctx, id)
