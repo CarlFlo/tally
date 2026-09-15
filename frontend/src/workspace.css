@@ -586,3 +586,49 @@
   color: var(--text);
   font-weight: 600;
 }
+
+
+/* Keep the desktop horizon rail visually aligned with the calendar. */
+.calendar-rail {
+  max-height: var(--calendar-rail-height, none);
+  min-height: 0;
+  overflow: hidden;
+}
+.calendar-rail > .horizon-section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  margin-bottom: 0;
+}
+.horizon-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 35%, transparent) transparent;
+}
+.horizon-scroll::-webkit-scrollbar {
+  width: 7px;
+}
+.horizon-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 35%, transparent);
+  border-radius: 999px;
+}
+.horizon-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+@media (max-width: 1020px) {
+  .calendar-rail {
+    max-height: none;
+    overflow: visible;
+  }
+  .calendar-rail > .horizon-section {
+    height: auto;
+  }
+  .horizon-scroll {
+    overflow: visible;
+    padding-right: 0;
+  }
+}
