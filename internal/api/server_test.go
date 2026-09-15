@@ -46,8 +46,8 @@ func testServer(t *testing.T, mode string) (*Server, http.Handler, *fakeTV) {
 		t.Fatal(e)
 	}
 	t.Cleanup(func() { db.Close() })
-	// Most API tests use the historical fixture names for readability. Production
-	// databases start empty; this test-only insert is promoted by the role trigger.
+	// Production databases start empty. API tests seed an explicit administrator
+	// with a neutral ID so authorization tests cannot depend on legacy identity names.
 	if _, e = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-admin','My profile','violet',?)", time.Now().Unix()); e != nil {
 		t.Fatal(e)
 	}
