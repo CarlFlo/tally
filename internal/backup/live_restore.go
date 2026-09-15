@@ -2,8 +2,6 @@ package backup
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,20 +10,15 @@ import (
 func (s *Service) RestoreRecord(ctx context.Context, id string) (Manifest, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	var filename string
-	var verified bool
-	err := s.DB.QueryRowContext(ctx, "SELECT filename,verified FROM backup_records WHERE id=?", id).Scan(&filename, &verified)
-	if errors.Is(err, sql.ErrNoRows) {
-		return Manifest{}, ErrNotFound
-	}
+	item, err := s.FindArchive(ctx, id)
 	if err != nil {
 		return Manifest{}, err
 	}
-	if !verified {
-		return Manifest{}, ErrUnverified
-	}
-	archive, err := s.archivePath(filename)
+	archive, err := s.archivePath(item.Filename)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return Manifest{}, ErrNotFound
+		}
 		return Manifest{}, err
 	}
 	return s.restoreLive(ctx, archive)
