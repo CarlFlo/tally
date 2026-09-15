@@ -45,14 +45,6 @@ func (s *Service) Create(ctx context.Context, kind string) (string, error) {
 	if e = os.Rename(temp, final); e != nil {
 		return "", e
 	}
-	info, e := os.Stat(final)
-	if e != nil {
-		return "", e
-	}
-	_, e = s.DB.ExecContext(ctx, "INSERT INTO backup_records VALUES(?,?,?,?,?,1)", database.ID(), filename, kind, info.Size(), time.Now().Unix())
-	if e != nil {
-		return "", e
-	}
 	if kind == "auto" {
 		e = s.Retain(ctx)
 	}
