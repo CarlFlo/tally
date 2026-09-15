@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/CarlFlo/mediaManager/internal/auth"
 )
@@ -67,13 +68,13 @@ func TestLocalAdminDemotionAndDeletionRequireActingAdminsPassword(t *testing.T) 
 	expect(t, request(t, h, "PATCH", "/api/profiles/user0/admin", map[string]any{"is_admin": false, "password": "wrong"}, userCookies...), 401)
 	// Re-authentication is throttled after a bad attempt; use a fresh server-side
 	// attempt window for the success path without weakening production throttling.
-	delete(s.AuthAttemptsForTest(), "reauth:user1")
+	time.Sleep(1100 * time.Millisecond)
 	expect(t, request(t, h, "PATCH", "/api/profiles/user0/admin", map[string]any{"is_admin": false, "password": "alex-pass"}, userCookies...), 200)
 	expect(t, request(t, h, "GET", "/api/settings", nil, adminCookies...), 403)
 
 	expect(t, request(t, h, "PATCH", "/api/profiles/user0/admin", map[string]any{"is_admin": true}, userCookies...), 200)
 	expect(t, request(t, h, "DELETE", "/api/profiles/user0", map[string]any{"password": "wrong"}, userCookies...), 401)
-	delete(s.AuthAttemptsForTest(), "reauth:user1")
+	time.Sleep(1100 * time.Millisecond)
 	expect(t, request(t, h, "DELETE", "/api/profiles/user0", map[string]any{"password": "alex-pass"}, userCookies...), 200)
 
 	var message string
