@@ -2,6 +2,9 @@ name: Checks
 on:
   push:
   pull_request:
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -24,10 +27,8 @@ jobs:
         working-directory: frontend
       - run: npm run build
         working-directory: frontend
-      - run: go mod download modernc.org/sqlite@v1.59.0
-      - run: git diff -- go.sum
       - run: go vet ./... && go test -race ./...
-      - run: go run golang.org/x/vuln/cmd/govulncheck@709015412431dd2b5b28a53c06c70bc02d49074c ./...
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
       - run: npx playwright install --with-deps chromium && npm run test:e2e
         working-directory: frontend
       - uses: actions/upload-artifact@v7
