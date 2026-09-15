@@ -356,7 +356,7 @@ test("calendar combines season releases, groups horizon dates, and expands every
   const idleScrollbarColor = await horizonScroll.evaluate(
     (element) => getComputedStyle(element).scrollbarColor,
   );
-  expect(idleScrollbarColor).toContain("transparent");
+  expect(idleScrollbarColor).toMatch(/rgba\(0, 0, 0, 0\)/);
   await page.locator(".horizon-section").hover();
   const hoverScrollbarColor = await horizonScroll.evaluate(
     (element) => getComputedStyle(element).scrollbarColor,
