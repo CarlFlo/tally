@@ -335,8 +335,16 @@ export function SettingsPage({
   );
   const [name, setName] = useState(boot.profile!.display_name);
   const [avatar, setAvatar] = useState(boot.profile!.avatar);
+  const [customColor, setCustomColor] = useState(
+    /^#[0-9A-Fa-f]{6}$/.test(boot.profile!.avatar) ? boot.profile!.avatar : "",
+  );
   const [newProfile, setNewProfile] = useState(false);
   const [deleting, setDeleting] = useState<Profile | null>(null);
+  const [sensitiveAction, setSensitiveAction] = useState<{
+    profile: Profile;
+    kind: "demote" | "delete";
+  } | null>(null);
+  const adminCount = boot.profiles.filter((profile) => !!profile.is_admin).length;
   const [busy, setBusy] = useState(false);
   const [password, setPassword] = useState("");
   const [current, setCurrent] = useState("");
@@ -355,7 +363,7 @@ export function SettingsPage({
     try {
       await api("/profile", "PATCH", {
         name,
-        avatar: avatar.endsWith(".png") ? "" : avatar,
+        avatar: customColor || (avatar.endsWith(".png") ? "" : avatar),
       });
       await invalidateResources(cache, ["bootstrap"]);
       notify("Profile updated");
@@ -364,6 +372,38 @@ export function SettingsPage({
     } finally {
       setBusy(false);
     }
+  }
+  async function setAdmin(profile: Profile, isAdmin: boolean, password = "") {
+    await api("/profiles/" + profile.id + "/admin", "PATCH", {
+      is_admin: isAdmin,
+      password,
+    });
+    await invalidateResources(cache, ["bootstrap", "settings", "capabilities"]);
+    notify(isAdmin ? "Administrator access granted" : "Administrator access removed");
+  }
+  async function removeProfile(profile: Profile, password = "") {
+    await api(
+      "/profiles/" + profile.id,
+      "DELETE",
+      password ? { password } : undefined,
+    );
+    if (profile.id === boot.profile?.id) {
+      resetSession("/login");
+      return;
+    }
+    cache.setQueryData(
+      queryKeys.bootstrap(),
+      (current: typeof boot | undefined) =>
+        current
+          ? {
+              ...current,
+              profiles: current.profiles.filter(
+                (item) => item.id !== profile.id,
+              ),
+            }
+          : current,
+    );
+    notify("Profile deleted");
   }
   return (
     <div className="page settings-page">
@@ -481,7 +521,7 @@ export function SettingsPage({
                 <Avatar
                   profile={{
                     ...boot.profile!,
-                    avatar,
+                    avatar: customColor || avatar,
                     display_name: name || "?",
                   }}
                   large
@@ -494,13 +534,16 @@ export function SettingsPage({
                         className={
                           "avatar-option avatar-" +
                           color +
-                          (avatar === color ? " selected" : "")
+                          (!customColor && avatar === color ? " selected" : "")
                         }
                         type="button"
                         aria-label={color + " avatar"}
-                        onClick={() => setAvatar(color)}
+                        onClick={() => {
+                          setAvatar(color);
+                          setCustomColor("");
+                        }}
                       >
-                        {avatar === color && <Check size={17} />}
+                        {!customColor && avatar === color && <Check size={17} />}
                       </button>
                     ),
                   )}
@@ -520,6 +563,7 @@ export function SettingsPage({
                             form,
                           );
                           setAvatar(response.avatar);
+                          setCustomColor("");
                           await invalidateResources(cache, ["bootstrap"]);
                           notify("Avatar updated");
                         } catch (e) {
@@ -531,6 +575,18 @@ export function SettingsPage({
                 </div>
               </div>
               <label>
+                Custom avatar color
+                <input
+                  value={customColor}
+                  pattern="#[0-9A-Fa-f]{6}"
+                  maxLength={7}
+                  placeholder="#4F46E5"
+                  spellCheck={false}
+                  onChange={(e) => setCustomColor(e.target.value)}
+                />
+                <small className="muted">Optional six-digit HTML color.</small>
+              </label>
+              <label>
                 Display name
                 <input
                   maxLength={80}
@@ -540,7 +596,7 @@ export function SettingsPage({
                 />
               </label>
               <p className="small-text muted">
-                {boot.profile!.id === "user0"
+                {boot.profile!.is_admin
                   ? "Administrator account"
                   : "Your personal account"}
               </p>
@@ -654,37 +710,63 @@ export function SettingsPage({
             )}
           </div>
           <div className="profile-settings-list">
-            {boot.profiles.map((p) => (
-              <div key={p.id}>
-                <Avatar profile={p} />
-                <span>
-                  <strong>{p.display_name}</strong>
-                  <small>
-                    {p.id === "user0" ? "admin" : ""}
-                    {p.id === boot.profile?.id
-                      ? p.id === "user0"
-                        ? " · Current profile"
-                        : "Current profile"
-                      : ""}
-                  </small>
-                </span>
-                {p.id === "user0" ? (
-                  <span className="badge">Permanent</span>
-                ) : (
-                  (boot.auth_mode === "disabled" ||
-                    p.id === boot.profile!.id) && (
+            {boot.profiles.map((p) => {
+              const isAdmin = !!p.is_admin;
+              const canDemote = !isAdmin || adminCount > 1;
+              const canDelete =
+                !isAdmin || boot.profiles.length === 1 || adminCount > 1;
+              return (
+                <div key={p.id}>
+                  <Avatar profile={p} />
+                  <span>
+                    <strong>{p.display_name}</strong>
+                    <small>
+                      {isAdmin ? "admin" : "user"}
+                      {p.id === boot.profile?.id ? " · Current profile" : ""}
+                    </small>
+                  </span>
+                  <span className="profile-role-actions">
+                    <button
+                      className="button small"
+                      disabled={isAdmin && !canDemote}
+                      title={
+                        isAdmin && !canDemote
+                          ? "Promote another administrator first."
+                          : ""
+                      }
+                      onClick={() => {
+                        if (!isAdmin) {
+                          void setAdmin(p, true);
+                        } else if (boot.auth_mode === "local") {
+                          setSensitiveAction({ profile: p, kind: "demote" });
+                        } else {
+                          void setAdmin(p, false);
+                        }
+                      }}
+                    >
+                      <ShieldCheck size={16} />
+                      {isAdmin ? "Remove admin" : "Make admin"}
+                    </button>
                     <button
                       className="button small danger"
                       aria-label={"Delete " + p.display_name}
-                      onClick={() => setDeleting(p)}
+                      disabled={!canDelete}
+                      title={!canDelete ? "Promote another administrator first." : ""}
+                      onClick={() => {
+                        if (isAdmin && boot.auth_mode === "local") {
+                          setSensitiveAction({ profile: p, kind: "delete" });
+                        } else {
+                          setDeleting(p);
+                        }
+                      }}
                     >
                       <Trash2 size={16} />
                       Delete
                     </button>
-                  )
-                )}
-              </div>
-            ))}
+                  </span>
+                </div>
+              );
+            })}
           </div>
           <p className="muted small-text">
             To use another profile, sign out first.
@@ -804,25 +886,24 @@ export function SettingsPage({
           title={"Delete " + deleting.display_name + "?"}
           message="This permanently removes this profile, preferences, follows, and episode progress. Other profiles keep their data."
           onClose={() => setDeleting(null)}
-          onConfirm={async () => {
-            const deletedProfileId = deleting.id;
-            await api("/profiles/" + deletedProfileId, "DELETE");
-            if (deletedProfileId === boot.profile?.id) {
-              resetSession();
-              return;
+          onConfirm={() => removeProfile(deleting)}
+        />
+      )}
+      {sensitiveAction && (
+        <AdminReauthDialog
+          title={
+            sensitiveAction.kind === "demote"
+              ? "Confirm administrator change"
+              : "Confirm profile deletion"
+          }
+          onClose={() => setSensitiveAction(null)}
+          onConfirm={async (password) => {
+            if (sensitiveAction.kind === "demote") {
+              await setAdmin(sensitiveAction.profile, false, password);
+            } else {
+              await removeProfile(sensitiveAction.profile, password);
             }
-            cache.setQueryData(
-              queryKeys.bootstrap(),
-              (current: typeof boot | undefined) =>
-                current
-                  ? {
-                      ...current,
-                      profiles: current.profiles.filter(
-                        (profile) => profile.id !== deletedProfileId,
-                      ),
-                    }
-                  : current,
-            );
+            setSensitiveAction(null);
           }}
         />
       )}
@@ -833,6 +914,13 @@ function CreateProfile({ onClose }: { onClose: () => void }) {
   const { boot, notify } = useApp();
   const cache = useQueryClient();
   const [name, setName] = useState("");
+  const [avatar] = useState(
+    () =>
+      ["mint", "amber", "rose", "blue", "peach"][
+        boot.profiles.length % 5
+      ],
+  );
+  const [customColor, setCustomColor] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   return (
@@ -844,9 +932,7 @@ function CreateProfile({ onClose }: { onClose: () => void }) {
           try {
             await api("/profiles", "POST", {
               name,
-              avatar: ["mint", "amber", "rose", "blue", "peach"][
-                boot.profiles.length % 5
-              ],
+              avatar: customColor || avatar,
               password,
             });
             await invalidateResources(cache, ["bootstrap"]);
@@ -869,6 +955,18 @@ function CreateProfile({ onClose }: { onClose: () => void }) {
             onChange={(e) => setName(e.target.value)}
           />
         </label>
+        <label>
+          Custom avatar color
+          <input
+            value={customColor}
+            pattern="#[0-9A-Fa-f]{6}"
+            maxLength={7}
+            placeholder="#4F46E5"
+            spellCheck={false}
+            onChange={(e) => setCustomColor(e.target.value)}
+          />
+          <small className="muted">Optional six-digit HTML color.</small>
+        </label>
         {boot.auth_mode === "local" && (
           <label>
             Password (optional)
@@ -888,6 +986,59 @@ function CreateProfile({ onClose }: { onClose: () => void }) {
           </button>
           <button className="button primary" disabled={busy}>
             {busy && <Busy />}Create profile
+          </button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
+function AdminReauthDialog({
+  title,
+  onClose,
+  onConfirm,
+}: {
+  title: string;
+  onClose: () => void;
+  onConfirm: (password: string) => Promise<void>;
+}) {
+  const { notify } = useApp();
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  return (
+    <Dialog title={title} onClose={onClose}>
+      <form
+        onSubmit={async (event) => {
+          event.preventDefault();
+          setBusy(true);
+          try {
+            await onConfirm(password);
+          } catch (error) {
+            notify((error as Error).message, true);
+            setBusy(false);
+          }
+        }}
+      >
+        <p className="muted">
+          Re-enter your password to confirm this administrator action.
+        </p>
+        <label>
+          Your password
+          <input
+            data-autofocus
+            required
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+        </label>
+        <div className="dialog-actions">
+          <button type="button" className="button" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="button danger" disabled={busy}>
+            {busy && <Busy />}Confirm
           </button>
         </div>
       </form>
