@@ -168,19 +168,24 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
       async () => (await (await page.request.get("/api/inbox")).json()).unread,
     )
     .toBe(0);
-  const message = await inbox.locator(".inbox-entry p").first().innerText();
-  await inbox
-    .getByRole("button", { name: `Dismiss ${message}`, exact: true })
-    .first()
-    .click();
-  await expect(
-    inbox.locator(".inbox-entry p").filter({ hasText: message }),
-  ).toHaveCount(0);
+  const backupMessages = inbox
+    .locator(".inbox-entry p")
+    .filter({ hasText: "Completed backup job" });
+  const backupMessageCount = await backupMessages.count();
+  expect(backupMessageCount).toBeGreaterThanOrEqual(2);
+  for (let i = 0; i < backupMessageCount; i++) {
+    await inbox
+      .getByRole("button", {
+        name: "Dismiss Completed backup job",
+        exact: true,
+      })
+      .first()
+      .click();
+  }
+  await expect(backupMessages).toHaveCount(0);
   await page.reload();
   await bell.click();
-  await expect(
-    inbox.locator(".inbox-entry p").filter({ hasText: message }),
-  ).toHaveCount(0);
+  await expect(backupMessages).toHaveCount(0);
   await page.screenshot({
     path: "../docs/screenshots/notification-inbox.png",
     fullPage: true,
