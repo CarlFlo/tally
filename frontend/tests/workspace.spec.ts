@@ -123,7 +123,7 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
   await page.reload();
   await expect(page.getByLabel("Automatic backups to keep")).toHaveValue("3");
   await page
-    .getByRole("button", { name: "Create backup", exact: true })
+    .getByRole("button", { name: "Create manual backup", exact: true })
     .click();
   const manualBackup = page.locator(".backup-row").filter({ hasText: "Manual" }).first();
   await expect(manualBackup).toBeVisible();
