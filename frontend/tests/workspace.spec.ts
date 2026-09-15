@@ -46,6 +46,9 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
     "admin · Current profile",
   );
   await expect(page.locator(".sidebar").getByRole("link")).toHaveCount(4);
+  await expect(page.locator(".footer")).toContainText(
+    "Tally · Your little TV universe",
+  );
   await expect(
     page
       .locator(".topbar")
@@ -347,6 +350,18 @@ test("calendar combines season releases, groups horizon dates, and expands every
   await today.getByRole("button", { name: /more$/ }).click();
   await expect(today.locator(".calendar-episode")).toHaveCount(6);
   await expect(page.locator(".horizon-day")).toHaveCount(1);
+  const horizonLabel = page.locator(".calendar-rail .tiny-label").first();
+  await expect(horizonLabel).toHaveCSS("font-size", "8px");
+  const horizonScroll = page.locator(".horizon-scroll");
+  const idleScrollbarColor = await horizonScroll.evaluate(
+    (element) => getComputedStyle(element).scrollbarColor,
+  );
+  expect(idleScrollbarColor).toContain("transparent");
+  await page.locator(".horizon-section").hover();
+  const hoverScrollbarColor = await horizonScroll.evaluate(
+    (element) => getComputedStyle(element).scrollbarColor,
+  );
+  expect(hoverScrollbarColor).not.toBe(idleScrollbarColor);
   await page.screenshot({
     path: "../docs/screenshots/calendar-grouped-releases.png",
     fullPage: true,
