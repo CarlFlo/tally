@@ -18,6 +18,8 @@ export default defineConfig({
       url: "http://127.0.0.1:18080/readyz",
       reuseExistingServer: false,
       timeout: 180_000,
+      stdout: "pipe",
+      stderr: "pipe",
       env: { TALLY_BROWSER_TEST: "1" },
     },
     {
@@ -27,6 +29,8 @@ export default defineConfig({
       url: "http://127.0.0.1:18082/readyz",
       reuseExistingServer: false,
       timeout: 180_000,
+      stdout: "pipe",
+      stderr: "pipe",
       env: { TALLY_BROWSER_TEST: "1", TALLY_BROWSER_AUTH: "local" },
     },
   ],
