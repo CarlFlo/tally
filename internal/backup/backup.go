@@ -7,10 +7,7 @@ import (
 	"github.com/CarlFlo/tally/internal/database"
 )
 
-var (
-	ErrNotFound   = errors.New("backup not found")
-	ErrUnverified = errors.New("backup is not verified")
-)
+var ErrNotFound = errors.New("backup not found")
 
 type Service struct {
 	DB                      *database.Store
