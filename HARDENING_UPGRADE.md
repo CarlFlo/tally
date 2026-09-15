@@ -86,3 +86,5 @@ Scope: implement the fixes and upgrades from the 2026-09-15 code audit while pre
 
 - [x] Trivy found CVE-2026-14456 in the Alpine runtime's OpenSSL 3.5.7-r0 packages, with 3.5.8-r0 already available. The Docker build now upgrades runtime packages before installing CA certificates; the security gate remains strict for fixed HIGH/CRITICAL findings.
 - [x] Final cache review found that a cancelled backup-list request could otherwise cache `context.Canceled` for an unchanged archive. Cancellation/deadline errors are now excluded from the manifest cache and covered by a regression test.
+
+- [x] UI polish: save/settings toast confirmations now auto-dismiss after ~2.2 seconds instead of 4.5 seconds and use a 180 ms fade/slide exit. Non-retry errors remain visible longer, while retry errors remain persistent until acted on. Manual dismiss and Retry use the same animated exit path.
