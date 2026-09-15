@@ -65,11 +65,4 @@ BEGIN
  SELECT RAISE(ABORT,'at least one administrator is required while profiles remain');
 END;
 
-CREATE TRIGGER profile_role_direct_delete
-BEFORE DELETE ON profile_roles
-WHEN EXISTS(SELECT 1 FROM profiles WHERE id=OLD.profile_id)
-BEGIN
- SELECT RAISE(ABORT,'profile roles are removed with their profile');
-END;
-
 DROP TABLE profile_id_migration;
