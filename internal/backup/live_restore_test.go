@@ -17,7 +17,8 @@ func TestLiveRestoreAppliesBackupWithoutRestartAndKeepsRelationshipsAndPreferenc
 	}
 	defer db.Close()
 	service := Service{DB: db, DataDir: dir, Path: filepath.Join(dir, "backups"), Keep: 2}
-	if _, err = db.Exec(`UPDATE profiles SET display_name='From backup' WHERE id='user0';
+	if _, err = db.Exec(`INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('user0','My profile','violet',1);
+UPDATE profiles SET display_name='From backup' WHERE id='user0';
 INSERT INTO shows(id,name) VALUES('restore-show','Restore show');
 INSERT INTO profile_shows(profile_id,show_id,added_at,favorite) VALUES('user0','restore-show',1,1);
 INSERT INTO profile_preferences(profile_id,data) VALUES('user0','{"theme":"dark","calendar_view":"agenda"}');
@@ -74,7 +75,7 @@ func TestLiveRestoreRollsBackDatabaseChangesOnApplyFailure(t *testing.T) {
 	}
 	defer db.Close()
 	service := Service{DB: db, DataDir: dir, Path: filepath.Join(dir, "backups"), Keep: 2}
-	if _, err = db.Exec("UPDATE profiles SET display_name='From backup' WHERE id='user0'"); err != nil {
+	if _, err = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('user0','From backup','violet',1)"); err != nil {
 		t.Fatal(err)
 	}
 	filename, err := service.Create(ctx, "manual")
@@ -104,7 +105,10 @@ func TestLiveRestoreMigratesOlderSchemaAndReportsSourceVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer sourceDB.Close()
-	if _, err = sourceDB.Exec(`DROP TABLE inbox_dismissals; DROP TABLE inbox_state; DROP INDEX episode_release_time;
+	if _, err = sourceDB.Exec(`INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('user0','My profile','violet',1);
+DROP TRIGGER profile_role_after_insert; DROP TRIGGER profile_role_last_admin_update; DROP TRIGGER profile_role_last_admin_delete;
+DROP TABLE profile_roles; DROP TABLE profile_id_aliases;
+DROP TABLE inbox_dismissals; DROP TABLE inbox_state; DROP INDEX episode_release_time;
 DROP TABLE activity_log; DROP TABLE browser_preferences; DROP TABLE notification_state; DROP TABLE notification_outbox;
 DROP TABLE application_settings; DROP TABLE show_actions; ALTER TABLE profile_shows DROP COLUMN favorite;
 ALTER TABLE jobs DROP COLUMN enabled; ALTER TABLE jobs DROP COLUMN paused; ALTER TABLE jobs DROP COLUMN failures;
@@ -142,7 +146,7 @@ UPDATE profiles SET display_name='Legacy profile' WHERE id='user0'`); err != nil
 	var version int
 	var name string
 	_ = targetDB.QueryRow("PRAGMA user_version").Scan(&version)
-	_ = targetDB.QueryRow("SELECT display_name FROM profiles WHERE id='user0'").Scan(&name)
+	_ = targetDB.QueryRow("SELECT display_name FROM profiles WHERE display_name='Legacy profile'").Scan(&name)
 	if version != database.Version || name != "Legacy profile" {
 		t.Fatal("old archive did not restore and upgrade")
 	}
