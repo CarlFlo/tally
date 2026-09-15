@@ -696,7 +696,7 @@ code {
   justify-content: space-between;
   font-size: 9px;
   color: var(--dim);
-  margin: 12px 38px 0;
+  margin: 2px 38px 0;
   padding: 20px 0 23px;
   border-top: 1px solid var(--border);
   gap: 20px;
@@ -722,6 +722,7 @@ code {
 .calendar-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 223px;
+  align-items: start;
   gap: 25px;
 }
 .calendar-section {
@@ -2992,7 +2993,7 @@ td .table-error {
     display: none;
   }
   .footer {
-    margin: 0 20px;
+    margin: 2px 20px 0;
     font-size: 8px;
     gap: 10px;
   }
@@ -3487,7 +3488,7 @@ td .table-error {
   }
   .footer {
     font-size: 7px;
-    margin: 0 15px;
+    margin: 2px 15px 0;
   }
   .episode-hero .poster {
     width: 76px;
