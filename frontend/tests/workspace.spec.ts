@@ -436,7 +436,26 @@ test("calendar combines season releases, groups horizon dates, and expands every
     (element) => element.scrollHeight > element.clientHeight,
   );
   expect(horizonOverflow).toBe(true);
-  await today.getByRole("button", { name: /more$/ }).click();
+
+  // Cached calendar data is available immediately on SPA navigation. The rail
+  // must not stretch the grid before the calendar section is measured.
+  await page.locator('.sidebar a[href="/shows"]').click();
+  await expect(page).toHaveURL(/\/shows$/);
+  await page.locator('.sidebar a[href="/calendar"]').click();
+  await expect(page).toHaveURL(/\/calendar$/);
+  const navigatedCalendarBox = await page.locator(".calendar-section").boundingBox();
+  const navigatedRailBox = await page.locator(".calendar-rail").boundingBox();
+  expect(navigatedCalendarBox).not.toBeNull();
+  expect(navigatedRailBox).not.toBeNull();
+  expect(navigatedRailBox!.height).toBeLessThanOrEqual(
+    navigatedCalendarBox!.height + 2,
+  );
+  const navigatedHorizonOverflow = await page.locator(".horizon-scroll").evaluate(
+    (element) => element.scrollHeight > element.clientHeight,
+  );
+  expect(navigatedHorizonOverflow).toBe(true);
+
+  await page.locator(".today-cell").getByRole("button", { name: /more$/ }).click();
   await expect(today.locator(".calendar-episode")).toHaveCount(1005);
 });
 
