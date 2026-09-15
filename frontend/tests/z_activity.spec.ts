@@ -222,9 +222,11 @@ test("notification forms test Webhook and Discord locally, preserve settings whe
     .fill('{"text":"{{message}}","custom":{"event":"{{event}}"}}');
   await page.getByRole("checkbox", { name: "New episode releases" }).check();
   await page.getByLabel("Daily release notification time").fill("18:30");
-  await page
-    .getByLabel("Notification timezone", { exact: true })
-    .fill("Europe/Stockholm");
+  await expect(page.getByLabel("Notification timezone")).toHaveCount(0);
+  const deployment = await (await page.request.get("/api/settings")).json();
+  await expect(page.locator(".notification-timezone-chip")).toHaveText(
+    deployment.timezone,
+  );
   await page
     .getByRole("button", { name: "Save settings", exact: true })
     .click();
