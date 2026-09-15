@@ -7,9 +7,9 @@ import (
 func (s *Service) runBackup(ctx context.Context, trigger string) (result runResult, err error) {
 	result.Attempt = 1
 
-	backupKind := "manual"
-	if trigger == "scheduled_refresh" {
-		backupKind = "auto"
+	backupKind := "auto"
+	if trigger == "manual_backup" {
+		backupKind = "manual"
 	}
 	_, err = s.Backup.Create(ctx, backupKind)
 	result.Candidates = 1

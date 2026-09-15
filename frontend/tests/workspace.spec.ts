@@ -125,9 +125,9 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
   await page
     .getByRole("button", { name: "Create backup", exact: true })
     .click();
-  const download = page
-    .getByRole("link", { name: "Download", exact: true })
-    .first();
+  const manualBackup = page.locator(".backup-row").filter({ hasText: "Manual" }).first();
+  await expect(manualBackup).toBeVisible();
+  const download = manualBackup.getByRole("link", { name: "Download", exact: true });
   await expect(download).toBeVisible();
   const downloaded = page.waitForEvent("download");
   await download.click();
@@ -138,6 +138,21 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
     path: "../docs/screenshots/backup-settings.png",
     fullPage: true,
   });
+
+  await page.goto("/system/jobs");
+  const backupJob = page
+    .locator(".job-card")
+    .filter({ has: page.getByRole("heading", { name: "Backup", exact: true }) });
+  await expect(backupJob).toContainText("Create backups of application data and saved settings.");
+  await backupJob.getByRole("button", { name: "Run now", exact: true }).click();
+  await expect
+    .poll(async () => {
+      const data = await (await page.request.get("/api/backups")).json();
+      return data.records.some((record: any) => record.kind === "auto");
+    }, { timeout: 15_000 })
+    .toBe(true);
+  await page.goto("/settings");
+  await expect(page.locator(".backup-row").filter({ hasText: "Automatic" }).first()).toBeVisible();
 
   const bell = page.getByRole("button", { name: /^Notifications/ });
   await expect(bell).toHaveAccessibleName(/unread/);

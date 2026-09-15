@@ -33,7 +33,7 @@ export function BackupArchives() {
   async function create() {
     setBusy(true);
     try {
-      await api("/jobs/backup", "POST", {});
+      await api("/backups", "POST", {});
       notify("Backup started. The archive will appear here when ready.");
       await invalidateResources(cache, ["backups"]);
     } catch (error) {
@@ -67,7 +67,7 @@ export function BackupArchives() {
     <section className="panel settings-card backup-archives">
       <div className="section-heading">
         <div><h3><Archive size={19} />Backup archives</h3><p className="muted">Download, restore, or remove verified snapshots of your data and saved settings.</p></div>
-        <button className="button primary" disabled={busy} onClick={create}>{busy ? <Busy /> : <Plus size={16} />}Create backup</button>
+        <button className="button primary" disabled={busy} onClick={create}>{busy ? <Busy /> : <Plus size={16} />}Create manual backup</button>
       </div>
       {archives.error && <ErrorState error={archives.error} retry={() => archives.refetch()} />}
       {archives.isPending && <Busy />}

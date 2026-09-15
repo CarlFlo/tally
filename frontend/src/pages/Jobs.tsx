@@ -142,7 +142,7 @@ export function JobsPage() {
                 {job.key === "metadata"
                   ? "Refresh only the shows that are due."
                   : job.key === "backup"
-                    ? "A verified snapshot of everything that matters."
+                    ? "Create backups of application data and saved settings."
                     : "Keep caches, sessions, and history tidy."}
               </p>
               <dl>

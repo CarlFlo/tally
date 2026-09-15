@@ -123,3 +123,5 @@ Features are DONE only after their meaningful failure paths and acceptance check
 # Completed: Backup archives now expose Manual/Automatic type and source Tally/schema versions, support confirmed in-app restore and deletion, preserve current state on failed restore, migrate compatible older backups in staging, and apply restored SQLite state without restarting Tally.
 
 # Fixed 2026-09-15: Live restore now deletes all restorable tables before inserting snapshot rows so SQLite cascades cannot erase restored follows/preferences. Archive inventory no longer renders failed job runs; backup/restore failures are surfaced through Notifications and Logs.
+
+# Completed 2026-09-15: Backup archives now label the direct action as "Create manual backup". The Jobs page Run now action creates an automatic backup (and therefore follows automatic retention), while scheduled runs remain automatic. Backup job copy was simplified.
