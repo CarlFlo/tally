@@ -64,7 +64,7 @@ func Run(args []string) error {
 	case "reset-password":
 		return resetPassword(ctx, db, args)
 	case "delete-backup":
-		return deleteBackup(ctx, db, b, args)
+		return deleteBackup(ctx, b, args)
 	case "backup":
 		return createBackup(ctx, b)
 	default:
