@@ -35,7 +35,7 @@ func TestTorrentSubmissionIdempotency(t *testing.T) {
 	}
 	magnet := "magnet:?xt=urn:btih:" + strings.Repeat("a", 40)
 	data, _ := json.Marshal(torrent.SearchResult{Name: "Example", Magnet: magnet})
-	s.selections.Store("choice", selection{Profile: "user0", Data: data, Expires: time.Now().Add(time.Minute)})
+	s.selections.Store("choice", selection{Profile: "profile-admin", Data: data, Expires: time.Now().Add(time.Minute)})
 	defer s.selections.Delete("choice")
 	body := map[string]string{"selection": "choice", "idempotency_key": "0123456789abcdef"}
 	expect(t, request(t, h, "POST", "/api/torrents/send", body), 200)
