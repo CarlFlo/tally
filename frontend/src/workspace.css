@@ -590,6 +590,7 @@
 
 /* Keep the desktop horizon rail visually aligned with the calendar. */
 .calendar-rail {
+  height: var(--calendar-rail-height, auto);
   max-height: var(--calendar-rail-height, none);
   min-height: 0;
   overflow: hidden;
@@ -621,6 +622,7 @@
 }
 @media (max-width: 1020px) {
   .calendar-rail {
+    height: auto;
     max-height: none;
     overflow: visible;
   }
