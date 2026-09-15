@@ -34,7 +34,7 @@ func TestRestoreValidationPreservesExistingData(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	_, _ = db.Exec("UPDATE profiles SET display_name='Keep me' WHERE id='user0'")
+	_, _ = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('user0','Keep me','violet',1)")
 	db.Close()
 	archive := filepath.Join(t.TempDir(), "invalid.zip")
 	_ = os.WriteFile(archive, []byte("bad"), 0600)
