@@ -142,7 +142,7 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
   await page.goto("/system/jobs");
   const backupJob = page
     .locator(".job-card")
-    .filter({ has: page.getByRole("heading", { name: "Backup", exact: true }) });
+    .filter({ has: page.getByRole("heading", { name: "Automatic backup", exact: true }) });
   await expect(backupJob).toContainText("Create backups of application data and saved settings.");
   await backupJob.getByRole("button", { name: "Run now", exact: true }).click();
   await expect
