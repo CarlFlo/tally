@@ -16,21 +16,21 @@ func TestAdministratorRoleIsTransferableWithBackendGuard(t *testing.T) {
 	if _, err := s.DB.Exec("INSERT INTO profiles VALUES('profile-member','Alex','mint',1); INSERT INTO profiles VALUES('profile-member-2','Sam','mint',2)"); err != nil {
 		t.Fatal(err)
 	}
-	profile-member := &http.Cookie{Name: "tally_profile", Value: "profile-member"}
+	member := &http.Cookie{Name: "tally_profile", Value: "profile-member"}
 	admin := &http.Cookie{Name: "tally_profile", Value: "profile-admin"}
 
-	expect(t, request(t, h, "GET", "/api/settings", nil, profile-member), 403)
-	expect(t, request(t, h, "DELETE", "/api/profiles/profile-member-2", nil, profile-member), 403)
+	expect(t, request(t, h, "GET", "/api/settings", nil, member), 403)
+	expect(t, request(t, h, "DELETE", "/api/profiles/profile-member-2", nil, member), 403)
 
 	expect(t, request(t, h, "PATCH", "/api/profiles/profile-member/admin", map[string]any{"is_admin": true}, admin), 200)
-	expect(t, request(t, h, "GET", "/api/settings", nil, profile-member), 200)
-	expect(t, request(t, h, "PATCH", "/api/profiles/profile-admin/admin", map[string]any{"is_admin": false}, profile-member), 200)
+	expect(t, request(t, h, "GET", "/api/settings", nil, member), 200)
+	expect(t, request(t, h, "PATCH", "/api/profiles/profile-admin/admin", map[string]any{"is_admin": false}, member), 200)
 	expect(t, request(t, h, "GET", "/api/settings", nil, admin), 403)
 
 	// The only remaining admin cannot demote themselves while other profiles remain.
-	expect(t, request(t, h, "PATCH", "/api/profiles/profile-member/admin", map[string]any{"is_admin": false}, profile-member), 400)
+	expect(t, request(t, h, "PATCH", "/api/profiles/profile-member/admin", map[string]any{"is_admin": false}, member), 400)
 
-	expect(t, request(t, h, "PATCH", "/api/profiles/profile-member-2/admin", map[string]any{"is_admin": true}, profile-member), 200)
+	expect(t, request(t, h, "PATCH", "/api/profiles/profile-member-2/admin", map[string]any{"is_admin": true}, member), 200)
 	expect(t, request(t, h, "PATCH", "/api/profiles/profile-member/admin", map[string]any{"is_admin": false}, &http.Cookie{Name: "tally_profile", Value: "profile-member-2"}), 200)
 
 	var events int
