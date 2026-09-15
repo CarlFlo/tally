@@ -12,11 +12,11 @@ import (
 func resetPassword(ctx context.Context, db *database.Store, args []string) error {
 	var e error
 	if len(args) != 1 {
-		return fmt.Errorf("usage: tally reset-password <profile>")
+		return fmt.Errorf("usage: tally reset-password <profile-id-or-name>")
 	}
-	var exists int
-	if e = db.QueryRowContext(ctx, "SELECT 1 FROM profiles WHERE id=?", args[0]).Scan(&exists); e != nil {
-		return fmt.Errorf("profile does not exist")
+	profileID, err := resolveProfile(ctx, db, profileID)
+	if err != nil {
+		return err
 	}
 	temporary := auth.Token()
 	hash, err := auth.Hash(temporary)
@@ -28,15 +28,15 @@ func resetPassword(ctx context.Context, db *database.Store, args []string) error
 		return err
 	}
 	defer tx.Rollback()
-	if _, err = tx.ExecContext(ctx, "INSERT INTO local_credentials VALUES(?,?,1) ON CONFLICT(profile_id) DO UPDATE SET hash=excluded.hash,must_change=1", args[0], hash); err != nil {
+	if _, err = tx.ExecContext(ctx, "INSERT INTO local_credentials VALUES(?,?,1) ON CONFLICT(profile_id) DO UPDATE SET hash=excluded.hash,must_change=1", profileID, hash); err != nil {
 		return err
 	}
-	if _, err = tx.ExecContext(ctx, "DELETE FROM sessions WHERE profile_id=?", args[0]); err != nil {
+	if _, err = tx.ExecContext(ctx, "DELETE FROM sessions WHERE profile_id=?", profileID); err != nil {
 		return err
 	}
 	if err = tx.Commit(); err != nil {
 		return err
 	}
-	slog.Warn("OPERATOR PASSWORD RESET — replace immediately", "profile_id", args[0], "temporary_password", temporary)
+	slog.Warn("OPERATOR PASSWORD RESET — replace immediately", "profile_id", profileID, "temporary_password", temporary)
 	return nil
 }
