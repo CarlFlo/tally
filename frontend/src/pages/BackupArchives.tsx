@@ -83,13 +83,13 @@ export function BackupArchives() {
   return (
     <section className="panel settings-card backup-archives">
       <div className="section-heading">
-        <div><h3><Archive size={19} />Backup archives</h3><p className="muted">Download, restore, or remove verified snapshots of your data and saved settings.</p></div>
+        <div><h3><Archive size={19} />Backup archives</h3><p className="muted">Download, restore, or remove backup archives found in Tally&apos;s backup folder.</p></div>
         <button className="button primary" disabled={busy} onClick={create}>{busy ? <Busy /> : <Plus size={16} />}Create manual backup</button>
       </div>
       {archives.error && <ErrorState error={archives.error} retry={() => archives.refetch()} />}
       {archives.isPending && <Busy />}
       {rows.map((record) => {
-        const kind = record.kind === "auto" ? "Automatic" : "Manual";
+        const kind = record.kind === "auto" ? "Automatic" : record.kind === "imported" ? "Imported" : "Manual";
         return (
           <div className="backup-row" key={record.id}>
             <Archive size={18} />
