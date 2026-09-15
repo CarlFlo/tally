@@ -37,10 +37,10 @@ func (s *Server) updateSettings(w http.ResponseWriter, r *http.Request, session 
 		if e := decode(r, &in); e != nil {
 			return e
 		}
-		if e := settings.ValidateWebhook(in.Data); e != nil {
+		if e := settings.ValidateWebhook(in.Data, s.Config.Timezone); e != nil {
 			return bad(e.Error())
 		}
-		value = in.Data.Defaults()
+		value = in.Data.Defaults(s.Config.Timezone)
 		revision = in.Revision
 	case "search":
 		var in struct {

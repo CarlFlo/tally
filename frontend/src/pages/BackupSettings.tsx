@@ -7,6 +7,7 @@ const scheduleOrder = ["metadata", "maintenance", "backup"];
 
 export function SchedulingBackupsSettings() {
   const settings = useLocal<any>("editable-settings", "/settings/backups");
+  const deployment = useLocal<any>("settings", "/settings");
   const schedules = useLocal<Schedule[]>("schedules", "/settings/scheduling");
   const orderedSchedules = schedules.data?.slice().sort(
     (a, b) => scheduleOrder.indexOf(a.key) - scheduleOrder.indexOf(b.key),
@@ -17,6 +18,10 @@ export function SchedulingBackupsSettings() {
         <div className="section-heading settings-group-heading">
           <div>
             <h2 id="schedule-group-title">Scheduling</h2>
+            <p className="muted">
+              Cron schedules use the server timezone from <code>TZ</code>:{" "}
+              <strong>{deployment.data?.timezone || "UTC"}</strong>.
+            </p>
           </div>
         </div>
         {schedules.error && <ErrorState error={schedules.error} retry={() => schedules.refetch()} />}

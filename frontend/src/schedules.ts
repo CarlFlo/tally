@@ -47,6 +47,5 @@ export function scheduleRunLabel(
     hour: "2-digit",
     minute: "2-digit",
     hour12: timeFormat === "12h",
-    timeZoneName: "short",
   }).format(new Date(value * 1000));
 }

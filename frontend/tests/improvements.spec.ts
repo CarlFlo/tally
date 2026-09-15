@@ -212,7 +212,15 @@ test("settings categories persist connections, schedules, debug previews and sta
     headers,
     data: { profile: "user0" },
   });
+  const deploymentSettings = await (await page.request.get("/api/settings")).json();
+  const notificationSettings = await (
+    await page.request.get("/api/settings/notifications")
+  ).json();
+  expect(notificationSettings.data.timezone).toBe(deploymentSettings.timezone);
   await page.goto("/settings/notifications");
+  await expect(page.getByLabel("Notification timezone")).toHaveValue(
+    deploymentSettings.timezone,
+  );
   await page
     .getByLabel("Webhook URL", { exact: true })
     .fill("http://127.0.0.1:1/fixture-webhook");
@@ -282,6 +290,10 @@ test("settings categories persist connections, schedules, debug previews and sta
     schedule.getByRole("checkbox", { name: "Run automatically" }),
   ).not.toBeChecked();
   await page.getByRole("link", { name: "Debug", exact: true }).click();
+  const environment = page.locator(".environment-settings");
+  await expect(environment).toContainText("TZ");
+  await expect(environment).toContainText(deploymentSettings.timezone);
+  await expect(page.getByText(/Secrets and credential values are intentionally not shown/)).toBeVisible();
   await page.getByRole("checkbox", { name: "Enable debug mode" }).check();
   await expect
     .poll(async () => {

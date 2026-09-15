@@ -15,7 +15,8 @@ func (s *Server) testNotification(w http.ResponseWriter, r *http.Request, _ auth
 	if err := decode(r, &in); err != nil {
 		return err
 	}
-	if err := settings.ValidateWebhook(in); err != nil {
+	in = in.Defaults(s.Config.Timezone)
+	if err := settings.ValidateWebhook(in, s.Config.Timezone); err != nil {
 		return bad(err.Error())
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)

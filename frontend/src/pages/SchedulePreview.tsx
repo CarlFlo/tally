@@ -1,3 +1,4 @@
+import { useApp } from "../lib";
 import { scheduleRunLabel } from "../schedules";
 
 export type Preview = {
@@ -17,10 +18,10 @@ export function SchedulePreview({
   error?: Error;
   timeFormat: string;
 }) {
+  const { boot } = useApp();
   const description = loading
     ? "Checking schedule…"
     : error?.message || preview?.description || "Enter a cron schedule.";
-  const timezone = preview?.timezone || "UTC";
   return (
     <div
       className={`schedule-preview ${error ? "is-invalid" : ""}`}
@@ -32,12 +33,16 @@ export function SchedulePreview({
         <p className="schedule-preview-description">{description}</p>
       </div>
       <div className="schedule-preview-section schedule-preview-runs">
-        <strong>Next 3 runs · {timezone}</strong>
+        <strong>Next 3 runs</strong>
         <ol>
           {[0, 1, 2].map((index) => (
             <li key={index}>
               {preview?.next_runs[index]
-                ? scheduleRunLabel(preview.next_runs[index], timeFormat, timezone)
+                ? scheduleRunLabel(
+                    preview.next_runs[index],
+                    timeFormat,
+                    boot.preferences.timezone,
+                  )
                 : "—"}
             </li>
           ))}

@@ -14,6 +14,7 @@ import (
 
 func TestEditableSettingsPersistAndIgnoreLaterEnvironment(t *testing.T) {
 	s, h, _ := testServer(t, "disabled")
+	s.Config.Timezone = "Europe/Stockholm"
 	ctx := context.Background()
 	if e := s.settingsStore().Ensure(ctx); e != nil {
 		t.Fatal(e)
@@ -28,12 +29,20 @@ func TestEditableSettingsPersistAndIgnoreLaterEnvironment(t *testing.T) {
 		t.Fatal(e)
 	}
 	expect(t, request(t, h, "GET", "/api/settings/search", nil), 200)
+	notificationDefaults := request(t, h, "GET", "/api/settings/notifications", nil)
+	expect(t, notificationDefaults, 200)
+	if !strings.Contains(notificationDefaults.Body.String(), `"timezone":"Europe/Stockholm"`) || !strings.Contains(notificationDefaults.Body.String(), `"server_timezone":"Europe/Stockholm"`) {
+		t.Fatal("notification defaults did not use deployment timezone", notificationDefaults.Body.String())
+	}
 	if s.searchProvider("jackett") == nil || s.searchProvider("torznab") != nil {
 		t.Fatal("restart overwrote UI settings")
 	}
 	safe := request(t, h, "GET", "/api/settings", nil)
 	if strings.Contains(safe.Body.String(), "test-only-secret") {
 		t.Fatal("general settings leaked key")
+	}
+	if !strings.Contains(safe.Body.String(), `"TZ":"Europe/Stockholm"`) || strings.Contains(safe.Body.String(), "OIDC_SECRET") {
+		t.Fatal("safe environment view is missing or leaked secret metadata", safe.Body.String())
 	}
 	expect(t, request(t, h, "PUT", "/api/settings/notifications", map[string]any{"revision": 1, "data": settings.Webhook{Enabled: true, URL: "file:///unsafe"}}), 400)
 	expect(t, request(t, h, "PUT", "/api/settings/notifications", map[string]any{"revision": 1, "data": settings.Webhook{Enabled: true, URL: "http://webhook.invalid/path"}}), 200)

@@ -46,6 +46,22 @@ func (s *Server) settings(w http.ResponseWriter, r *http.Request, session auth.S
 		return e
 	}
 	c := s.Config
-	jsonResponse(w, 200, map[string]any{"auth_mode": c.AuthMode, "max_profiles": c.MaxProfiles, "timezone": c.Timezone, "language": c.Language, "downloader": client.Adapter, "downloader_configured": client.Configured(), "jackett_configured": s.jackettConfigured(), "oidc_secret_configured": c.OIDCSecret != "", "webhook_configured": webhookConfigured, "backup_enabled": backupEnabled, "backup_keep": backupKeep, "backup_cron": backupCron, "metadata_cron": metadataCron, "maintenance_cron": maintenanceCron, "job_concurrency": c.JobConcurrency, "provider_concurrency": c.ProviderConcurrency, "operator": s.operator(session) == nil, "backups": backups, "schema_version": database.Version})
+	var environment map[string]any
+	if s.operator(session) == nil {
+		environment = map[string]any{
+			"TZ":                         c.Timezone,
+			"APP_AUTH_MODE":              c.AuthMode,
+			"APP_LANGUAGE":               c.Language,
+			"APP_THEME_DEFAULT":          c.Theme,
+			"APP_MAX_PROFILES":           c.MaxProfiles,
+			"JOB_MAX_CONCURRENCY":        c.JobConcurrency,
+			"JOB_MAX_RETRIES":            c.JobRetries,
+			"JOB_MAX_BATCH_SIZE":         c.BatchSize,
+			"PROVIDER_MAX_CONCURRENCY":   c.ProviderConcurrency,
+			"STATS_RAW_RETENTION_DAYS":   c.RawRetention,
+			"STATS_AGGREGATE_RETENTION_DAYS": c.AggregateRetention,
+		}
+	}
+	jsonResponse(w, 200, map[string]any{"auth_mode": c.AuthMode, "max_profiles": c.MaxProfiles, "timezone": c.Timezone, "language": c.Language, "downloader": client.Adapter, "downloader_configured": client.Configured(), "jackett_configured": s.jackettConfigured(), "oidc_secret_configured": c.OIDCSecret != "", "webhook_configured": webhookConfigured, "backup_enabled": backupEnabled, "backup_keep": backupKeep, "backup_cron": backupCron, "metadata_cron": metadataCron, "maintenance_cron": maintenanceCron, "job_concurrency": c.JobConcurrency, "provider_concurrency": c.ProviderConcurrency, "operator": s.operator(session) == nil, "backups": backups, "schema_version": database.Version, "environment": environment})
 	return nil
 }

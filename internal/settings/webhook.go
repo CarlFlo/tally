@@ -22,7 +22,7 @@ type Webhook struct {
 	Timezone     string   `json:"timezone"`
 }
 
-func (w Webhook) Defaults() Webhook {
+func (w Webhook) Defaults(defaultTimezone ...string) Webhook {
 	if w.Type == "" {
 		w.Type = "webhook"
 	}
@@ -37,6 +37,9 @@ func (w Webhook) Defaults() Webhook {
 	}
 	if w.Timezone == "" {
 		w.Timezone = "UTC"
+		if len(defaultTimezone) > 0 && defaultTimezone[0] != "" {
+			w.Timezone = defaultTimezone[0]
+		}
 	}
 	return w
 }
@@ -60,8 +63,8 @@ func (w Webhook) Subscribed(event string) bool {
 	return false
 }
 
-func ValidateWebhook(w Webhook) error {
-	w = w.Defaults()
+func ValidateWebhook(w Webhook, defaultTimezone ...string) error {
+	w = w.Defaults(defaultTimezone...)
 	if w.Type != "webhook" && w.Type != "discord" {
 		return fmt.Errorf("choose Webhook or Discord")
 	}

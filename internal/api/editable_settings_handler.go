@@ -44,6 +44,12 @@ func (s *Server) editableSettings(w http.ResponseWriter, r *http.Request, sessio
 		effective := search.Effective()
 		out = &effective
 	}
-	jsonResponse(w, 200, map[string]any{"data": out, "revision": rev})
+	response := map[string]any{"data": out, "revision": rev}
+	if webhook, ok := out.(*settings.Webhook); ok {
+		effective := webhook.Defaults(s.Config.Timezone)
+		response["data"] = &effective
+		response["server_timezone"] = s.Config.Timezone
+	}
+	jsonResponse(w, 200, response)
 	return nil
 }

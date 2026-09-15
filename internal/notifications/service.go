@@ -14,6 +14,7 @@ import (
 type Service struct {
 	DB        *database.Store
 	Requester providers.Requester
+	Timezone  string
 	OnChange  func(string, ...string)
 }
 
@@ -46,7 +47,7 @@ func (s *Service) Tick(ctx context.Context, now time.Time) error {
 	if _, err := (settings.Store{DB: s.DB}).Load(ctx, "notifications", &config); err != nil {
 		return err
 	}
-	config = config.Defaults()
+	config = config.Defaults(s.Timezone)
 	if err := s.collectBellReleases(ctx, now); err != nil {
 		return err
 	}

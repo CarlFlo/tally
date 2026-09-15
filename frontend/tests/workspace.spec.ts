@@ -54,12 +54,21 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
   ).toBeFocused();
   await expect(page.locator("#profile-menu")).toHaveCount(0);
 
+  await page.request.patch("/api/preferences", {
+    headers,
+    data: { timezone: "America/New_York", time_format: "24h" },
+  });
   await page.goto("/settings/scheduling");
   const editor = page
     .locator(".schedule-editor")
     .filter({
       has: page.getByRole("heading", { name: "Metadata sync", exact: true }),
     });
+  const deploymentSettings = await (await page.request.get("/api/settings")).json();
+  await expect(page.getByText(
+    `Cron schedules use the server timezone from TZ: ${deploymentSettings.timezone}.`,
+    { exact: true },
+  )).toBeVisible();
   const stored = (
     await (await page.request.get("/api/settings/scheduling")).json()
   ).find((job: any) => job.key === "metadata");
@@ -90,7 +99,23 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
   await expect(previewPanel.getByText("Cron expression", { exact: true })).toHaveCount(0);
   await expect(previewPanel.getByText("Timezone", { exact: true })).toHaveCount(0);
   await expect(previewPanel).toContainText("Description");
-  await expect(previewPanel).toContainText("Next 3 runs · UTC");
+  await expect(previewPanel.getByText("Next 3 runs", { exact: true })).toBeVisible();
+  await expect(previewPanel).not.toContainText("UTC");
+  const previewResponse = await page.request.post("/api/settings/scheduling/preview", {
+    headers,
+    data: { schedule: "20 * * * *" },
+  });
+  const previewData = await previewResponse.json();
+  const expectedFirstRun = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "America/New_York",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(previewData.next_runs[0] * 1000));
+  await expect(previewPanel.locator("li").first()).toHaveText(expectedFirstRun);
 
   await page.setViewportSize({ width: 1000, height: 1000 });
   const stackedFieldsBox = await editor.locator(".schedule-fields").boundingBox();
@@ -109,6 +134,10 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
   await page.screenshot({
     path: "../docs/screenshots/compact-schedules.png",
     fullPage: true,
+  });
+  await page.request.patch("/api/preferences", {
+    headers,
+    data: { timezone: "UTC", time_format: "24h" },
   });
 
   await page.goto("/settings/bell");
@@ -165,6 +194,7 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
     .locator(".job-card")
     .filter({ has: page.getByRole("heading", { name: "Automatic backup", exact: true }) });
   await expect(backupJob).toContainText("Create backups of application data and saved settings.");
+  await expect(backupJob.getByText(/Schedule ·/)).toHaveCount(0);
   await backupJob.getByRole("button", { name: "Run now", exact: true }).click();
   await expect
     .poll(async () => {

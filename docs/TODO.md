@@ -42,8 +42,8 @@ Blockers: none.
 - [x] Persistent debug mode with safe UI failure previews.
 - [x] Statistics limits (20/50/100, default 20), persisted per profile.
 - [x] Live statistics refresh; unified five-field scheduler parser, backend cron description/next-run previews, and combined Scheduling & backups settings.
-- [x] Event-driven active-page refresh for jobs, statistics, logs, inbox, library, and settings; stable Scheduling & backups layout; deployment-timezone cron scheduling with three-run previews and `*/60` compatibility.
-- [x] Scheduling UI polish: job-specific common presets, deployment-timezone preview rendering, compact aligned fields, slim grouped sections, concealed secret fields by default, and edge-aligned input focus states.
+- [x] Event-driven active-page refresh for jobs, statistics, logs, inbox, library, and settings; stable Scheduling & backups layout; deployment-timezone cron scheduling with profile-timezone three-run previews and `*/60` compatibility.
+- [x] Scheduling UI polish: job-specific common presets, profile-timezone preview rendering, compact aligned fields, slim grouped sections, concealed secret fields by default, and edge-aligned input focus states.
 - [x] Migration/backup/queue/settings/protocol tests, browser checks, build, local deployment.
 
 ## Architecture
@@ -126,4 +126,4 @@ Features are DONE only after their meaningful failure paths and acceptance check
 
 # Completed 2026-09-15: Backup archives now label the direct action as "Create manual backup". The Jobs page Run now action creates an automatic backup (and therefore follows automatic retention), while scheduled runs remain automatic. Backup job copy was simplified.
 
-# Completed 2026-09-15: Cron schedules and previews now use the deployment `TZ` IANA timezone (default UTC), including DST-aware next-run calculation. The scheduling preview shows only a stacked description and the next three runs, with the active schedule timezone in the runs heading.
+# Completed 2026-09-15: Cron execution uses the deployment `TZ` IANA timezone (default UTC), including DST-aware next-run calculation. Schedule previews show only a stacked description and the next three runs; timestamps are formatted in the active profile timezone without repeated timezone suffixes. Notification delivery timezone defaults to deployment `TZ`, and Debug exposes a safe non-secret view of effective environment configuration.

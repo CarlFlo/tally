@@ -11,7 +11,7 @@ import {
   notificationErrors,
   parseNotificationTime,
 } from "./notificationValidation";
-const defaults = (data: any, timezone: string) => ({
+const defaults = (data: any, serverTimezone: string) => ({
   url: "",
   discord_url: "",
   bot_name: "",
@@ -24,7 +24,7 @@ const defaults = (data: any, timezone: string) => ({
     data.body ||
     '{"app":"Tally","message":"{{message}}","event":"{{event}}","show":"{{show}}","time":"{{time}}"}',
   delivery_time: data.delivery_time || "09:00",
-  timezone: data.timezone || timezone,
+  timezone: data.timezone || serverTimezone || "UTC",
 });
 export function NotificationSettings() {
   const query = useLocal<any>(
@@ -47,7 +47,7 @@ function NotificationForm({ saved }: { saved: any }) {
   const { boot, notify } = useApp(),
     cache = useQueryClient();
   const [data, setData] = useState(() =>
-    defaults(saved.data, boot.preferences.timezone),
+    defaults(saved.data, saved.server_timezone),
   );
   const [timeText, setTimeText] = useState(() =>
     displayNotificationTime(data.delivery_time, boot.preferences.time_format),
@@ -76,14 +76,14 @@ function NotificationForm({ saved }: { saved: any }) {
   useEffect(() => {
     if (saved.revision <= revision || JSON.stringify(data) !== JSON.stringify(stored))
       return;
-    const next = defaults(saved.data, boot.preferences.timezone);
+    const next = defaults(saved.data, saved.server_timezone);
     setData(next);
     setStored(next);
     setRevision(saved.revision);
     setTimeText(
       displayNotificationTime(next.delivery_time, boot.preferences.time_format),
     );
-  }, [boot.preferences.time_format, boot.preferences.timezone, data, revision, saved, stored]);
+  }, [boot.preferences.time_format, data, revision, saved, stored]);
   const change = (key: string, value: any) =>
     setData((old: any) => ({ ...old, [key]: value }));
   async function persist(next: any) {
