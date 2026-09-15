@@ -10,18 +10,15 @@ test("backup archives restore and delete from the UI without restarting Tally", 
   await page.goto("/settings");
   await expect(page.locator(".compact-retention strong")).toHaveText("after");
 
-  const keep = page.getByLabel("Automatic backups to keep");
-  await keep.fill("3");
-  await page.getByRole("button", { name: "Save settings", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Backup settings saved");
-
-  await page.getByRole("button", { name: "Create backup", exact: true }).click();
+  // The existing settings test creates a verified manual backup with retention=3.
+  // Reuse it here so this final test does not depend on unrelated end-of-suite fixture state.
   const row = page.locator(".backup-row").filter({ hasText: "Manual" }).first();
-  await expect(row.getByRole("button", { name: "Restore", exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(row.getByRole("button", { name: "Restore", exact: true })).toBeVisible();
   const filename = await row.locator("strong").innerText();
   const boot = await (await page.request.get("/api/bootstrap")).json();
   await expect(row).toContainText(`Tally ${boot.version}`);
 
+  const keep = page.getByLabel("Automatic backups to keep");
   await keep.fill("4");
   await page.getByRole("button", { name: "Save settings", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Backup settings saved");
