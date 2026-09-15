@@ -65,4 +65,5 @@ BEGIN
  SELECT RAISE(ABORT,'at least one administrator is required while profiles remain');
 END;
 
+DROP TABLE counters;
 DROP TABLE profile_id_migration;
