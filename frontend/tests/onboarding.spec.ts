@@ -24,7 +24,7 @@ test("passwordless profiles set their own password and signed-out visitors can a
   await expect(
     page.getByRole("link", { name: "Add profile", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "E Eve", exact: true }).click();
+  await page.getByRole("button", { name: "EV Eve", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Set up your password, Eve." }),
   ).toBeVisible();
@@ -38,7 +38,7 @@ test("passwordless profiles set their own password and signed-out visitors can a
   await expect(page).toHaveURL(/\/calendar$/);
   await expect(page.locator(".header-profile strong")).toHaveText("Eve");
   await signOut(page);
-  await page.getByRole("button", { name: "E Eve", exact: true }).click();
+  await page.getByRole("button", { name: "EV Eve", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Welcome back, Eve." }),
   ).toBeVisible();
