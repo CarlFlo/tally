@@ -1,33 +1,38 @@
 package api
 
 import (
-	"github.com/CarlFlo/mediaManager/internal/profiles"
 	"net/http"
 	"strings"
 
 	"github.com/CarlFlo/mediaManager/internal/auth"
+	"github.com/CarlFlo/mediaManager/internal/profiles"
 )
 
 func (s *Server) updateProfile(w http.ResponseWriter, r *http.Request, session auth.Session) error {
 	var in struct{ Name, Avatar string }
-	if e := decode(r, &in); e != nil {
-		return e
+	if err := decode(r, &in); err != nil {
+		return err
 	}
 	name := strings.TrimSpace(in.Name)
-	if err := profiles.ValidateName(in.Name); err != nil {
+	if err := profiles.ValidateName(name); err != nil {
 		return bad(err.Error())
 	}
-	if in.Avatar != "" && !builtinAvatar(in.Avatar) {
-		return bad("choose a built-in avatar or upload an image")
+	avatar := in.Avatar
+	if avatar != "" {
+		var err error
+		avatar, err = profiles.NormalizeAvatar(avatar)
+		if err != nil {
+			return bad(err.Error())
+		}
 	}
-	var e error
-	if in.Avatar == "" {
-		_, e = s.DB.ExecContext(r.Context(), "UPDATE profiles SET display_name=? WHERE id=?", name, session.Profile)
+	var err error
+	if avatar == "" {
+		_, err = s.DB.ExecContext(r.Context(), "UPDATE profiles SET display_name=? WHERE id=?", name, session.Profile)
 	} else {
-		_, e = s.DB.ExecContext(r.Context(), "UPDATE profiles SET display_name=?,avatar=? WHERE id=?", name, in.Avatar, session.Profile)
+		_, err = s.DB.ExecContext(r.Context(), "UPDATE profiles SET display_name=?,avatar=? WHERE id=?", name, avatar, session.Profile)
 	}
-	if e != nil {
-		return e
+	if err != nil {
+		return err
 	}
 	jsonResponse(w, 200, map[string]bool{"ok": true})
 	return nil
