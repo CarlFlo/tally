@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { openProfileMenu } from "./navigation";
+import { openProfileMenu, selectProfileByName } from "./navigation";
 
 const headers = { "X-Tally-CSRF": "1" };
 
@@ -20,10 +20,7 @@ test("rapid view switching stays interactive while live data changes", async ({
   page.on("console", (message) => {
     if (message.type() === "error") errors.push(message.text());
   });
-  await page.request.post("/api/profiles/select", {
-    headers,
-    data: { profile: "user0" },
-  });
+  await selectProfileByName(page, "My profile");
 
   await page.goto("/settings");
   await expect(page.locator(".schedule-editor")).toHaveCount(3);
