@@ -283,6 +283,12 @@ test("settings categories persist connections, schedules, debug previews and sta
   ).not.toBeChecked();
   await page.getByRole("link", { name: "Debug", exact: true }).click();
   await page.getByRole("checkbox", { name: "Enable debug mode" }).check();
+  await expect
+    .poll(async () => {
+      const boot = await (await page.request.get("/api/bootstrap")).json();
+      return boot.preferences.debug_mode;
+    })
+    .toBe(true);
   await page.goto("/jobs");
   await expect(
     page.getByRole("button", { name: "Preview paused", exact: true }),
