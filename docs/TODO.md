@@ -139,3 +139,9 @@ Features are DONE only after their meaningful failure paths and acceptance check
 # Completed 2026-09-15: Graceful shutdown now closes live SSE connections before draining HTTP requests, preventing persistent /api/events streams from holding Docker shutdown open.
 # Completed 2026-09-15: Granting or removing administrator access now requires an explicit confirmation dialog; local-auth demotion still requires the acting administrator's password afterward.
 # Completed 2026-09-15: Backup archives include an explicit Refresh action that rescans the filesystem-backed backup directory on demand without background polling or filesystem watchers.
+
+
+# Completed 2026-09-15: Hardening/performance audit follow-up moved idle background work to deadline/event-driven scheduling, exempted long-lived SSE from the normal HTTP write deadline, made WAL checkpoint policy explicit, split shutdown phase budgets, removed duplicate image-body caching, streamed filesystem image hits, and atomically published cache files.
+# Completed 2026-09-15: Frontend routing no longer remounts the authenticated route tree on every pathname change; secondary System/Settings/Logs bundles lazy-load, manual backup completion no longer polls every 500 ms, and unchanged backup manifests are cached by filesystem metadata. Existing same-document navigation stress/browser regressions pass on the branch.
+# Completed 2026-09-15: Production container builds use BuildKit package/build caches and no longer rerun the Go suite, redundant Alpine tzdata was removed because Go embeds tzdata, the local-password default minimum is six characters, and deployment documentation explicitly describes Tally's trusted-LAN/no-direct-WAN model.
+# In progress 2026-09-15: Dependency/security CI follow-up upgrades modernc SQLite to 1.59.0, adds npm audit, govulncheck, Trivy image scanning, and Dependabot. See root `HARDENING_UPGRADE.md` for live status and implementation notes.
