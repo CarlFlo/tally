@@ -1,5 +1,3 @@
-import { dateTimeFormatter } from "../dateFormatting";
-
 const tokens = new Set(["event", "key", "level", "message", "show", "time"]);
 
 export type NotificationErrors = Record<string, string>;
@@ -16,8 +14,6 @@ export function notificationErrors(data: any): NotificationErrors {
     errors.prefix = "Use 500 characters or fewer.";
   if (!validTime(data.delivery_time))
     errors.delivery_time = "Enter a valid notification time.";
-  if (!validTimezone(data.timezone))
-    errors.timezone = "Choose a valid IANA timezone.";
   return errors;
 }
 
@@ -51,15 +47,6 @@ function validURL(value: string) {
 
 function validTime(value: string) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value || "");
-}
-
-function validTimezone(value: string) {
-  try {
-    dateTimeFormatter("en", { timeZone: value });
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 function validateBody(body: string, errors: NotificationErrors) {

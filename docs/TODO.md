@@ -127,3 +127,5 @@ Features are DONE only after their meaningful failure paths and acceptance check
 # Completed 2026-09-15: Backup archives now label the direct action as "Create manual backup". The Jobs page Run now action creates an automatic backup (and therefore follows automatic retention), while scheduled runs remain automatic. Backup job copy was simplified.
 
 # Completed 2026-09-15: Cron execution uses the deployment `TZ` IANA timezone (default UTC), including DST-aware next-run calculation. Schedule previews show only a stacked description and the next three runs; timestamps are formatted in the active profile timezone without repeated timezone suffixes. Notification delivery timezone defaults to deployment `TZ`, and Debug exposes a safe non-secret view of effective environment configuration.
+
+# Completed 2026-09-15: Notification delivery time is always interpreted in deployment `TZ`; the editable notification-timezone field was removed. The time field shows the server timezone beside its label and, when the profile timezone differs, shows the next delivery converted to the user's timezone using the same DST-aware backend scheduling logic.

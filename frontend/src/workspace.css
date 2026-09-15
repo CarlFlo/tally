@@ -552,3 +552,37 @@
     transition: none;
   }
 }
+
+.notification-schedule {
+  max-width: 520px;
+  margin-top: 18px;
+}
+.notification-time-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.notification-timezone-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 2px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface2);
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+}
+.notification-local-time {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.notification-local-time strong {
+  color: var(--text);
+  font-weight: 600;
+}

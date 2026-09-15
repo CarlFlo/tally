@@ -34,6 +34,11 @@ func TestEditableSettingsPersistAndIgnoreLaterEnvironment(t *testing.T) {
 	if !strings.Contains(notificationDefaults.Body.String(), `"timezone":"Europe/Stockholm"`) || !strings.Contains(notificationDefaults.Body.String(), `"server_timezone":"Europe/Stockholm"`) {
 		t.Fatal("notification defaults did not use deployment timezone", notificationDefaults.Body.String())
 	}
+	preview := request(t, h, "POST", "/api/settings/notifications/preview", map[string]string{"delivery_time": "09:00"})
+	expect(t, preview, 200)
+	if !strings.Contains(preview.Body.String(), `"server_timezone":"Europe/Stockholm"`) || !strings.Contains(preview.Body.String(), `"next_delivery":`) {
+		t.Fatal("notification time preview did not use deployment timezone", preview.Body.String())
+	}
 	if s.searchProvider("jackett") == nil || s.searchProvider("torznab") != nil {
 		t.Fatal("restart overwrote UI settings")
 	}

@@ -35,11 +35,13 @@ func (w Webhook) Defaults(defaultTimezone ...string) Webhook {
 	if w.DeliveryTime == "" {
 		w.DeliveryTime = "09:00"
 	}
-	if w.Timezone == "" {
-		w.Timezone = "UTC"
-		if len(defaultTimezone) > 0 && defaultTimezone[0] != "" {
-			w.Timezone = defaultTimezone[0]
+	if len(defaultTimezone) > 0 {
+		w.Timezone = defaultTimezone[0]
+		if w.Timezone == "" {
+			w.Timezone = "UTC"
 		}
+	} else if w.Timezone == "" {
+		w.Timezone = "UTC"
 	}
 	return w
 }

@@ -69,7 +69,6 @@ export function NotificationFields({
       </fieldset>
       <NotificationScheduleFields
         data={data}
-        change={change}
         errors={errors}
         timeText={timeText}
         timeFormat={timeFormat}

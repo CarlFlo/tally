@@ -18,12 +18,12 @@ func TestWebhookRejectsUnsafeURLsAndInvalidTemplates(t *testing.T) {
 	}
 }
 
-func TestWebhookDefaultsUseServerTimezoneWithoutOverridingExplicitChoice(t *testing.T) {
+func TestWebhookDefaultsUseServerTimezoneAsAuthority(t *testing.T) {
 	if got := (Webhook{}).Defaults("Europe/Stockholm").Timezone; got != "Europe/Stockholm" {
 		t.Fatalf("default timezone = %q", got)
 	}
-	if got := (Webhook{Timezone: "America/New_York"}).Defaults("Europe/Stockholm").Timezone; got != "America/New_York" {
-		t.Fatalf("explicit timezone was overwritten: %q", got)
+	if got := (Webhook{Timezone: "America/New_York"}).Defaults("Europe/Stockholm").Timezone; got != "Europe/Stockholm" {
+		t.Fatalf("legacy stored timezone overrode server timezone: %q", got)
 	}
 	if got := (Webhook{}).Defaults().Timezone; got != "UTC" {
 		t.Fatalf("fallback timezone = %q", got)

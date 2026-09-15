@@ -217,9 +217,37 @@ test("settings categories persist connections, schedules, debug previews and sta
     await page.request.get("/api/settings/notifications")
   ).json();
   expect(notificationSettings.data.timezone).toBe(deploymentSettings.timezone);
+  const initialBoot = await (await page.request.get("/api/bootstrap")).json();
+  const originalTimezone = initialBoot.preferences.timezone;
+  const userTimezone =
+    deploymentSettings.timezone === "America/New_York"
+      ? "Europe/Stockholm"
+      : "America/New_York";
+  await page.request.patch("/api/preferences", {
+    headers,
+    data: { timezone: userTimezone, time_format: "24h" },
+  });
   await page.goto("/settings/notifications");
-  await expect(page.getByLabel("Notification timezone")).toHaveValue(
+  await expect(page.getByLabel("Notification timezone")).toHaveCount(0);
+  await expect(page.locator(".notification-timezone-chip")).toHaveText(
     deploymentSettings.timezone,
+  );
+  const deliveryInput = page.getByLabel("Daily release notification time");
+  await deliveryInput.fill("09:00");
+  const deliveryPreview = await (
+    await page.request.post("/api/settings/notifications/preview", {
+      headers,
+      data: { delivery_time: "09:00" },
+    })
+  ).json();
+  const expectedUserTime = new Intl.DateTimeFormat("en-GB", {
+    timeZone: userTimezone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(deliveryPreview.next_delivery * 1000));
+  await expect(page.locator(".notification-local-time")).toContainText(
+    `Your time: ${expectedUserTime} · ${userTimezone}`,
   );
   await page
     .getByLabel("Webhook URL", { exact: true })
@@ -392,6 +420,7 @@ test("settings categories persist connections, schedules, debug previews and sta
       debug_job_state: "normal",
       job_type_filter: "all",
       job_status_filter: "all",
+      timezone: originalTimezone,
     },
   });
   expect(errors).toEqual([]);

@@ -29,6 +29,7 @@ func (s *Server) Handler() http.Handler {
 		{"GET /api/shows/suggestions", s.suggestions, false},
 		{"PATCH /api/shows/{id}/favorite", s.favoriteShow, false},
 		{"POST /api/settings/notifications/test", s.testNotification, false},
+		{"POST /api/settings/notifications/preview", s.notificationTimePreview, false},
 		{"GET /api/capabilities", s.capabilities, false},
 		{"GET /api/backups", s.backups, false},
 		{"POST /api/backups", s.createManualBackup, false},

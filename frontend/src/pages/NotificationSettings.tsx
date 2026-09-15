@@ -24,7 +24,7 @@ const defaults = (data: any, serverTimezone: string) => ({
     data.body ||
     '{"app":"Tally","message":"{{message}}","event":"{{event}}","show":"{{show}}","time":"{{time}}"}',
   delivery_time: data.delivery_time || "09:00",
-  timezone: data.timezone || serverTimezone || "UTC",
+  timezone: serverTimezone || data.timezone || "UTC",
 });
 export function NotificationSettings() {
   const query = useLocal<any>(
@@ -91,11 +91,14 @@ function NotificationForm({ saved }: { saved: any }) {
       data: next,
       revision,
     });
+    const serverTimezone = saved.server_timezone || next.timezone || "UTC";
+    const persisted = { ...next, timezone: serverTimezone };
     setRevision(response.revision);
-    setStored(next);
+    setStored(persisted);
     cache.setQueryData(queryKeys.local("editable-settings", "/settings/notifications"), {
-      data: next,
+      data: persisted,
       revision: response.revision,
+      server_timezone: serverTimezone,
     });
     await invalidateResources(cache, ["settings"]);
   }
