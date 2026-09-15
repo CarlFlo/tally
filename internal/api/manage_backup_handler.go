@@ -13,7 +13,7 @@ func (s *Server) restoreBackup(w http.ResponseWriter, r *http.Request, session a
 	if s.Backup == nil {
 		return apiError{500, "backup service is unavailable"}
 	}
-	manifest, err := s.Backup.RestoreRecord(r.Context(), r.PathValue("id"))
+	manifest, err := s.Backup.RestoreArchive(r.Context(), r.PathValue("id"))
 	if errors.Is(err, backup.ErrNotFound) {
 		return apiError{404, "backup not found"}
 	}
@@ -36,7 +36,7 @@ func (s *Server) deleteBackup(w http.ResponseWriter, r *http.Request, _ auth.Ses
 	if s.Backup == nil {
 		return apiError{500, "backup service is unavailable"}
 	}
-	err := s.Backup.DeleteRecord(r.Context(), r.PathValue("id"))
+	err := s.Backup.DeleteArchive(r.Context(), r.PathValue("id"))
 	if errors.Is(err, backup.ErrNotFound) {
 		return apiError{404, "backup not found"}
 	}
