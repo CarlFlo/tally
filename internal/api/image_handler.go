@@ -37,6 +37,27 @@ func serveCachedImage(w http.ResponseWriter, r *http.Request, path string) bool 
 	return true
 }
 
+func writeCachedImage(dir, path string, data []byte) error {
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return err
+	}
+	file, err := os.CreateTemp(dir, ".image-*")
+	if err != nil {
+		return err
+	}
+	temp := file.Name()
+	defer os.Remove(temp)
+	if _, err = file.Write(data); err == nil {
+		err = file.Close()
+	} else {
+		_ = file.Close()
+	}
+	if err != nil {
+		return err
+	}
+	return os.Rename(temp, path)
+}
+
 func (s *Server) image(w http.ResponseWriter, r *http.Request, _ auth.Session) error {
 	raw := r.URL.Query().Get("url")
 	u, err := url.Parse(raw)
@@ -58,10 +79,7 @@ func (s *Server) image(w http.ResponseWriter, r *http.Request, _ auth.Session) e
 	if err != nil || (format != "png" && format != "jpeg" && format != "webp") || cfg.Width > 5000 || cfg.Height > 5000 || cfg.Width*cfg.Height > 20000000 {
 		return bad("provider returned an invalid image")
 	}
-	if err = os.MkdirAll(dir, 0700); err != nil {
-		return err
-	}
-	if err = os.WriteFile(path, res.Body, 0600); err != nil {
+	if err = writeCachedImage(dir, path, res.Body); err != nil {
 		return err
 	}
 	w.Header().Set("Content-Type", http.DetectContentType(res.Body))
