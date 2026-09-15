@@ -13,18 +13,18 @@ import (
 func TestCSRFAndAuthenticatedIsolation(t *testing.T) {
 	s, h, _ := testServer(t, "local")
 	hash, _ := auth.Hash("1234")
-	_, e := s.DB.Exec("INSERT INTO local_credentials VALUES('user0',?,0); INSERT INTO profiles VALUES('user1','Second','mint',?); INSERT INTO local_credentials VALUES('user1',?,0)", hash, time.Now().Unix(), hash)
+	_, e := s.DB.Exec("INSERT INTO local_credentials VALUES('profile-admin',?,0); INSERT INTO profiles VALUES('profile-member','Second','mint',?); INSERT INTO local_credentials VALUES('profile-member',?,0)", hash, time.Now().Unix(), hash)
 	if e != nil {
 		t.Fatal(e)
 	}
-	login := request(t, h, "POST", "/api/auth/login", map[string]string{"Profile": "user1", "Password": "1234"})
+	login := request(t, h, "POST", "/api/auth/login", map[string]string{"Profile": "profile-member", "Password": "1234"})
 	expect(t, login, 200)
 	cookies := login.Result().Cookies()
-	cookies = append(cookies, &http.Cookie{Name: "tally_profile", Value: "user0"})
+	cookies = append(cookies, &http.Cookie{Name: "tally_profile", Value: "profile-admin"})
 	expect(t, request(t, h, "POST", "/api/profiles", map[string]string{"Name": "Intruder"}, cookies...), 403)
 	expect(t, request(t, h, "PATCH", "/api/profile", map[string]string{"Name": "Only mine"}, cookies...), 200)
 	var name string
-	_ = s.DB.QueryRow("SELECT display_name FROM profiles WHERE id='user0'").Scan(&name)
+	_ = s.DB.QueryRow("SELECT display_name FROM profiles WHERE id='profile-admin'").Scan(&name)
 	if name != "My profile" {
 		t.Fatal("browser-controlled profile ID was trusted")
 	}
@@ -42,21 +42,21 @@ func TestCSRFAndAuthenticatedIsolation(t *testing.T) {
 	w = httptest.NewRecorder()
 	h.ServeHTTP(w, r)
 	expect(t, w, 403)
-	expect(t, request(t, h, "POST", "/api/profiles/select", map[string]string{"Profile": "user0"}, cookies...), 403)
+	expect(t, request(t, h, "POST", "/api/profiles/select", map[string]string{"Profile": "profile-admin"}, cookies...), 403)
 }
 
 func TestRestrictedSessionAndRevocation(t *testing.T) {
 	s, h, _ := testServer(t, "local")
 	hash, _ := auth.Hash("temporary")
-	_, _ = s.DB.Exec("INSERT INTO local_credentials VALUES('user0',?,1)", hash)
-	w := request(t, h, "POST", "/api/auth/login", map[string]string{"Profile": "user0", "Password": "temporary"})
+	_, _ = s.DB.Exec("INSERT INTO local_credentials VALUES('profile-admin',?,1)", hash)
+	w := request(t, h, "POST", "/api/auth/login", map[string]string{"Profile": "profile-admin", "Password": "temporary"})
 	expect(t, w, 200)
 	cookie := w.Result().Cookies()
 	expect(t, request(t, h, "GET", "/api/shows", nil, cookie...), 403)
 	expect(t, request(t, h, "POST", "/api/auth/password", map[string]string{"Password": "5678"}, cookie...), 200)
 	expect(t, request(t, h, "GET", "/api/shows", nil, cookie...), 401)
 	var stored string
-	_ = s.DB.QueryRow("SELECT hash FROM local_credentials WHERE profile_id='user0'").Scan(&stored)
+	_ = s.DB.QueryRow("SELECT hash FROM local_credentials WHERE profile_id='profile-admin'").Scan(&stored)
 	if !auth.Verify(stored, "5678") || auth.Verify(stored, "temporary") {
 		t.Fatal("password replacement failed")
 	}

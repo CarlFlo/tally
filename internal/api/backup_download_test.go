@@ -31,11 +31,11 @@ func TestBackupDownloadRequiresOwnerAndConfinesArchivePaths(t *testing.T) {
 	if result.Body.String() != string(data) || !strings.Contains(result.Header().Get("Content-Disposition"), "attachment;") || result.Header().Get("Content-Type") != "application/zip" {
 		t.Fatal("archive response is incorrect")
 	}
-	if _, err = s.DB.Exec("INSERT INTO profiles VALUES('user1','Alex','mint',1)"); err != nil {
+	if _, err = s.DB.Exec("INSERT INTO profiles VALUES('profile-member','Alex','mint',1)"); err != nil {
 		t.Fatal(err)
 	}
-	owner := &http.Cookie{Name: "tally_profile", Value: "user0"}
-	member := &http.Cookie{Name: "tally_profile", Value: "user1"}
+	owner := &http.Cookie{Name: "tally_profile", Value: "profile-admin"}
+	member := &http.Cookie{Name: "tally_profile", Value: "profile-member"}
 	expect(t, request(t, h, "GET", "/api/backups/"+id+"/download", nil, member), 403)
 	if _, err = s.DB.Exec(`INSERT INTO backup_records VALUES('escape','../app.db','manual',1,1,1);
  INSERT INTO backup_records VALUES('failed','failed.zip','manual',1,1,0);
