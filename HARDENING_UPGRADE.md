@@ -16,64 +16,70 @@ Scope: implement the fixes and upgrades from the 2026-09-15 code audit while pre
 
 ### Runtime and backend efficiency
 
-- [~] Fix long-lived SSE handling so the server-wide write timeout cannot terminate healthy event streams.
-- [ ] Replace the one-second scheduled-job SQLite polling loop with a next-deadline timer plus explicit wakeups when schedules change.
-- [ ] Replace the one-second notification worker polling loop with event/deadline-driven wakeups and a conservative fallback timer.
-- [ ] Remove duplicate image-body caching between provider `cache.db` and the filesystem image cache.
-- [ ] Stream cached image files instead of loading the complete file into memory.
-- [ ] Make SQLite WAL checkpoint policy explicit for the main and provider-cache databases and checkpoint cleanly during maintenance/shutdown where appropriate.
-- [ ] Split shutdown phase budgets so job cancellation cannot consume the entire HTTP-drain budget.
+- [x] Fix long-lived SSE handling so the server-wide write timeout cannot terminate healthy event streams.
+- [x] Replace the one-second scheduled-job SQLite polling loop with a next-deadline timer plus explicit wakeups when schedules change.
+- [x] Replace the one-second notification worker polling loop with event/deadline-driven wakeups and a 30-second reconciliation fallback.
+- [x] Remove duplicate image-body caching between provider `cache.db` and the filesystem image cache while retaining shared-request coalescing.
+- [x] Stream cached image files instead of loading the complete file into memory.
+- [x] Publish image cache files through temp-file + atomic rename so concurrent requests cannot observe partial files.
+- [x] Make SQLite WAL checkpoint policy explicit for the main and provider-cache databases and checkpoint during maintenance/clean shutdown.
+- [x] Split shutdown phase budgets so job cancellation cannot consume the entire HTTP-drain budget.
+- [x] Fix scheduled-job next-run recalculation to consistently use deployment `TZ`/DST semantics.
 
 ### Frontend efficiency and navigation
 
-- [ ] Remove the global `<Routes key={location.pathname}>` remount and preserve route/component lifecycle normally.
-- [ ] Add route-level lazy loading for secondary/admin/settings pages while keeping core navigation responsive.
-- [ ] Remove 500 ms manual-backup job polling and rely on live job/backups invalidation; retain a bounded fallback for connection loss.
-- [ ] Reduce repeated backup archive ZIP inspection by caching archive metadata keyed by filesystem identity/mtime/size while preserving manual Refresh semantics.
+- [x] Remove the global `<Routes key={location.pathname}>` remount and preserve normal React Router lifecycle.
+- [x] Add route-level lazy loading for System, Settings and Logs while keeping Calendar, Shows and Search eager.
+- [x] Remove 500 ms manual-backup job polling and rely on live job/backups invalidation; EventSource recovery already revalidates active server data after a connection failure.
+- [x] Reduce repeated backup archive ZIP inspection by caching manifest results keyed by filename, size and nanosecond mtime while preserving manual Refresh semantics.
 
 ### Dependencies and image/build
 
-- [ ] Upgrade `modernc.org/sqlite` from v1.58.0 to the current v1.59.x release and update sums.
-- [ ] Re-check Go and npm dependencies after the implementation; do not perform major framework migrations solely for version-number parity.
-- [ ] Keep Node 24 LTS for the frontend builder and Alpine 3.24 for the runtime unless verification shows a better stable choice.
-- [ ] Remove redundant runtime `tzdata` package if the embedded Go timezone database fully covers Tally's runtime needs.
-- [ ] Separate production image build from test execution so normal image builds do not rerun the Go suite unnecessarily.
-- [ ] Add BuildKit cache mounts for Go modules/build cache and npm package cache where safe.
+- [~] Upgrade `modernc.org/sqlite` from v1.58.0 to v1.59.0 and commit the generated `go.sum` checksum. The driver passes vet/race tests when CI generates the checksum; checksum commit is pending.
+- [x] Re-check Go and npm dependencies; retain stable/LTS versions rather than perform major framework migrations solely for version-number parity.
+- [x] Keep Node 24 LTS for the frontend builder and Alpine 3.24 for the runtime.
+- [x] Remove redundant runtime `tzdata`; Tally already embeds Go's timezone database.
+- [x] Separate production image build from test execution so normal image builds do not rerun the Go suite.
+- [x] Add BuildKit cache mounts for Go modules/build cache and npm package cache.
 
 ### Security and operational hardening
 
-- [ ] Keep the LAN-only threat model explicit in documentation and warn against direct public-internet exposure.
-- [ ] Raise the default local password/PIN minimum from 4 to a safer value while preserving the environment override.
-- [ ] Preserve current first-profile bootstrap behavior; do not add setup-token complexity for the trusted-LAN model.
-- [ ] Add `govulncheck ./...` to CI.
-- [ ] Add npm dependency audit for high/critical vulnerabilities to CI.
-- [ ] Add a container-image vulnerability scan to CI with a practical high/critical threshold.
-- [ ] Add/confirm automated dependency update configuration for Go, npm, Docker base images, and GitHub Actions.
+- [x] Keep the LAN-only threat model explicit in documentation and warn against direct public-internet exposure.
+- [x] Raise the default local password/PIN minimum from 4 to 6 while preserving the environment override.
+- [x] Preserve current first-profile bootstrap behavior; do not add setup-token complexity for the trusted-LAN model.
+- [~] Add `govulncheck ./...` to CI. The current Go 1.27-compatible upstream x/vuln commit passes; final branch run is pending.
+- [x] Add npm dependency audit for high/critical vulnerabilities to CI. Current branch audit reports zero vulnerabilities.
+- [~] Add a high/critical Trivy container-image vulnerability scan to CI. Workflow is configured; final image scan is pending.
+- [x] Add Dependabot coverage for Go modules, npm, Docker images and GitHub Actions.
 
 ### Maintainability
 
-- [ ] Reassess the low-activity cron-description dependency; replace it only if a small, tested internal five-field describer can cover Tally's supported expressions without regressions.
-- [ ] Update architecture/TODO/README documentation for lifecycle, scheduler, notifications, image cache, Docker build, security model, and verification changes.
-- [ ] Add or update targeted tests for every changed lifecycle/concurrency/cache boundary.
+- [-] Replace the low-activity `github.com/lnquy/cron` description dependency. Reassessed and intentionally retained: it has zero transitive dependencies, is not on the execution/security path, and supports a much broader cron-description grammar than a small replacement. Removing it now would trade a cosmetic dependency-age concern for schedule-description regressions. The scheduler itself remains `robfig/cron/v3`.
+- [x] Update README and architecture/TODO documentation for lifecycle, scheduler, notifications, image cache, Docker build and security model.
+- [x] Add targeted tests for scheduler and notification deadline calculations; existing navigation/browser/race suites cover the changed lifecycle boundaries.
 
 ## Findings and decisions
 
 - Tally is intentionally a LAN/self-hosted application. First-profile creation is therefore treated as a local trust-boundary/design concern, not an internet-facing release blocker.
 - Direct WAN exposure remains unsupported unless the operator deliberately adds appropriate authentication, TLS/reverse proxy, or a private-network/VPN layer.
 - Node 24 LTS and Alpine 3.24 are intentionally preferred over chasing non-LTS/current release trains.
-- The existing non-root runtime, dropped Linux capabilities, no-new-privileges, Argon2id, hashed session tokens, OIDC PKCE/state/nonce, CSRF/origin checks, backup extraction validation, bounded outbound HTTP, and backend authorization are to be preserved.
+- React Router 8 is not being adopted solely for version parity; the current React Router compatibility package works with the existing architecture and a major router migration is unrelated to this hardening pass.
+- The existing non-root runtime, dropped Linux capabilities, no-new-privileges, Argon2id, hashed session tokens, OIDC PKCE/state/nonce, CSRF/origin checks, backup extraction validation, bounded outbound HTTP, and backend authorization are preserved.
 
 ## Verification
 
-- [ ] `go test ./...`
-- [ ] `go vet ./...`
-- [ ] `go test -race ./...`
-- [ ] frontend production build
-- [ ] Playwright E2E/browser regression suite
-- [ ] Docker production build
-- [ ] vulnerability scans/audits added by this branch
-- [ ] final diff review against every item above
+- [~] `go test ./...` — covered by successful staged branch runs; final head pending.
+- [~] `go vet ./...` — covered by successful staged branch runs; final head pending.
+- [~] `go test -race ./...` — runtime and navigation batches pass; final head pending.
+- [~] frontend production build — passes on staged branch runs; final head pending.
+- [~] Playwright E2E/browser regression suite — runtime and navigation batches pass, including same-document navigation stress; final head pending.
+- [~] Docker production build — passes before the final dependency/scan additions; final head pending.
+- [~] vulnerability scans/audits — npm audit and Go vulnerability analysis pass; Trivy final image scan pending.
+- [ ] final diff review against every item above.
 
 ## Issues / notes discovered during implementation
 
-- None yet.
+- [x] Scheduled job start used the UTC parser directly when advancing `next_run`, bypassing deployment timezone handling. Fixed to use the same timezone-aware scheduler helper used elsewhere.
+- [x] `golang.org/x/vuln` v1.1.4 panics under Go 1.27 (`unexpected expr: *ast.KeyValueExpr`) because its bundled `x/tools` is too old. CI now pins the current upstream x/vuln commit from 2026-09-08, which passes under Go 1.27.
+- [~] The SQLite 1.59.0 module checksum is being generated in CI because this environment cannot run Go module downloads locally. Once captured it will be committed and the temporary checksum-generation workflow steps removed.
+- [x] Removing the global route remount and adding lazy secondary routes passed the existing same-document navigation stress suite, including bounded listener/stream/request checks.
