@@ -81,12 +81,14 @@ export function ScheduleEditor({ job }: { job: Schedule }) {
           <div><h3>{jobName(job.key)}</h3><p>{jobDescription(job.key)}</p></div>
           <label className="toggle-setting"><input type="checkbox" checked={enabled} onChange={(event) => void save(saved.schedule, event.target.checked)} />Run automatically</label>
         </div>
-        <div className="schedule-fields">
-          <label>Common schedule<select value={selectedPreset} aria-label={`${jobName(job.key)} common schedule`} onChange={(event) => event.target.value !== "custom" && setSpec(event.target.value)}><option value="custom">Custom cron</option>{presets.map(([label, value]) => <option key={value} value={value}>{label}</option>)}</select><small aria-hidden="true">&nbsp;</small></label>
-          <label>Cron expression<input name={`cron-${job.key}`} value={spec} required maxLength={100} spellCheck={false} autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-bwignore="true" data-protonpass-ignore="true" data-form-type="other" onChange={(event) => setSpec(event.target.value)} /><small>Minute · hour · day-of-month · month · weekday</small></label>
-          <button className="button primary small">{busy ? <Busy /> : <Save size={16} />}Save schedule</button>
+        <div className="schedule-editor-body">
+          <div className="schedule-fields">
+            <label>Common schedule<select value={selectedPreset} aria-label={`${jobName(job.key)} common schedule`} onChange={(event) => event.target.value !== "custom" && setSpec(event.target.value)}><option value="custom">Custom cron</option>{presets.map(([label, value]) => <option key={value} value={value}>{label}</option>)}</select><small aria-hidden="true">&nbsp;</small></label>
+            <label>Cron expression<input name={`cron-${job.key}`} value={spec} required maxLength={100} spellCheck={false} autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-bwignore="true" data-protonpass-ignore="true" data-form-type="other" onChange={(event) => setSpec(event.target.value)} /><small>Minute · hour · day-of-month · month · weekday</small></label>
+            <button className="button primary small">{busy ? <Busy /> : <Save size={16} />}Save schedule</button>
+          </div>
+          <SchedulePreview expression={spec} preview={currentPreview || initialPreview} loading={!settled || preview.isFetching} error={settled ? preview.error as Error | undefined : undefined} timeFormat={boot.preferences.time_format} timezone={boot.preferences.timezone} />
         </div>
-        <SchedulePreview expression={spec} preview={currentPreview || initialPreview} loading={!settled || preview.isFetching} error={settled ? preview.error as Error | undefined : undefined} timeFormat={boot.preferences.time_format} timezone={boot.preferences.timezone} />
         {!!job.paused && <p className="error-box">Paused after {job.failures} consecutive failures. Resume from System → Jobs when ready.</p>}
       </fieldset>
       {saveError && <ErrorState error={saveError} />}

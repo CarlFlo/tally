@@ -331,10 +331,20 @@
 .settings-card-list > .settings-card { margin-bottom: 0; }
 .schedule-editor.settings-card { padding: 22px 25px; }
 .schedule-heading p { margin: 5px 0 0; color: var(--muted); font-size: 11px; }
+.schedule-editor-body {
+  display: grid;
+  grid-template-columns: minmax(360px, .95fr) minmax(320px, 1.05fr);
+  gap: 18px;
+  align-items: stretch;
+  margin-top: 14px;
+}
 .schedule-editor .schedule-fields {
   display: grid;
-  grid-template-columns: minmax(170px, .75fr) minmax(250px, 1fr) auto;
+  grid-template-columns: minmax(150px, .8fr) minmax(200px, 1fr);
+  gap: 12px;
+  align-content: start;
   align-items: end;
+  margin-top: 0;
 }
 .schedule-editor .schedule-fields label {
   display: grid;
@@ -344,6 +354,14 @@
 .schedule-editor .schedule-fields select,
 .schedule-editor .schedule-fields input { width: 100%; margin-top: 6px; }
 .schedule-editor .schedule-fields small { display: block; min-height: 15px; margin-top: 5px; color: var(--muted); }
+.schedule-editor .schedule-fields button {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+.schedule-editor .schedule-preview {
+  margin-top: 0;
+  min-height: 100%;
+}
 .backup-settings-group { padding-top: 4px; border-top: 1px solid var(--border); }
 .scheduling-backups .settings-card { padding: 18px 22px; }
 .scheduling-backups .settings-group-heading { margin-bottom: 8px; }
@@ -470,6 +488,14 @@
   }
   65% {
     transform: rotate(12deg);
+  }
+}
+@media (max-width: 1050px) {
+  .schedule-editor-body {
+    grid-template-columns: 1fr;
+  }
+  .schedule-editor .schedule-preview {
+    min-height: 164px;
   }
 }
 @media (max-width: 700px) {

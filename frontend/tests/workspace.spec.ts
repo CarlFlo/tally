@@ -79,6 +79,22 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
     ).schedule,
   ).toBe(stored.schedule);
   await expect(editor.getByLabel("Cron expression")).toHaveValue("20 * * * *");
+
+  const fieldsBox = await editor.locator(".schedule-fields").boundingBox();
+  const previewBox = await editor.locator(".schedule-preview").boundingBox();
+  expect(fieldsBox).not.toBeNull();
+  expect(previewBox).not.toBeNull();
+  expect(previewBox!.x).toBeGreaterThan(fieldsBox!.x + fieldsBox!.width);
+  expect(Math.abs(previewBox!.y - fieldsBox!.y)).toBeLessThan(8);
+
+  await page.setViewportSize({ width: 1000, height: 1000 });
+  const stackedFieldsBox = await editor.locator(".schedule-fields").boundingBox();
+  const stackedPreviewBox = await editor.locator(".schedule-preview").boundingBox();
+  expect(stackedFieldsBox).not.toBeNull();
+  expect(stackedPreviewBox).not.toBeNull();
+  expect(stackedPreviewBox!.y).toBeGreaterThan(stackedFieldsBox!.y + stackedFieldsBox!.height);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+
   await editor
     .getByRole("button", { name: "Save schedule", exact: true })
     .click();
