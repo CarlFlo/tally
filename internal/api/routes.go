@@ -55,6 +55,7 @@ func (s *Server) Handler() http.Handler {
 		{"POST /api/profiles", s.createProfile, false},
 		{"POST /api/profiles/select", s.selectProfile, true},
 		{"PATCH /api/profile", s.updateProfile, false},
+		{"PATCH /api/profiles/{id}/admin", s.updateProfileAdmin, false},
 		{"DELETE /api/profiles/{id}", s.deleteProfile, false},
 		{"POST /api/profile/avatar", s.uploadAvatar, false},
 		{"GET /api/avatars/{name}", s.avatar, true},
