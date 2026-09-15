@@ -65,7 +65,7 @@ func TestBrowserServer(t *testing.T) {
 	s, _, _ := testServer(t, mode)
 	// Browser tests deliberately avoid legacy userN IDs so UI authorization
 	// cannot accidentally pass by coupling administrator access to an ID.
-	if _, err := s.DB.Exec("DELETE FROM profiles WHERE id='user0'"); err != nil {
+	if _, err := s.DB.Exec("DELETE FROM profiles WHERE id='profile-admin'"); err != nil {
 		t.Fatal(err)
 	}
 	adminID := database.ID()

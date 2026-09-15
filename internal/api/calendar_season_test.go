@@ -8,17 +8,17 @@ import (
 
 func TestCalendarSeasonSizeUsesSharedDeclaredMetadata(t *testing.T) {
 	s, h, _ := testServer(t, "disabled")
-	if _, err := s.DB.Exec(`INSERT INTO profiles VALUES('user1','Alex','mint',1);
+	if _, err := s.DB.Exec(`INSERT INTO profiles VALUES('profile-member','Alex','mint',1);
  INSERT INTO shows(id,name) VALUES('known','Known season'),('unknown','Unknown season');
  INSERT INTO seasons(id,show_id,number,episode_count) VALUES('season','known',2,8);
  INSERT INTO episodes(id,show_id,season,number,name,airdate) VALUES
  ('one','known',2,1,'First','2026-09-12'),('two','known',2,2,'Second','2026-09-12'),
  ('unknown-one','unknown',1,1,'Pilot','2026-09-12');
- INSERT INTO profile_shows(profile_id,show_id,added_at) VALUES('user0','known',1),('user0','unknown',1);`); err != nil {
+ INSERT INTO profile_shows(profile_id,show_id,added_at) VALUES('profile-admin','known',1),('profile-admin','unknown',1);`); err != nil {
 		t.Fatal(err)
 	}
-	owner := &http.Cookie{Name: "tally_profile", Value: "user0"}
-	member := &http.Cookie{Name: "tally_profile", Value: "user1"}
+	owner := &http.Cookie{Name: "tally_profile", Value: "profile-admin"}
+	member := &http.Cookie{Name: "tally_profile", Value: "profile-member"}
 	path := "/api/calendar?from=2026-09-01&to=2026-10-01"
 	result := request(t, h, "GET", path, nil, owner)
 	expect(t, result, 200)

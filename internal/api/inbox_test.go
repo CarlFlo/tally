@@ -11,17 +11,17 @@ import (
 
 func TestInboxMarkersDismissalsAndLogsAreProfileScoped(t *testing.T) {
 	s, h, _ := testServer(t, "disabled")
-	if _, err := s.DB.Exec(`INSERT INTO profiles VALUES('user1','Alex','mint',1);
+	if _, err := s.DB.Exec(`INSERT INTO profiles VALUES('profile-member','Alex','mint',1);
  INSERT INTO activity_log(id,action,profile_id,message,created_at) VALUES
- (1,'show_added','user1','Added personal show',1),
- (2,'settings_updated','user0','Private operator action',2),
+ (1,'show_added','profile-member','Added personal show',1),
+ (2,'settings_updated','profile-admin','Private operator action',2),
  (3,'job_failed','','System failure',3),
- (4,'episode_progress_updated','user1','Noisy progress',4),
- (5,'show_removed','user1','Removed personal show',5);`); err != nil {
+ (4,'episode_progress_updated','profile-member','Noisy progress',4),
+ (5,'show_removed','profile-member','Removed personal show',5);`); err != nil {
 		t.Fatal(err)
 	}
-	owner := &http.Cookie{Name: "tally_profile", Value: "user0"}
-	member := &http.Cookie{Name: "tally_profile", Value: "user1"}
+	owner := &http.Cookie{Name: "tally_profile", Value: "profile-admin"}
+	member := &http.Cookie{Name: "tally_profile", Value: "profile-member"}
 	read := func(cookie *http.Cookie) inbox.Page {
 		t.Helper()
 		result := request(t, h, "GET", "/api/inbox", nil, cookie)
@@ -63,7 +63,7 @@ func TestInboxMarkersDismissalsAndLogsAreProfileScoped(t *testing.T) {
 	if got := read(member); got.Unread != 0 || len(got.Entries) != 0 {
 		t.Fatal("clear did not persist", got)
 	}
-	if _, err := s.DB.Exec("INSERT INTO activity_log(action,profile_id,message,created_at) VALUES('show_added','user1','New arrival',6)"); err != nil {
+	if _, err := s.DB.Exec("INSERT INTO activity_log(action,profile_id,message,created_at) VALUES('show_added','profile-member','New arrival',6)"); err != nil {
 		t.Fatal(err)
 	}
 	if got := read(member); got.Unread != 0 || len(got.Entries) != 0 {
@@ -84,7 +84,7 @@ func TestInboxUsesBellCategoriesInsteadOfActivityMessages(t *testing.T) {
  ('settings_updated','Updated scheduling settings',4);`); err != nil {
 		t.Fatal(err)
 	}
-	owner := &http.Cookie{Name: "tally_profile", Value: "user0"}
+	owner := &http.Cookie{Name: "tally_profile", Value: "profile-admin"}
 	expect(t, request(t, h, "PATCH", "/api/preferences", map[string]any{"bell_categories": []string{"backup_successes", "routine_background"}}, owner), 200)
 	result := request(t, h, "GET", "/api/inbox", nil, owner)
 	expect(t, result, 200)

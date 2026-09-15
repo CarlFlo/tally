@@ -65,15 +65,15 @@ func TestConnectionSecretsVisibleOnlyInExplicitOperatorView(t *testing.T) {
 		t.Fatal(e)
 	}
 	owner := httptest.NewRecorder()
-	s.Auth.NewSession(ctx, owner, httptest.NewRequest("GET", "/", nil), "user0", false)
+	s.Auth.NewSession(ctx, owner, httptest.NewRequest("GET", "/", nil), "profile-admin", false)
 	response := request(t, h, "GET", "/api/downloader?reveal=1", nil, owner.Result().Cookies()...)
 	expect(t, response, 200)
 	if !strings.Contains(response.Body.String(), fixtureClientKey) || response.Header().Get("Cache-Control") != "no-store" {
 		t.Fatal("explicit reveal unavailable or cacheable")
 	}
-	s.DB.Exec("INSERT INTO profiles VALUES('user1','Other','mint',1)")
+	s.DB.Exec("INSERT INTO profiles VALUES('profile-member','Other','mint',1)")
 	ordinary := httptest.NewRecorder()
-	s.Auth.NewSession(ctx, ordinary, httptest.NewRequest("GET", "/", nil), "user1", false)
+	s.Auth.NewSession(ctx, ordinary, httptest.NewRequest("GET", "/", nil), "profile-member", false)
 	for _, path := range []string{"/api/downloader?reveal=1", "/api/settings/search", "/api/settings/notifications", "/api/settings/scheduling"} {
 		expect(t, request(t, h, "GET", path, nil, ordinary.Result().Cookies()...), 403)
 	}
@@ -84,9 +84,9 @@ func TestFavoritesEpisodeResetAndPersistentViewPreferences(t *testing.T) {
 	expect(t, response, 201)
 	id := value(t, response, "id")
 	expect(t, request(t, h, "PATCH", "/api/shows/"+id+"/favorite", map[string]bool{"favorite": true}), 200)
-	s.DB.Exec("INSERT INTO profiles VALUES('user1','Other','mint',1)")
-	other := &http.Cookie{Name: "tally_profile", Value: "user1"}
-	owner := &http.Cookie{Name: "tally_profile", Value: "user0"}
+	s.DB.Exec("INSERT INTO profiles VALUES('profile-member','Other','mint',1)")
+	other := &http.Cookie{Name: "tally_profile", Value: "profile-member"}
+	owner := &http.Cookie{Name: "tally_profile", Value: "profile-admin"}
 	expect(t, request(t, h, "POST", "/api/shows", map[string]int{"tvmaze_id": 7}, other), 201)
 	if strings.Contains(request(t, h, "GET", "/api/shows", nil, other).Body.String(), `"favorite":1`) {
 		t.Fatal("favorite leaked between profiles")
@@ -97,7 +97,7 @@ func TestFavoritesEpisodeResetAndPersistentViewPreferences(t *testing.T) {
 		expect(t, request(t, h, "PATCH", "/api/episodes/"+ep, map[string]bool{"downloaded": v, "watched": v}, owner), 200)
 	}
 	var downloaded, watched int
-	s.DB.QueryRow("SELECT downloaded,watched FROM profile_episode_state WHERE profile_id='user0' AND episode_id=?", ep).Scan(&downloaded, &watched)
+	s.DB.QueryRow("SELECT downloaded,watched FROM profile_episode_state WHERE profile_id='profile-admin' AND episode_id=?", ep).Scan(&downloaded, &watched)
 	if downloaded != 0 || watched != 0 {
 		t.Fatal("states could not be cleared")
 	}
@@ -105,7 +105,7 @@ func TestFavoritesEpisodeResetAndPersistentViewPreferences(t *testing.T) {
 	expect(t, request(t, h, "PATCH", "/api/preferences", map[string]any{"scan_limit": 100}, owner), 200)
 	var prefs map[string]any
 	var raw string
-	s.DB.QueryRow("SELECT data FROM profile_preferences WHERE profile_id='user0'").Scan(&raw)
+	s.DB.QueryRow("SELECT data FROM profile_preferences WHERE profile_id='profile-admin'").Scan(&raw)
 	json.Unmarshal([]byte(raw), &prefs)
 	if prefs["request_limit"] != float64(50) || prefs["scan_limit"] != float64(100) || prefs["debug_mode"] != true {
 		t.Fatal("preferences were not merged persistently")
