@@ -16,7 +16,7 @@ func TestScheduledReleaseSurvivesRestartAndMasterSwitchSkipsPending(t *testing.T
 		t.Fatal(err)
 	}
 	defer db.Close()
-	if _, err = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('user0','Fixture','violet',1)"); err != nil {
+	if _, err = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-fixture','Fixture','violet',1)"); err != nil {
 		t.Fatal(err)
 	}
 	store := settings.Store{DB: db}
@@ -29,7 +29,7 @@ func TestScheduledReleaseSurvivesRestartAndMasterSwitchSkipsPending(t *testing.T
 		t.Fatal(err)
 	}
 	now := time.Date(2026, 1, 2, 8, 0, 0, 0, time.UTC)
-	_, err = db.Exec(`INSERT INTO shows(id,name) VALUES('show','Example'); INSERT INTO profile_shows(profile_id,show_id,added_at) VALUES('user0','show',1); INSERT INTO episodes(id,show_id,season,number,name,airstamp) VALUES('ep','show',1,1,'Pilot','2026-01-02T08:00:00Z'); INSERT INTO notification_state(key,value) VALUES('bell_release_cursor',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value; UPDATE notification_state SET value=? WHERE key='release_cursor'`, now.Add(-time.Minute).Unix(), now.Add(-time.Minute).Unix())
+	_, err = db.Exec(`INSERT INTO shows(id,name) VALUES('show','Example'); INSERT INTO profile_shows(profile_id,show_id,added_at) VALUES('profile-fixture','show',1); INSERT INTO episodes(id,show_id,season,number,name,airstamp) VALUES('ep','show',1,1,'Pilot','2026-01-02T08:00:00Z'); INSERT INTO notification_state(key,value) VALUES('bell_release_cursor',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value; UPDATE notification_state SET value=? WHERE key='release_cursor'`, now.Add(-time.Minute).Unix(), now.Add(-time.Minute).Unix())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func TestScheduledReleaseSurvivesRestartAndMasterSwitchSkipsPending(t *testing.T
 	if len(r.requests) != 0 {
 		t.Fatal("sent before delivery time")
 	}
-	// Recreate worker with the same permanent state, as on restart.
+	// Recreate worker with the same persisted state, as on restart.
 	s = &Service{DB: db, Requester: r}
 	if err = s.Tick(ctx, now.Add(time.Hour)); err != nil {
 		t.Fatal(err)

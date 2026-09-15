@@ -34,7 +34,7 @@ func TestRestoreValidationPreservesExistingData(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	_, _ = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('user0','Keep me','violet',1)")
+	_, _ = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-owner','Keep me','violet',1)")
 	db.Close()
 	archive := filepath.Join(t.TempDir(), "invalid.zip")
 	_ = os.WriteFile(archive, []byte("bad"), 0600)
@@ -47,7 +47,7 @@ func TestRestoreValidationPreservesExistingData(t *testing.T) {
 	}
 	defer raw.Close()
 	var name string
-	_ = raw.QueryRow("SELECT display_name FROM profiles WHERE id='user0'").Scan(&name)
+	_ = raw.QueryRow("SELECT display_name FROM profiles WHERE id='profile-owner'").Scan(&name)
 	if name != "Keep me" {
 		t.Fatal("failed restore changed original database")
 	}

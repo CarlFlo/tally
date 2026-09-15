@@ -40,7 +40,7 @@ func TestJobDedupCancellationAndDeadline(t *testing.T) {
 		t.Fatal(e)
 	}
 	defer p.Close()
-	_, e = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('user0','Fixture','violet',1); INSERT INTO shows(id,name) VALUES('show','Example'); INSERT INTO external_ids VALUES('tvmaze','show','7','show'); INSERT INTO profile_shows(profile_id,show_id,added_at) VALUES('user0','show',1)")
+	_, e = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-fixture','Fixture','violet',1); INSERT INTO shows(id,name) VALUES('show','Example'); INSERT INTO external_ids VALUES('tvmaze','show','7','show'); INSERT INTO profile_shows(profile_id,show_id,added_at) VALUES('profile-fixture','show',1)")
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -110,7 +110,7 @@ func TestJobDeadlineCountsAsFailure(t *testing.T) {
 		t.Fatal(e)
 	}
 	defer p.Close()
-	if _, e = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('user0','Fixture','violet',1); INSERT INTO shows(id,name) VALUES('show','Example'); INSERT INTO external_ids VALUES('tvmaze','show','7','show'); INSERT INTO profile_shows(profile_id,show_id,added_at) VALUES('user0','show',1)"); e != nil {
+	if _, e = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-fixture','Fixture','violet',1); INSERT INTO shows(id,name) VALUES('show','Example'); INSERT INTO external_ids VALUES('tvmaze','show','7','show'); INSERT INTO profile_shows(profile_id,show_id,added_at) VALUES('profile-fixture','show',1)"); e != nil {
 		t.Fatal(e)
 	}
 	s := New(ctx, db, config.Config{JobRuntime: 50 * time.Millisecond, BatchSize: 5}, &metadata.Service{DB: db, Provider: &blockingTV{started: make(chan struct{}, 1)}}, p, nil)

@@ -10,7 +10,7 @@ func TestHubCoalescesAndDeliversChanges(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	hub := New()
-	updates := hub.Subscribe(ctx, "user0")
+	updates := hub.Subscribe(ctx, "profileA")
 	hub.Publish("", "jobs", "jobs", "statistics")
 	hub.Publish("", "calendar")
 	select {
@@ -35,18 +35,18 @@ func TestHubScopesProfileEvents(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	hub := New()
-	user0 := hub.Subscribe(ctx, "user0")
-	user1 := hub.Subscribe(ctx, "user1")
+	profileA := hub.Subscribe(ctx, "profileA")
+	profileB := hub.Subscribe(ctx, "profileB")
 
-	hub.Publish("user1", "calendar")
+	hub.Publish("profileB", "calendar")
 
 	select {
-	case <-user0:
+	case <-profileA:
 		t.Fatal("profile event leaked to another profile")
 	default:
 	}
 	select {
-	case event := <-user1:
+	case event := <-profileB:
 		if len(event.Changes) != 1 || event.Changes[0].Resource != "calendar" {
 			t.Fatalf("unexpected event: %#v", event)
 		}
