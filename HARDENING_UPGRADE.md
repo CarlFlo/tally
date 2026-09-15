@@ -35,7 +35,7 @@ Scope: implement the fixes and upgrades from the 2026-09-15 code audit while pre
 
 ### Dependencies and image/build
 
-- [~] Upgrade `modernc.org/sqlite` from v1.58.0 to v1.59.0 and commit the generated `go.sum` checksum. The driver passes vet/race tests when CI generates the checksum; checksum commit is pending.
+- [x] Upgrade `modernc.org/sqlite` from v1.58.0 to v1.59.0 with verified module checksums committed to `go.sum`.
 - [x] Re-check Go and npm dependencies; retain stable/LTS versions rather than perform major framework migrations solely for version-number parity.
 - [x] Keep Node 24 LTS for the frontend builder and Alpine 3.24 for the runtime.
 - [x] Remove redundant runtime `tzdata`; Tally already embeds Go's timezone database.
@@ -47,9 +47,9 @@ Scope: implement the fixes and upgrades from the 2026-09-15 code audit while pre
 - [x] Keep the LAN-only threat model explicit in documentation and warn against direct public-internet exposure.
 - [x] Raise the default local password/PIN minimum from 4 to 6 while preserving the environment override.
 - [x] Preserve current first-profile bootstrap behavior; do not add setup-token complexity for the trusted-LAN model.
-- [~] Add `govulncheck ./...` to CI. The current Go 1.27-compatible upstream x/vuln commit passes; final branch run is pending.
+- [x] Add `govulncheck ./...` to CI using `golang.org/x/vuln` v1.8.0, which supports Go 1.27. A staged branch scan reports zero called/imported-package vulnerabilities.
 - [x] Add npm dependency audit for high/critical vulnerabilities to CI. Current branch audit reports zero vulnerabilities.
-- [~] Add a high/critical Trivy container-image vulnerability scan to CI. Workflow is configured; final image scan is pending.
+- [~] Add a high/critical Trivy container-image vulnerability scan to CI. The first scan correctly caught fixed OpenSSL CVE-2026-14456 in stale Alpine base packages; the runtime now runs `apk upgrade --no-cache` so `libcrypto3`/`libssl3` receive the fixed 3.5.8-r0 packages. Final rescan is pending.
 - [x] Add Dependabot coverage for Go modules, npm, Docker images and GitHub Actions.
 
 ### Maintainability
@@ -74,12 +74,14 @@ Scope: implement the fixes and upgrades from the 2026-09-15 code audit while pre
 - [~] frontend production build — passes on staged branch runs; final head pending.
 - [~] Playwright E2E/browser regression suite — runtime and navigation batches pass, including same-document navigation stress; final head pending.
 - [~] Docker production build — passes before the final dependency/scan additions; final head pending.
-- [~] vulnerability scans/audits — npm audit and Go vulnerability analysis pass; Trivy final image scan pending.
+- [~] vulnerability scans/audits — npm audit and Go vulnerability analysis pass; Trivy identified CVE-2026-14456 and the image fix is committed; final rescan pending.
 - [ ] final diff review against every item above.
 
 ## Issues / notes discovered during implementation
 
 - [x] Scheduled job start used the UTC parser directly when advancing `next_run`, bypassing deployment timezone handling. Fixed to use the same timezone-aware scheduler helper used elsewhere.
 - [x] `golang.org/x/vuln` v1.1.4 panics under Go 1.27 (`unexpected expr: *ast.KeyValueExpr`) because its bundled `x/tools` is too old. CI now pins the current upstream x/vuln commit from 2026-09-08, which passes under Go 1.27.
-- [~] The SQLite 1.59.0 module checksum is being generated in CI because this environment cannot run Go module downloads locally. Once captured it will be committed and the temporary checksum-generation workflow steps removed.
+- [x] SQLite 1.59.0 checksums were captured from CI, committed to `go.sum`, and the temporary checksum-generation workflow steps were removed.
 - [x] Removing the global route remount and adding lazy secondary routes passed the existing same-document navigation stress suite, including bounded listener/stream/request checks.
+
+- [x] Trivy found CVE-2026-14456 in the Alpine runtime's OpenSSL 3.5.7-r0 packages, with 3.5.8-r0 already available. The Docker build now upgrades runtime packages before installing CA certificates; the security gate remains strict for fixed HIGH/CRITICAL findings.
