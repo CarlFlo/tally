@@ -340,6 +340,10 @@ export function SettingsPage({
   );
   const [newProfile, setNewProfile] = useState(false);
   const [deleting, setDeleting] = useState<Profile | null>(null);
+  const [adminConfirmation, setAdminConfirmation] = useState<{
+    profile: Profile;
+    isAdmin: boolean;
+  } | null>(null);
   const [sensitiveAction, setSensitiveAction] = useState<{
     profile: Profile;
     kind: "demote" | "delete";
@@ -734,15 +738,9 @@ export function SettingsPage({
                           ? "Promote another administrator first."
                           : ""
                       }
-                      onClick={() => {
-                        if (!isAdmin) {
-                          void setAdmin(p, true);
-                        } else if (boot.auth_mode === "local") {
-                          setSensitiveAction({ profile: p, kind: "demote" });
-                        } else {
-                          void setAdmin(p, false);
-                        }
-                      }}
+                      onClick={() =>
+                        setAdminConfirmation({ profile: p, isAdmin: !isAdmin })
+                      }
                     >
                       <ShieldCheck size={16} />
                       {isAdmin ? "Remove admin" : "Make admin"}
@@ -887,6 +885,33 @@ export function SettingsPage({
           message="This permanently removes this profile, preferences, follows, and episode progress. Other profiles keep their data."
           onClose={() => setDeleting(null)}
           onConfirm={() => removeProfile(deleting)}
+        />
+      )}
+      {adminConfirmation && (
+        <Confirm
+          title={
+            adminConfirmation.isAdmin
+              ? "Grant administrator access?"
+              : "Remove administrator access?"
+          }
+          message={
+            adminConfirmation.isAdmin
+              ? `Make ${adminConfirmation.profile.display_name} an administrator? They will be able to manage shared settings, profiles, and other administrator actions.`
+              : `Remove administrator access from ${adminConfirmation.profile.display_name}? They will lose access to shared administration settings.`
+          }
+          onClose={() => setAdminConfirmation(null)}
+          onConfirm={async () => {
+            if (adminConfirmation.isAdmin) {
+              await setAdmin(adminConfirmation.profile, true);
+            } else if (boot.auth_mode === "local") {
+              setSensitiveAction({
+                profile: adminConfirmation.profile,
+                kind: "demote",
+              });
+            } else {
+              await setAdmin(adminConfirmation.profile, false);
+            }
+          }}
         />
       )}
       {sensitiveAction && (

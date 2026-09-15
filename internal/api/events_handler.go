@@ -24,6 +24,8 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request, session auth.Ses
 	defer heartbeat.Stop()
 	for {
 		select {
+		case <-s.Events.Done():
+			return nil
 		case <-r.Context().Done():
 			return nil
 		case event := <-updates:

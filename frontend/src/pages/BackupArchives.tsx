@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Archive, Download, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { Archive, Download, Plus, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { api, Busy, bytes, Confirm, dateLabel, ErrorState, useApp } from "../lib";
 import { queryKeys } from "../queryKeys";
@@ -87,7 +87,12 @@ export function BackupArchives() {
     <section className="panel settings-card backup-archives">
       <div className="section-heading">
         <div><h3><Archive size={19} />Backup archives</h3><p className="muted">Download, restore, or remove backup archives found in Tally&apos;s backup folder.</p></div>
-        <button className="button primary" disabled={busy} onClick={create}>{busy ? <Busy /> : <Plus size={16} />}Create manual backup</button>
+        <div className="backup-actions">
+          <button className="button" disabled={busy || archives.isFetching} onClick={() => void archives.refetch()}>
+            {archives.isFetching ? <Busy /> : <RefreshCw size={16} />}Refresh
+          </button>
+          <button className="button primary" disabled={busy} onClick={create}>{busy ? <Busy /> : <Plus size={16} />}Create manual backup</button>
+        </div>
       </div>
       {archives.error && <ErrorState error={archives.error} retry={() => archives.refetch()} />}
       {archives.isPending && <Busy />}

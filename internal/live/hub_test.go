@@ -54,3 +54,26 @@ func TestHubScopesProfileEvents(t *testing.T) {
 		t.Fatal("profile event was not delivered")
 	}
 }
+
+
+func TestHubCloseSignalsShutdownAndStopsPublishing(t *testing.T) {
+	hub := New()
+	hub.Close()
+	hub.Close()
+
+	select {
+	case <-hub.Done():
+	case <-time.After(time.Second):
+		t.Fatal("hub shutdown signal was not closed")
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	updates := hub.Subscribe(ctx, "profileA")
+	hub.Publish("", "jobs")
+	select {
+	case <-updates:
+		t.Fatal("closed hub published an update")
+	default:
+	}
+}

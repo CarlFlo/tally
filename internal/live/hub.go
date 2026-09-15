@@ -24,23 +24,47 @@ type subscription struct {
 type Hub struct {
 	mu          sync.Mutex
 	subscribers map[*subscription]struct{}
+	done        chan struct{}
+	closed      bool
 }
 
 func New() *Hub {
-	return &Hub{subscribers: make(map[*subscription]struct{})}
+	return &Hub{subscribers: make(map[*subscription]struct{}), done: make(chan struct{})}
+}
+
+func (h *Hub) Done() <-chan struct{} {
+	return h.done
+}
+
+func (h *Hub) Close() {
+	if h == nil {
+		return
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.closed {
+		return
+	}
+	h.closed = true
+	close(h.done)
 }
 
 func (h *Hub) Subscribe(ctx context.Context, profile string) <-chan Event {
 	sub := &subscription{profile: profile, updates: make(chan Event, 1)}
 	h.mu.Lock()
-	h.subscribers[sub] = struct{}{}
+	closed := h.closed
+	if !closed {
+		h.subscribers[sub] = struct{}{}
+	}
 	h.mu.Unlock()
-	go func() {
-		<-ctx.Done()
-		h.mu.Lock()
-		delete(h.subscribers, sub)
-		h.mu.Unlock()
-	}()
+	if !closed {
+		go func() {
+			<-ctx.Done()
+			h.mu.Lock()
+			delete(h.subscribers, sub)
+			h.mu.Unlock()
+		}()
+	}
 	return sub.updates
 }
 
@@ -89,6 +113,9 @@ func (h *Hub) Publish(profile string, resources ...string) {
 	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	if h.closed {
+		return
+	}
 	for subscriber := range h.subscribers {
 		if profile != "" && subscriber.profile != profile {
 			continue
