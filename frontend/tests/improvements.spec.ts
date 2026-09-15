@@ -304,6 +304,15 @@ test("settings categories persist connections, schedules, debug previews and sta
   await page
     .getByRole("combobox", { name: "Filter history by result" })
     .selectOption("failed");
+  await expect
+    .poll(async () => {
+      const boot = await (await page.request.get("/api/bootstrap")).json();
+      return {
+        job: boot.preferences.job_type_filter,
+        status: boot.preferences.job_status_filter,
+      };
+    })
+    .toEqual({ job: "backup", status: "failed" });
   await page.reload();
   await expect(
     page.getByRole("combobox", { name: "Filter history by job" }),
