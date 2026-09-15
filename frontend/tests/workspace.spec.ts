@@ -441,7 +441,7 @@ test("calendar combines season releases, groups horizon dates, and expands every
   // must not stretch the grid before the calendar section is measured.
   await page.locator('.sidebar a[href="/shows"]').click();
   await expect(page).toHaveURL(/\/shows$/);
-  await page.locator('.sidebar a[href="/calendar"]').click();
+  await page.locator('.sidebar nav a[href="/calendar"]').click();
   await expect(page).toHaveURL(/\/calendar$/);
   const navigatedCalendarBox = await page.locator(".calendar-section").boundingBox();
   const navigatedRailBox = await page.locator(".calendar-rail").boundingBox();
