@@ -17,9 +17,6 @@ func (s *Server) restoreBackup(w http.ResponseWriter, r *http.Request, session a
 	if errors.Is(err, backup.ErrNotFound) {
 		return apiError{404, "backup not found"}
 	}
-	if errors.Is(err, backup.ErrUnverified) {
-		return apiError{409, "this backup failed verification"}
-	}
 	if err != nil {
 		message := "backup: restore failed: " + err.Error()
 		_ = activity.Record(r.Context(), s.DB, activity.Event{Action: "job_failed", Profile: session.Profile, Message: message})
