@@ -5,16 +5,18 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 )
 
 type Archive struct {
-	ID        string
-	Filename  string
-	Kind      string
-	Size      int64
-	CreatedAt int64
+	ID         string
+	Filename   string
+	Kind       string
+	Size       int64
+	CreatedAt  int64
+	modifiedAt int64
 }
 
 func (s *Service) Archives(ctx context.Context) ([]Archive, error) {
@@ -34,7 +36,7 @@ func (s *Service) Archives(ctx context.Context) ([]Archive, error) {
 		if !validArchiveName(name) {
 			continue
 		}
-		info, statErr := os.Lstat(s.Path + string(os.PathSeparator) + name)
+		info, statErr := os.Lstat(filepath.Join(s.Path, name))
 		if statErr != nil {
 			if os.IsNotExist(statErr) {
 				continue
@@ -45,18 +47,19 @@ func (s *Service) Archives(ctx context.Context) ([]Archive, error) {
 			continue
 		}
 		archives = append(archives, Archive{
-			ID:        archiveID(name),
-			Filename:  name,
-			Kind:      archiveKind(name),
-			Size:      info.Size(),
-			CreatedAt: info.ModTime().Unix(),
+			ID:         archiveID(name),
+			Filename:   name,
+			Kind:       archiveKind(name),
+			Size:       info.Size(),
+			CreatedAt:  info.ModTime().Unix(),
+			modifiedAt: info.ModTime().UnixNano(),
 		})
 	}
 	sort.Slice(archives, func(i, j int) bool {
-		if archives[i].CreatedAt == archives[j].CreatedAt {
+		if archives[i].modifiedAt == archives[j].modifiedAt {
 			return archives[i].Filename > archives[j].Filename
 		}
-		return archives[i].CreatedAt > archives[j].CreatedAt
+		return archives[i].modifiedAt > archives[j].modifiedAt
 	})
 	return archives, nil
 }
