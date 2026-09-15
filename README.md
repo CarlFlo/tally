@@ -61,8 +61,8 @@ tally healthcheck
 tally backup
 tally verify-backup <archive>
 tally restore <archive>
-tally link-identity <profile> <issuer> <subject>
-tally reset-password <profile>
+tally link-identity <profile-id-or-name> <issuer> <subject>
+tally reset-password <profile-id-or-name>
 tally delete-backup <filename>
 ```
 
@@ -72,10 +72,12 @@ When using Docker Compose:
 docker compose run --rm tally backup
 docker compose run --rm tally verify-backup /config/backups/example.zip
 docker compose run --rm tally restore /config/backups/example.zip
-docker compose run --rm tally link-identity user0 https://example.com subject
-docker compose run --rm tally reset-password user0
+docker compose run --rm tally link-identity "My profile" https://example.com subject
+docker compose run --rm tally reset-password "My profile"
 docker compose run --rm tally delete-backup example.zip
 ```
+
+For `link-identity` and `reset-password`, the profile argument may be the opaque profile ID or an exact, unique display name. Ambiguous display names are rejected rather than guessed.
 
 Commands that access the Tally data volume require exclusive access. Stop the running container first:
 

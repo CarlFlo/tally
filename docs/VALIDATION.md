@@ -1,5 +1,18 @@
 # Validation record
 
+## Profile roles and generated identity migration
+
+Verified 2026-09-15 on `refactor/profile-permissions`.
+
+- Schema 6 migrates sequential profile IDs to opaque generated IDs, rewrites every profile-owned relation, keeps legacy aliases only for compatibility, removes the obsolete profile counter, and validates role integrity.
+- Administrator authorization is role-based across API routes, capabilities, logs/inbox visibility, settings, backups, jobs, and browser navigation. No runtime authorization check depends on a special profile ID.
+- The database prevents demoting or deleting the last administrator while other profiles remain. Deleting the sole remaining profile is allowed, and a newly created first profile becomes administrator automatically.
+- Local-auth administrator demotion/deletion re-authenticates the acting administrator with their own password. Tests reject using the target administrator's password for another actor's request.
+- Profile creation/deletion and administrator grant/revoke activity is logged and maps to the subscribable `profile_access_changed` notification event.
+- Profile colors accept validated six-digit HTML colors and automatic initials use the first two Unicode characters.
+- The frontend production build, `go vet ./...`, `go test -race ./...`, the full Playwright suite, and the Docker build pass. Legacy schema/backup upgrade tests cover version-one through schema-six restore behavior.
+
+
 Updated 2026-09-12. Current checks use Go 1.27.1, Node.js 22.14.0, Chromium 153, and Docker Engine 29.4.0.
 
 ## Header, calendar, onboarding, and backups
@@ -24,7 +37,7 @@ Verified 2026-09-12 against isolated fixtures. All Go application/test files rem
 
 - `go test ./...`, `go test -race ./...`, `go vet ./...`, the TypeScript/Vite build, and the native Windows build pass.
 - All nine Playwright workflows pass. New workflows cover show/card menus, Escape/Back closure, clear watch history with downloaded markers retained, Shift-remove without confirmation, action-filtered log search, and named show jobs. Existing personal-profile, authentication, discovery, torrent, settings, scheduling, and statistics workflows continue to pass.
-- Browser tests also cover server-stored light/dark/system login appearance, user0-only navigation and APIs, self-deletion/sign-out, protected user0, Sunday week starts, persisted Webhook/Discord settings, custom JSON, local Test Notification requests, the master switch, and a controlled clock crossing a release time into Available.
+- Browser tests also cover server-stored light/dark/system login appearance, administrator-role navigation and APIs, self-deletion/sign-out, last-admin protection, Sunday week starts, persisted Webhook/Discord settings, custom JSON, local Test Notification requests, the master switch, and a controlled clock crossing a release time into Available.
 - Backend tests cover cross-profile history isolation, idempotent follow logging, filtered named job history, both disabled/local administration boundaries, deletion/session revocation, browser-cookie isolation, JSON escaping, Discord confirmation/payload/mention suppression, immediate error priority, subscription filtering, restart-safe release deduplication, local-time/DST scheduling, failure logging without automatic retries, and a disable/re-enable race against an already selected notification batch.
 - Schema 3 to 4 upgrades preserve settings revision and favorites and leave a validated version-3 snapshot. Earlier schemas still upgrade sequentially. Backup round-trips now include activity, browser appearance, Discord connection settings, and the pending notification outbox, alongside existing profile/client/library state.
 - Desktop and 390px mobile layouts were inspected: [show actions](screenshots/show-actions-mobile.png), [activity logs](screenshots/activity-logs-desktop.png), [notification services](screenshots/notification-services-desktop.png), [mobile notifications](screenshots/notification-services-mobile.png), and [login appearance](screenshots/login-appearance.png).

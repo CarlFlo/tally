@@ -30,7 +30,7 @@ func Run(args []string) error {
 		return healthcheck(c)
 	case "serve", "backup", "restore", "verify-backup", "link-identity", "reset-password", "delete-backup":
 	default:
-		return fmt.Errorf("usage: tally [serve|healthcheck|backup|restore <archive>|verify-backup <archive>|link-identity <profile> <issuer> <subject>|reset-password <profile>|delete-backup <filename>]")
+		return fmt.Errorf("usage: tally [serve|healthcheck|backup|restore <archive>|verify-backup <archive>|link-identity <profile-id-or-name> <issuer> <subject>|reset-password <profile-id-or-name>|delete-backup <filename>]")
 	}
 	if err = os.MkdirAll(c.DataDir, 0700); err != nil {
 		return err
