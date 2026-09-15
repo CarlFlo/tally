@@ -14,7 +14,7 @@ func resetPassword(ctx context.Context, db *database.Store, args []string) error
 	if len(args) != 1 {
 		return fmt.Errorf("usage: tally reset-password <profile-id-or-name>")
 	}
-	profileID, err := resolveProfile(ctx, db, profileID)
+	profileID, err := resolveProfile(ctx, db, args[0])
 	if err != nil {
 		return err
 	}
