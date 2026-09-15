@@ -33,9 +33,7 @@ func (s *Service) ProcessNext(ctx context.Context) (processed bool, resultErr er
 	}
 	defer func() {
 		s.changedProfile(profile, "show-actions", "shows", "calendar", "logs")
-		if profile != "user0" {
-			s.changedProfile("user0", "logs")
-		}
+		s.changedProfile("", "logs")
 	}()
 	// A failed commit must not strand the action in 'running' until restart.
 	// Later transaction rollbacks run before this cleanup.
