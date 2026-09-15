@@ -1,5 +1,5 @@
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
-import { AlertCircle, CalendarDays, Menu, Search, Tv } from "lucide-react";
+import { AlertCircle, CalendarDays, Menu, Search, Tv, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -79,6 +79,19 @@ function App() {
     setAdd(false);
   }, [location.key]);
   useEffect(() => {
+    if (!mobile) return;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobile(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [mobile]);
+  useEffect(() => {
     const revalidate = (event: PageTransitionEvent) => {
       if (event.persisted) window.location.reload();
     };
@@ -156,11 +169,23 @@ function App() {
         ) : boot.restricted ? (
           <PasswordGate notify={notify} />
         ) : (
-          <div className="app-shell">
+          <div className={"app-shell" + (mobile ? " mobile-nav-open" : "")}>
             {mobile && (
               <div className="mobile-scrim" onClick={() => setMobile(false)} />
             )}
-            <aside className={"sidebar " + (mobile ? "open" : "")}>
+            <button
+              className="icon-button mobile-menu"
+              aria-label={mobile ? "Close navigation" : "Open navigation"}
+              aria-expanded={mobile}
+              aria-controls="main-navigation"
+              onClick={() => setMobile((open) => !open)}
+            >
+              {mobile ? <X size={21} /> : <Menu size={21} />}
+            </button>
+            <aside
+              id="main-navigation"
+              className={"sidebar " + (mobile ? "open" : "")}
+            >
               <NavLink to="/calendar" className="brand-link">
                 <Logo />
               </NavLink>
@@ -191,13 +216,6 @@ function App() {
             <div className="main-shell">
               <header className="topbar">
                 <div className="topbar-left">
-                  <button
-                    className="icon-button mobile-menu"
-                    aria-label="Open navigation"
-                    onClick={() => setMobile(true)}
-                  >
-                    <Menu size={21} />
-                  </button>
                   <span className="topbar-breadcrumb">
                     Your space <span>/</span>{" "}
                     <strong>

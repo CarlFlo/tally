@@ -42,7 +42,6 @@ export function CalendarHorizon({
       <section className="rail-section horizon-section">
         <div className="section-heading">
           <h3>On the horizon</h3>
-          <span className="tiny-label">NEXT UP</span>
         </div>
         {episodes.length ? (
           <div className="horizon-scroll">

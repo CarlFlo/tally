@@ -21,6 +21,48 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
+test("mobile navigation toggles above the header without crowding the breadcrumb", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/calendar");
+
+  const sidebar = page.locator(".sidebar");
+  const topbar = page.locator(".topbar");
+  const breadcrumb = page.locator(".topbar-breadcrumb");
+  const openNavigation = page.getByRole("button", { name: "Open navigation" });
+
+  await expect(openNavigation).toBeVisible();
+  await expect(openNavigation).toHaveAttribute("aria-expanded", "false");
+  await expect(sidebar).toBeHidden();
+
+  const buttonBox = await openNavigation.boundingBox();
+  const breadcrumbBox = await breadcrumb.boundingBox();
+  expect(buttonBox).not.toBeNull();
+  expect(breadcrumbBox).not.toBeNull();
+  expect(breadcrumbBox!.x).toBeGreaterThan(buttonBox!.x + buttonBox!.width);
+
+  await openNavigation.click();
+
+  const closeNavigation = page.getByRole("button", { name: "Close navigation" });
+  await expect(closeNavigation).toHaveAttribute("aria-expanded", "true");
+  await expect(sidebar).toBeVisible();
+  const stacking = await Promise.all([
+    sidebar.evaluate((element) => Number(getComputedStyle(element).zIndex)),
+    topbar.evaluate((element) => Number(getComputedStyle(element).zIndex)),
+    closeNavigation.evaluate((element) => Number(getComputedStyle(element).zIndex)),
+  ]);
+  expect(stacking[0]).toBeGreaterThan(stacking[1]);
+  expect(stacking[2]).toBeGreaterThan(stacking[0]);
+
+  await closeNavigation.click();
+  await expect(page.getByRole("button", { name: "Open navigation" })).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+  await expect(sidebar).toBeHidden();
+});
+
 test("header navigation, persistent inbox, compact schedules, and downloadable backups", async ({
   page,
 }) => {
@@ -350,18 +392,35 @@ test("calendar combines season releases, groups horizon dates, and expands every
   await today.getByRole("button", { name: /more$/ }).click();
   await expect(today.locator(".calendar-episode")).toHaveCount(6);
   await expect(page.locator(".horizon-day")).toHaveCount(1);
-  const horizonLabel = page.locator(".calendar-rail .tiny-label").first();
-  await expect(horizonLabel).toHaveCSS("font-size", "8px");
+  await expect(page.getByText("NEXT UP", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "On the horizon", exact: true }),
+  ).toHaveCSS("font-size", "15px");
+  const horizonLabel = page.locator(".calendar-rail .horizon-day .tiny-label").first();
+  await expect(horizonLabel).toHaveCSS("font-size", "9px");
+  await expect(page.locator(".horizon-section .upcoming-card strong").first()).toHaveCSS(
+    "font-size",
+    "12px",
+  );
+  await expect(page.locator(".horizon-section .upcoming-card small").first()).toHaveCSS(
+    "font-size",
+    "10px",
+  );
   const horizonScroll = page.locator(".horizon-scroll");
   const idleScrollbarColor = await horizonScroll.evaluate(
     (element) => getComputedStyle(element).scrollbarColor,
   );
   expect(idleScrollbarColor).toMatch(/rgba\(0, 0, 0, 0\)/);
-  await page.locator(".horizon-section").hover();
-  const hoverScrollbarColor = await horizonScroll.evaluate(
-    (element) => getComputedStyle(element).scrollbarColor,
+  const scrollbarTransition = await horizonScroll.evaluate(
+    (element) => getComputedStyle(element).transitionProperty,
   );
-  expect(hoverScrollbarColor).not.toBe(idleScrollbarColor);
+  expect(scrollbarTransition).toContain("--horizon-scrollbar-thumb");
+  await page.locator(".horizon-section").hover();
+  await expect
+    .poll(() =>
+      horizonScroll.evaluate((element) => getComputedStyle(element).scrollbarColor),
+    )
+    .not.toBe(idleScrollbarColor);
   await page.screenshot({
     path: "../docs/screenshots/calendar-grouped-releases.png",
     fullPage: true,
