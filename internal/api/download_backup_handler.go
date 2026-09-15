@@ -1,34 +1,33 @@
 package api
 
 import (
+	"errors"
 	"mime"
 	"net/http"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/CarlFlo/tally/internal/activity"
 	"github.com/CarlFlo/tally/internal/auth"
+	"github.com/CarlFlo/tally/internal/backup"
 )
 
 func (s *Server) downloadBackup(w http.ResponseWriter, r *http.Request, session auth.Session) error {
-	var filename string
-	var verified bool
-	if err := s.DB.QueryRowContext(r.Context(), "SELECT filename,verified FROM backup_records WHERE id=?", r.PathValue("id")).Scan(&filename, &verified); err != nil {
+	if s.Backup == nil {
+		return apiError{500, "backup service is unavailable"}
+	}
+	archive, err := s.Backup.FindArchive(r.Context(), r.PathValue("id"))
+	if errors.Is(err, backup.ErrNotFound) {
 		return apiError{404, "backup not found"}
 	}
-	if !verified {
-		return apiError{409, "this backup failed verification"}
+	if err != nil {
+		return err
 	}
-	if filepath.Base(filename) != filename || strings.ContainsAny(filename, "/\\:") {
-		return bad("invalid backup filename")
-	}
-	root, err := os.OpenRoot(filepath.Join(s.Config.DataDir, "backups"))
+	root, err := os.OpenRoot(s.Backup.Path)
 	if err != nil {
 		return apiError{404, "backup storage is unavailable"}
 	}
 	defer root.Close()
-	file, err := root.Open(filename)
+	file, err := root.Open(archive.Filename)
 	if err != nil {
 		return apiError{404, "backup file is unavailable"}
 	}
@@ -40,12 +39,12 @@ func (s *Server) downloadBackup(w http.ResponseWriter, r *http.Request, session 
 	if !info.Mode().IsRegular() {
 		return bad("invalid backup file")
 	}
-	if err = activity.Record(r.Context(), s.DB, activity.Event{Action: "backup_download_requested", Profile: session.Profile, Message: "Requested download of " + filename}); err != nil {
+	if err = activity.Record(r.Context(), s.DB, activity.Event{Action: "backup_download_requested", Profile: session.Profile, Message: "Requested download of " + archive.Filename}); err != nil {
 		return err
 	}
 	w.Header().Set("Content-Type", "application/zip")
-	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": filename}))
+	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": archive.Filename}))
 	w.Header().Set("Cache-Control", "no-store")
-	http.ServeContent(w, r, filename, info.ModTime(), file)
+	http.ServeContent(w, r, archive.Filename, info.ModTime(), file)
 	return nil
 }

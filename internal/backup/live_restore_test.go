@@ -29,17 +29,14 @@ INSERT INTO browser_preferences VALUES('restore-browser','dark',1);`); err != ni
 	if err != nil {
 		t.Fatal(err)
 	}
-	var id string
-	if err = db.QueryRow("SELECT id FROM backup_records WHERE filename=?", filename).Scan(&id); err != nil {
-		t.Fatal(err)
-	}
+	id := archiveID(filename)
 	if _, err = db.Exec(`UPDATE profiles SET display_name='Current state' WHERE id='profile-owner';
 DELETE FROM shows WHERE id='restore-show';
 UPDATE profile_preferences SET data='{"theme":"light","calendar_view":"month"}' WHERE profile_id='profile-owner';
 UPDATE browser_preferences SET theme='light' WHERE id='restore-browser';`); err != nil {
 		t.Fatal(err)
 	}
-	manifest, err := service.RestoreRecord(ctx, id)
+	manifest, err := service.RestoreArchive(ctx, id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,9 +57,8 @@ UPDATE browser_preferences SET theme='light' WHERE id='restore-browser';`); err 
 	if manifest.Schema != database.Version {
 		t.Fatalf("restored schema %d, want %d", manifest.Schema, database.Version)
 	}
-	var count int
-	if err = db.QueryRow("SELECT COUNT(*) FROM backup_records WHERE id=?", id).Scan(&count); err != nil || count != 1 {
-		t.Fatal("restore removed current backup inventory", count, err)
+	if _, err = service.FindArchive(ctx, id); err != nil {
+		t.Fatal("restore removed current backup inventory", err)
 	}
 }
 
@@ -82,13 +78,12 @@ func TestLiveRestoreRollsBackDatabaseChangesOnApplyFailure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var id string
-	_ = db.QueryRow("SELECT id FROM backup_records WHERE filename=?", filename).Scan(&id)
+	id := archiveID(filename)
 	if _, err = db.Exec(`UPDATE profiles SET display_name='Keep current' WHERE id='profile-owner';
 CREATE TRIGGER prevent_restore BEFORE DELETE ON profiles BEGIN SELECT RAISE(ABORT,'fixture restore failure'); END;`); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = service.RestoreRecord(ctx, id); err == nil {
+	if _, err = service.RestoreArchive(ctx, id); err == nil {
 		t.Fatal("restore unexpectedly succeeded")
 	}
 	var name string

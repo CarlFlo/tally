@@ -11,35 +11,70 @@ import (
 	"time"
 
 	"github.com/CarlFlo/tally/internal/appversion"
+	"github.com/CarlFlo/tally/internal/backup"
 	"github.com/CarlFlo/tally/internal/database"
 )
 
-func TestBackupManagementListsVersionRestoresLiveAndDeletes(t *testing.T) {
-	s, h, _ := testServer(t, "disabled")
-	if _, err := s.DB.Exec(`INSERT INTO shows(id,name) VALUES('restore-show','Restore show');
-INSERT INTO profile_shows(profile_id,show_id,added_at,favorite) VALUES('profile-admin','restore-show',1,1);
-INSERT INTO profile_preferences(profile_id,data) VALUES('profile-admin','{"theme":"dark"}');`); err != nil {
-		t.Fatal(err)
-	}
-	filename, err := s.Backup.Create(context.Background(), "manual")
+func backupIDByName(t *testing.T, service *backup.Service, filename string) string {
+	t.Helper()
+	archives, err := service.Archives(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	var id string
-	if err = s.DB.QueryRow("SELECT id FROM backup_records WHERE filename=?", filename).Scan(&id); err != nil {
+	for _, archive := range archives {
+		if archive.Filename == filename {
+			return archive.ID
+		}
+	}
+	t.Fatalf("backup %q not found in filesystem inventory", filename)
+	return ""
+}
+
+func TestBackupManagementDiscoversCopiedArchiveRestoresLiveAndDeletes(t *testing.T) {
+	s, h, _ := testServer(t, "disabled")
+	if _, err := s.DB.Exec("INSERT INTO shows(id,name) VALUES('restore-show','Restore show');" +
+		"INSERT INTO profile_shows(profile_id,show_id,added_at,favorite) VALUES('profile-admin','restore-show',1,1);" +
+		"INSERT INTO profile_preferences(profile_id,data) VALUES('profile-admin','{\"theme\":\"dark\"}');"); err != nil {
 		t.Fatal(err)
 	}
+	generated, err := s.Backup.Create(context.Background(), "manual")
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(s.Backup.Path, generated))
+	if err != nil {
+		t.Fatal(err)
+	}
+	imported := "previous-settings.zip"
+	if err = os.WriteFile(filepath.Join(s.Backup.Path, imported), data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Remove(filepath.Join(s.Backup.Path, generated)); err != nil {
+		t.Fatal(err)
+	}
+	var recordCount int
+	if err = s.DB.QueryRow("SELECT COUNT(*) FROM backup_records").Scan(&recordCount); err != nil || recordCount != 0 {
+		t.Fatal("backup discovery should not require database records", recordCount, err)
+	}
+
+	id := backupIDByName(t, s.Backup, imported)
 	owner := &http.Cookie{Name: "tally_profile", Value: "profile-admin"}
 	listing := request(t, h, "GET", "/api/backups", nil, owner)
 	expect(t, listing, 200)
-	for _, want := range []string{`"kind":"manual"`, fmt.Sprintf(`"schema":%d`, database.Version), fmt.Sprintf(`"app_version":"%s"`, appversion.Version), `"compatible":true`} {
+	for _, want := range []string{
+		"\"filename\":\"previous-settings.zip\"",
+		"\"kind\":\"imported\"",
+		fmt.Sprintf("\"schema\":%d", database.Version),
+		fmt.Sprintf("\"app_version\":\"%s\"", appversion.Version),
+		"\"compatible\":true",
+	} {
 		if !strings.Contains(listing.Body.String(), want) {
 			t.Fatalf("backup metadata missing %s: %s", want, listing.Body.String())
 		}
 	}
-	if _, err = s.DB.Exec(`UPDATE profiles SET display_name='Changed after backup' WHERE id='profile-admin';
-DELETE FROM shows WHERE id='restore-show';
-UPDATE profile_preferences SET data='{"theme":"light"}' WHERE profile_id='profile-admin';`); err != nil {
+	if _, err = s.DB.Exec("UPDATE profiles SET display_name='Changed after backup' WHERE id='profile-admin';" +
+		"DELETE FROM shows WHERE id='restore-show';" +
+		"UPDATE profile_preferences SET data='{\"theme\":\"light\"}' WHERE profile_id='profile-admin';"); err != nil {
 		t.Fatal(err)
 	}
 	expect(t, request(t, h, "POST", "/api/backups/"+id+"/restore", map[string]any{}, owner), 200)
@@ -56,7 +91,7 @@ UPDATE profile_preferences SET data='{"theme":"light"}' WHERE profile_id='profil
 		t.Fatal("restore lost profile theme", theme, err)
 	}
 	expect(t, request(t, h, "DELETE", "/api/backups/"+id, nil, owner), 200)
-	if _, err = os.Stat(filepath.Join(s.Backup.Path, filename)); !os.IsNotExist(err) {
+	if _, err = os.Stat(filepath.Join(s.Backup.Path, imported)); !os.IsNotExist(err) {
 		t.Fatal("deleted backup file still exists")
 	}
 }
@@ -72,8 +107,7 @@ func TestBackupManagementRequiresOperatorAndFailedRestorePreservesStateAndNotifi
 	if err != nil {
 		t.Fatal(err)
 	}
-	var id string
-	_ = s.DB.QueryRow("SELECT id FROM backup_records WHERE filename=?", filename).Scan(&id)
+	id := backupIDByName(t, s.Backup, filename)
 	expect(t, request(t, h, "POST", "/api/backups/"+id+"/restore", map[string]any{}, member), 403)
 	expect(t, request(t, h, "DELETE", "/api/backups/"+id, nil, member), 403)
 

@@ -52,6 +52,10 @@ func Run(args []string) error {
 	if command == "restore" {
 		return restoreBackup(ctx, c, args)
 	}
+	if command == "delete-backup" {
+		b := &backup.Service{DataDir: c.DataDir, Path: filepath.Join(c.DataDir, "backups"), Timezone: c.Timezone}
+		return deleteBackup(ctx, b, args)
+	}
 	db, err := database.Open(ctx, c.DataDir)
 	if err != nil {
 		return err
@@ -63,8 +67,6 @@ func Run(args []string) error {
 		return linkIdentity(ctx, db, args)
 	case "reset-password":
 		return resetPassword(ctx, db, args)
-	case "delete-backup":
-		return deleteBackup(ctx, db, b, args)
 	case "backup":
 		return createBackup(ctx, b)
 	default:
