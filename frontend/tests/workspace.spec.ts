@@ -24,7 +24,21 @@ test.beforeEach(async ({ page }) => {
 test("header navigation, persistent inbox, compact schedules, and downloadable backups", async ({
   page,
 }) => {
+  const profileResponse = await page.request.post("/api/profiles", {
+    headers,
+    data: { name: "Delete style fixture", avatar: "mint" },
+  });
+  expect(profileResponse.ok()).toBe(true);
+  const profileFixture = await profileResponse.json();
   await page.goto("/settings/profiles");
+  const profileDelete = page.getByRole("button", {
+    name: "Delete Delete style fixture",
+    exact: true,
+  });
+  await expect(profileDelete).toContainText("Delete");
+  await expect(profileDelete).toHaveClass(/button/);
+  await expect(profileDelete).toHaveClass(/danger/);
+  await page.request.delete(`/api/profiles/${profileFixture.id}`, { headers });
   await expect(page.locator(".profile-settings-list")).not.toContainText(
     /user\d+/,
   );
@@ -180,6 +194,29 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
     .click();
   const manualBackup = page.locator(".backup-row").filter({ hasText: "Manual" }).first();
   await expect(manualBackup).toBeVisible();
+  const backupDelete = manualBackup.getByRole("button", {
+    name: "Delete",
+    exact: true,
+  });
+  await expect(backupDelete).toHaveClass(/button/);
+  await expect(backupDelete).toHaveClass(/danger/);
+  const originalTheme = await page.locator("html").getAttribute("data-theme");
+  for (const theme of ["dark", "light"]) {
+    await page.locator("html").evaluate((element, value) => {
+      element.setAttribute("data-theme", value as string);
+    }, theme);
+    await backupDelete.hover();
+    const hoverStyle = await backupDelete.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { background: style.backgroundColor, color: style.color };
+    });
+    expect(hoverStyle.background).not.toBe("rgba(0, 0, 0, 0)");
+    expect(hoverStyle.background).not.toBe(hoverStyle.color);
+  }
+  await page.locator("html").evaluate((element, value) => {
+    if (value) element.setAttribute("data-theme", value as string);
+    else element.removeAttribute("data-theme");
+  }, originalTheme);
   const download = manualBackup.getByRole("link", { name: "Download", exact: true });
   await expect(download).toBeVisible();
   const downloaded = page.waitForEvent("download");
@@ -287,6 +324,9 @@ test("calendar combines season releases, groups horizon dates, and expands every
     route.fulfill({ json: episodes }),
   );
   await page.goto("/calendar");
+  await expect(page.getByText("shows in your orbit", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("episodes this view", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("already caught up", { exact: true })).toHaveCount(0);
   const today = page.locator(".today-cell");
   await expect(today.locator(".calendar-episode")).toHaveCount(3);
   await expect(today.locator(".calendar-episode").first()).toContainText(
@@ -313,6 +353,15 @@ test("calendar combines season releases, groups horizon dates, and expands every
   });
   episodes = Array.from({ length: 1005 }, (_, i) => episode(i + 10, 1, 10));
   await page.reload();
+  const calendarBox = await page.locator(".calendar-section").boundingBox();
+  const railBox = await page.locator(".calendar-rail").boundingBox();
+  expect(calendarBox).not.toBeNull();
+  expect(railBox).not.toBeNull();
+  expect(railBox!.height).toBeLessThanOrEqual(calendarBox!.height + 2);
+  const horizonOverflow = await page.locator(".horizon-scroll").evaluate(
+    (element) => element.scrollHeight > element.clientHeight,
+  );
+  expect(horizonOverflow).toBe(true);
   await today.getByRole("button", { name: /more$/ }).click();
   await expect(today.locator(".calendar-episode")).toHaveCount(1005);
 });
