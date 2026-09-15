@@ -14,6 +14,9 @@ func TestQueueSurvivesReopenAndSharesMetadataAcrossProfiles(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
+	if _, e = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('user0','Fixture','violet',1)"); e != nil {
+		t.Fatal(e)
+	}
 	p := &queueTV{}
 	s := &Service{DB: db, Provider: p}
 	if e = s.QueueFollow(ctx, "user0", 7, "Saved queue", true); e != nil {

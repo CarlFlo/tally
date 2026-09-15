@@ -16,6 +16,9 @@ func TestScheduledReleaseSurvivesRestartAndMasterSwitchSkipsPending(t *testing.T
 		t.Fatal(err)
 	}
 	defer db.Close()
+	if _, err = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('user0','Fixture','violet',1)"); err != nil {
+		t.Fatal(err)
+	}
 	store := settings.Store{DB: db}
 	if err = store.Ensure(ctx); err != nil {
 		t.Fatal(err)

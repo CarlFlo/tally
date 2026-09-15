@@ -49,6 +49,9 @@ func TestOpaquePasswordHashAndPolicy(t *testing.T) {
 func TestRecoveryExpiryRestartAndForcedReplacement(t *testing.T) {
 	s := testAuth(t)
 	hash, _ := Hash("original")
+	if _, err := s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('user0','Fixture','violet',1)"); err != nil {
+		t.Fatal(err)
+	}
 	_, _ = s.DB.Exec("INSERT INTO local_credentials VALUES('user0',?,0)", hash)
 	ctx := context.Background()
 	if e := s.Recover(ctx, "user0"); e != nil {
@@ -98,8 +101,8 @@ func TestOIDCIdentityIsIssuerAndSubject(t *testing.T) {
 	o := NewOIDC(s, nil)
 	ctx := context.Background()
 	first, e := o.MapIdentity(ctx, "https://issuer.example", "abc", "Same Name")
-	if e != nil || first != "user0" {
-		t.Fatalf("first identity: %s %v", first, e)
+	if e != nil || len(first) != 32 || first == "user0" {
+		t.Fatalf("first identity is not generated: %s %v", first, e)
 	}
 	same, e := o.MapIdentity(ctx, "https://issuer.example", "abc", "Changed Name")
 	if e != nil || same != first {

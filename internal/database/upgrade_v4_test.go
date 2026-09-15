@@ -13,7 +13,7 @@ func TestVersionThreeUpgradePreservesLibraryAndNotificationSettings(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = raw.Exec(schema + "\n" + migration002 + "\n" + migration003 + `PRAGMA user_version=3; INSERT INTO application_settings VALUES('notifications','{"enabled":true,"url":"http://fixture.invalid/secret"}',7); INSERT INTO shows(id,name) VALUES('show','Preserved show'); INSERT INTO profile_shows VALUES('user0','show',1,1);`)
+	_, err = raw.Exec(schema + "\n" + migration002 + "\n" + migration003 + `PRAGMA user_version=3; INSERT INTO profiles VALUES('user0','Fixture','violet',1); INSERT INTO application_settings VALUES('notifications','{"enabled":true,"url":"http://fixture.invalid/secret"}',7); INSERT INTO shows(id,name) VALUES('show','Preserved show'); INSERT INTO profile_shows VALUES('user0','show',1,1);`)
 	if err != nil {
 		t.Fatal(err)
 	}

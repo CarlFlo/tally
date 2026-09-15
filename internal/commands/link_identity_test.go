@@ -14,6 +14,9 @@ func TestLinkIdentityCommandArguments(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
+	if _, err = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('user0','Fixture','violet',1)"); err != nil {
+		t.Fatal(err)
+	}
 	args := []string{"user0", "https://identity.example", "immutable-subject"}
 	if err = linkIdentity(ctx, db, args); err != nil {
 		t.Fatal(err)

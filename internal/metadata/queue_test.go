@@ -39,6 +39,9 @@ func queueService(t *testing.T) (*Service, *queueTV) {
 		t.Fatal(e)
 	}
 	t.Cleanup(func() { db.Close() })
+	if _, e = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('user0','Fixture','violet',1)"); e != nil {
+		t.Fatal(e)
+	}
 	p := &queueTV{}
 	return &Service{DB: db, Provider: p}, p
 }
