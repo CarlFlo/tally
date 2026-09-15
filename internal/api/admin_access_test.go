@@ -83,7 +83,7 @@ func TestLocalAdminDemotionAndDeletionRequireActingAdminsPassword(t *testing.T) 
 	expect(t, request(t, h, "DELETE", "/api/profiles/profile-admin", map[string]any{"password": "alex-pass"}, userCookies...), 200)
 
 	var message string
-	if err := s.DB.QueryRow("SELECT message FROM activity_log WHERE action='profile_deleted' ORDER BY id DESC LIMIT 1").Scan(&message); err != nil || !strings.Contains(message, "My profile") {
-		t.Fatal("administrator deletion activity lost", err)
+	if err := s.DB.QueryRow("SELECT message FROM activity_log WHERE action='profile_deleted' ORDER BY id DESC LIMIT 1").Scan(&message); err != nil || !strings.Contains(message, "Alex deleted profile My profile") {
+		t.Fatal("administrator deletion activity lost actor or target", message, err)
 	}
 }
