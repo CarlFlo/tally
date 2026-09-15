@@ -2,35 +2,46 @@ package backup
 
 import (
 	"context"
-	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 )
 
 func (s *Service) Retain(ctx context.Context) error {
-	keep, e := s.retentionCount(ctx)
-	if e != nil {
-		return e
+	keep, err := s.retentionCount(ctx)
+	if err != nil {
+		return err
 	}
-	rows, e := s.DB.Rows(ctx, "SELECT id,filename FROM backup_records WHERE kind='auto' AND verified=1 ORDER BY created_at DESC,id DESC LIMIT -1 OFFSET ?", keep)
-	if e != nil {
-		return e
+	archives, err := s.Archives(ctx)
+	if err != nil {
+		return err
 	}
-	for _, r := range rows {
-		name := r["filename"].(string)
-		if filepath.Base(name) != name {
-			return fmt.Errorf("unsafe backup filename")
+	auto := make([]Archive, 0, len(archives))
+	for _, archive := range archives {
+		if archive.Kind == "auto" {
+			auto = append(auto, archive)
 		}
-		if e = os.Remove(filepath.Join(s.Path, name)); e != nil && !os.IsNotExist(e) {
-			return e
+	}
+	for _, archive := range auto[minimum(keep, len(auto)):] {
+		path, pathErr := s.archivePath(archive.Filename)
+		if pathErr != nil {
+			if os.IsNotExist(pathErr) {
+				continue
+			}
+			return pathErr
 		}
-		if _, e = s.DB.ExecContext(ctx, "DELETE FROM backup_records WHERE id=?", r["id"]); e != nil {
-			return e
+		if err = os.Remove(path); err != nil && !os.IsNotExist(err) {
+			return err
 		}
 	}
 	return nil
+}
+
+func minimum(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func ListFiles(path string) ([]string, error) {
@@ -40,7 +51,7 @@ func ListFiles(path string) ([]string, error) {
 	}
 	out := []string{}
 	for _, v := range entries {
-		if strings.HasSuffix(v.Name(), ".zip") {
+		if strings.HasSuffix(strings.ToLower(v.Name()), ".zip") {
 			out = append(out, v.Name())
 		}
 	}
