@@ -10,7 +10,7 @@ import (
 	"github.com/CarlFlo/tally/internal/database"
 )
 
-func TestDeleteRecordRemovesArchive(t *testing.T) {
+func TestDeleteArchiveRemovesArchive(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	db, err := database.Open(ctx, dir)
@@ -23,7 +23,7 @@ func TestDeleteRecordRemovesArchive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = service.DeleteRecord(ctx, archiveID(filename)); err != nil {
+	if err = service.DeleteArchive(ctx, archiveID(filename)); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = os.Stat(filepath.Join(service.Path, filename)); !os.IsNotExist(err) {
@@ -31,7 +31,7 @@ func TestDeleteRecordRemovesArchive(t *testing.T) {
 	}
 }
 
-func TestDeleteRecordRejectsMissingAndNonRegularArchives(t *testing.T) {
+func TestDeleteArchiveRejectsMissingAndNonRegularArchives(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	db, err := database.Open(ctx, dir)
@@ -49,7 +49,7 @@ func TestDeleteRecordRejectsMissingAndNonRegularArchives(t *testing.T) {
 	if err = os.Remove(filepath.Join(service.Path, missing)); err != nil {
 		t.Fatal(err)
 	}
-	if err = service.DeleteRecord(ctx, missingID); !errors.Is(err, ErrNotFound) {
+	if err = service.DeleteArchive(ctx, missingID); !errors.Is(err, ErrNotFound) {
 		t.Fatal("missing archive should not remain addressable", err)
 	}
 
@@ -65,7 +65,7 @@ func TestDeleteRecordRejectsMissingAndNonRegularArchives(t *testing.T) {
 	if err = os.Mkdir(blockedPath, 0700); err != nil {
 		t.Fatal(err)
 	}
-	if err = service.DeleteRecord(ctx, blockedID); !errors.Is(err, ErrNotFound) {
+	if err = service.DeleteArchive(ctx, blockedID); !errors.Is(err, ErrNotFound) {
 		t.Fatal("non-regular archive should not be addressable", err)
 	}
 	if info, statErr := os.Stat(blockedPath); statErr != nil || !info.IsDir() {
