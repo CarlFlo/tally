@@ -314,8 +314,7 @@ function App() {
               </main>
               <footer className="footer">
                 <span>
-                  Tally <span className="footer-dot">·</span> A little more in
-                  the loop.
+                  Tally <span className="footer-dot">·</span> Your little TV universe
                 </span>
                 <a
                   href="https://www.tvmaze.com"
