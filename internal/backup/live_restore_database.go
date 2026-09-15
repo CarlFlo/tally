@@ -3,6 +3,7 @@ package backup
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"strings"
 
 	"github.com/CarlFlo/mediaManager/internal/database"
@@ -23,10 +24,11 @@ func replaceDatabaseState(ctx context.Context, db *database.Store, stagedPath st
 		return err
 	}
 	defer tx.Rollback()
-	if _, err = tx.ExecContext(ctx, "PRAGMA defer_foreign_keys=ON"); err != nil {
+	tables, err := applicationTables(ctx, tx)
+	if err != nil {
 		return err
 	}
-	tables, err := applicationTables(ctx, tx)
+	order, err := parentFirstOrder(ctx, tx, tables)
 	if err != nil {
 		return err
 	}
@@ -43,10 +45,8 @@ func replaceDatabaseState(ctx context.Context, db *database.Store, stagedPath st
 			return err
 		}
 	}
-	for _, table := range tables {
-		if table == "backup_records" {
-			continue
-		}
+	// Keep normal FK enforcement enabled and insert parents before children.
+	for _, table := range order {
 		name := quoteIdentifier(table)
 		if _, err = tx.ExecContext(ctx, "INSERT INTO main."+name+" SELECT * FROM restore."+name); err != nil {
 			return err
@@ -79,6 +79,71 @@ func applicationTables(ctx context.Context, tx *sql.Tx) ([]string, error) {
 		tables = append(tables, name)
 	}
 	return tables, rows.Err()
+}
+
+func parentFirstOrder(ctx context.Context, tx *sql.Tx, tables []string) ([]string, error) {
+	inRestore := make(map[string]bool, len(tables))
+	for _, table := range tables {
+		if table != "backup_records" {
+			inRestore[table] = true
+		}
+	}
+	dependencies := make(map[string]map[string]bool, len(inRestore))
+	for table := range inRestore {
+		dependencies[table] = map[string]bool{}
+		rows, err := tx.QueryContext(ctx, "PRAGMA main.foreign_key_list("+quoteIdentifier(table)+")")
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			var id, seq int
+			var parent, from, to, onUpdate, onDelete, match string
+			if err = rows.Scan(&id, &seq, &parent, &from, &to, &onUpdate, &onDelete, &match); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			if parent == table {
+				rows.Close()
+				return nil, fmt.Errorf("self-referencing restore table %s is unsupported", table)
+			}
+			if inRestore[parent] {
+				dependencies[table][parent] = true
+			}
+		}
+		if err = rows.Err(); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		if err = rows.Close(); err != nil {
+			return nil, err
+		}
+	}
+	done := map[string]bool{}
+	order := make([]string, 0, len(inRestore))
+	for len(order) < len(inRestore) {
+		progress := false
+		for _, table := range tables {
+			if !inRestore[table] || done[table] {
+				continue
+			}
+			ready := true
+			for parent := range dependencies[table] {
+				if !done[parent] {
+					ready = false
+					break
+				}
+			}
+			if ready {
+				done[table] = true
+				order = append(order, table)
+				progress = true
+			}
+		}
+		if !progress {
+			return nil, fmt.Errorf("restore schema contains a foreign-key cycle")
+		}
+	}
+	return order, nil
 }
 
 func restoreSequences(ctx context.Context, tx *sql.Tx) error {
