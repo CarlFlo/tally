@@ -25,7 +25,11 @@ func (s Store) Load(ctx context.Context, key string, out any) (int64, error) {
 	return rev, json.Unmarshal([]byte(raw), out)
 }
 
-func (s Store) Save(ctx context.Context, key string, value any, revision int64, actor string) (int64, error) {
+func (s Store) Save(ctx context.Context, key string, value any, revision int64, actors ...string) (int64, error) {
+	actor := ""
+	if len(actors) > 0 {
+		actor = actors[0]
+	}
 	raw, e := json.Marshal(value)
 	if e != nil {
 		return 0, e
