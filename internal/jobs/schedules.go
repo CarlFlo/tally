@@ -16,7 +16,11 @@ type Schedule struct {
 	Revision int64  `json:"revision"`
 }
 
-func (s *Service) SaveSchedule(ctx context.Context, in Schedule, actor string) error {
+func (s *Service) SaveSchedule(ctx context.Context, in Schedule, actors ...string) error {
+	actor := ""
+	if len(actors) > 0 {
+		actor = actors[0]
+	}
 	if in.Key != "metadata" && in.Key != "maintenance" && in.Key != "backup" {
 		return fmt.Errorf("unknown job")
 	}
