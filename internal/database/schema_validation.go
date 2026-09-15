@@ -74,6 +74,19 @@ func ValidateSchema(ctx context.Context, db Querier) error {
 			}
 			rows.Close()
 		}
+		var profiles, roles, admins int
+		if err := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM profiles").Scan(&profiles); err != nil {
+			return err
+		}
+		if err := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM profile_roles").Scan(&roles); err != nil {
+			return err
+		}
+		if err := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM profile_roles WHERE is_admin=1").Scan(&admins); err != nil {
+			return err
+		}
+		if roles != profiles || (profiles > 0 && admins == 0) {
+			return fmt.Errorf("database profile role state is inconsistent")
+		}
 	}
 	if version >= 4 {
 		for _, query := range []string{
