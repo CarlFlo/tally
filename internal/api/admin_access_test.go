@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/CarlFlo/mediaManager/internal/auth"
 )
@@ -66,16 +65,12 @@ func TestLocalAdminDemotionAndDeletionRequireActingAdminsPassword(t *testing.T) 
 	}
 	userCookies := userRecorder.Result().Cookies()
 	expect(t, request(t, h, "PATCH", "/api/profiles/user0/admin", map[string]any{"is_admin": false, "password": "wrong"}, userCookies...), 401)
-	// Re-authentication is throttled after a bad attempt; use a fresh server-side
-	// attempt window for the success path without weakening production throttling.
-	time.Sleep(1100 * time.Millisecond)
-	expect(t, request(t, h, "PATCH", "/api/profiles/user0/admin", map[string]any{"is_admin": false, "password": "alex-pass"}, userCookies...), 200)
+	expect(t, request(t, h, "PATCH", "/api/profiles/user0/admin", map[string]any{"is_admin": false, "password": "admin-pass"}, adminCookies...), 200)
 	expect(t, request(t, h, "GET", "/api/settings", nil, adminCookies...), 403)
 
 	expect(t, request(t, h, "PATCH", "/api/profiles/user0/admin", map[string]any{"is_admin": true}, userCookies...), 200)
 	expect(t, request(t, h, "DELETE", "/api/profiles/user0", map[string]any{"password": "wrong"}, userCookies...), 401)
-	time.Sleep(1100 * time.Millisecond)
-	expect(t, request(t, h, "DELETE", "/api/profiles/user0", map[string]any{"password": "alex-pass"}, userCookies...), 200)
+	expect(t, request(t, h, "DELETE", "/api/profiles/user0", map[string]any{"password": "admin-pass"}, adminCookies...), 200)
 
 	var message string
 	if err := s.DB.QueryRow("SELECT message FROM activity_log WHERE action='profile_deleted' ORDER BY id DESC LIMIT 1").Scan(&message); err != nil || !strings.Contains(message, "My profile") {
