@@ -14,6 +14,10 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request, session auth.Ses
 	if !ok {
 		return apiError{http.StatusNotImplemented, "live updates are unavailable"}
 	}
+	// SSE connections are intentionally long-lived. Clear the server-wide write
+	// deadline for this request while retaining heartbeats and request-context
+	// cancellation.
+	_ = http.NewResponseController(w).SetWriteDeadline(time.Time{})
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Accel-Buffering", "no")

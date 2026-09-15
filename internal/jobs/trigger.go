@@ -9,7 +9,6 @@ import (
 
 	"github.com/CarlFlo/tally/internal/activity"
 	"github.com/CarlFlo/tally/internal/database"
-	"github.com/CarlFlo/tally/internal/scheduling"
 )
 
 func (s *Service) Trigger(kind, trigger, show string) (string, error) {
@@ -27,7 +26,7 @@ func (s *Service) Trigger(kind, trigger, show string) (string, error) {
 	}
 	if trigger == "scheduled_refresh" {
 		var enabled, paused bool
-		if e := s.DB.QueryRow("SELECT enabled,paused FROM jobs WHERE key=?", kind).Scan(&enabled, &paused); e != nil || !enabled || paused {
+		if err := s.DB.QueryRow("SELECT enabled,paused FROM jobs WHERE key=?", kind).Scan(&enabled, &paused); err != nil || !enabled || paused {
 			return "", fmt.Errorf("job schedule is disabled or paused")
 		}
 	}
@@ -41,17 +40,18 @@ func (s *Service) Trigger(kind, trigger, show string) (string, error) {
 	}
 	id := database.ID()
 	ctx, cancel := context.WithTimeout(s.ctx, s.Config.JobRuntime)
-	_, e := s.DB.ExecContext(ctx, "INSERT INTO job_runs(id,job_key,trigger,started_at,status) VALUES(?,?,?,?,'running')", id, key, trigger, time.Now().Unix())
-	if e != nil {
+	_, err := s.DB.ExecContext(ctx, "INSERT INTO job_runs(id,job_key,trigger,started_at,status) VALUES(?,?,?,?,'running')", id, key, trigger, time.Now().Unix())
+	if err != nil {
 		cancel()
 		<-s.sem
-		return "", e
+		return "", err
 	}
 	if show == "" {
 		var spec string
 		if s.DB.QueryRow("SELECT schedule FROM jobs WHERE key=?", kind).Scan(&spec) == nil {
-			if parsed, e := scheduling.Parse(spec); e == nil {
-				_, _ = s.DB.Exec("UPDATE jobs SET next_run=CASE WHEN enabled=1 AND paused=0 THEN ? ELSE 0 END WHERE key=?", parsed.Next(time.Now().UTC()).Unix(), kind)
+			if next, nextErr := s.nextScheduledRun(spec, time.Now()); nextErr == nil {
+				_, _ = s.DB.Exec("UPDATE jobs SET next_run=CASE WHEN enabled=1 AND paused=0 THEN ? ELSE 0 END WHERE key=?", next.Unix(), kind)
+				s.wakeScheduler()
 			}
 		}
 	}
@@ -62,12 +62,12 @@ func (s *Service) Trigger(kind, trigger, show string) (string, error) {
 		defer s.wg.Done()
 		defer func() { cancel(); <-s.sem; s.mu.Lock(); delete(s.running, key); s.mu.Unlock() }()
 		started := time.Now()
-		result, e := s.run(ctx, id, kind, trigger, show)
+		result, runErr := s.run(ctx, id, kind, trigger, show)
 		status := "success"
 		errorText := ""
-		if e != nil {
+		if runErr != nil {
 			status = "failed"
-			errorText = e.Error()
+			errorText = runErr.Error()
 			if errors.Is(ctx.Err(), context.Canceled) {
 				status = "cancelled"
 			}
@@ -75,9 +75,9 @@ func (s *Service) Trigger(kind, trigger, show string) (string, error) {
 		}
 		var calls, hits int
 		_ = s.DB.QueryRow("SELECT COALESCE(SUM(CASE WHEN reason IN ('request','conditional cache hit') THEN 1 ELSE 0 END),0),COALESCE(SUM(CASE WHEN reason IN ('fresh cache','conditional cache hit') THEN 1 ELSE 0 END),0) FROM provider_requests WHERE job_id=?", id).Scan(&calls, &hits)
-		_, err := s.DB.Exec("UPDATE job_runs SET ended_at=?,duration_ms=?,status=?,error=?,candidates=?,processed=?,skipped=?,changes=?,attempt=?,api_calls=?,cache_hits=? WHERE id=?", time.Now().Unix(), time.Since(started).Milliseconds(), status, errorText, result.Candidates, result.Processed, result.Skipped, result.Changes, result.Attempt, calls, hits, id)
-		if err != nil {
-			slog.Error("persist job result", "job_id", id, "error", err)
+		_, persistErr := s.DB.Exec("UPDATE job_runs SET ended_at=?,duration_ms=?,status=?,error=?,candidates=?,processed=?,skipped=?,changes=?,attempt=?,api_calls=?,cache_hits=? WHERE id=?", time.Now().Unix(), time.Since(started).Milliseconds(), status, errorText, result.Candidates, result.Processed, result.Skipped, result.Changes, result.Attempt, calls, hits, id)
+		if persistErr != nil {
+			slog.Error("persist job result", "job_id", id, "error", persistErr)
 		}
 		if show == "" {
 			s.finishSchedule(kind, status)

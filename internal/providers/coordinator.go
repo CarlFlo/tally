@@ -31,14 +31,14 @@ type Coordinator struct {
 }
 
 func New(ctx context.Context, db *database.Store, dir string, concurrency, retries int) (*Coordinator, error) {
-	cache, e := sql.Open("sqlite", filepath.ToSlash(filepath.Join(dir, "cache.db")))
-	if e != nil {
-		return nil, e
+	cache, err := sql.Open("sqlite", filepath.ToSlash(filepath.Join(dir, "cache.db")))
+	if err != nil {
+		return nil, err
 	}
 	cache.SetMaxOpenConns(1)
-	if _, e = cache.Exec("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; CREATE TABLE IF NOT EXISTS responses (key TEXT PRIMARY KEY,body BLOB NOT NULL,etag TEXT NOT NULL,modified TEXT NOT NULL,content_type TEXT NOT NULL,expires INTEGER NOT NULL)"); e != nil {
+	if _, err = cache.Exec("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA wal_autocheckpoint=1000; CREATE TABLE IF NOT EXISTS responses (key TEXT PRIMARY KEY,body BLOB NOT NULL,etag TEXT NOT NULL,modified TEXT NOT NULL,content_type TEXT NOT NULL,expires INTEGER NOT NULL)"); err != nil {
 		cache.Close()
-		return nil, e
+		return nil, err
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	return &Coordinator{db: db, cache: cache, concurrency: concurrency, retries: retries, states: map[string]*state{}, ctx: ctx, cancel: cancel, client: &http.Client{Timeout: 20 * time.Second, CheckRedirect: func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse }}}, nil
@@ -50,7 +50,12 @@ func (c *Coordinator) Close() error {
 	c.cancel()
 	c.lifecycle.Unlock()
 	c.active.Wait()
-	return c.cache.Close()
+	_, checkpointErr := c.cache.Exec("PRAGMA wal_checkpoint(TRUNCATE)")
+	closeErr := c.cache.Close()
+	if checkpointErr != nil {
+		return checkpointErr
+	}
+	return closeErr
 }
 
 func (c *Coordinator) begin() bool {

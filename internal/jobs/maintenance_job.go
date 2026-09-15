@@ -26,12 +26,15 @@ func (s *Service) runMaintenance(ctx context.Context) (result runResult, err err
 				err = ctx.Err()
 				return result, err
 			}
-			info, e := f.Info()
-			if e == nil && !f.IsDir() && time.Since(info.ModTime()) > 30*24*time.Hour {
+			info, fileErr := f.Info()
+			if fileErr == nil && !f.IsDir() && time.Since(info.ModTime()) > 30*24*time.Hour {
 				_ = os.Remove(filepath.Join(s.Config.DataDir, "cache", "images", f.Name()))
 				result.Changes++
 			}
 		}
+	}
+	if err == nil {
+		err = s.DB.Checkpoint(ctx, false)
 	}
 	result.Processed = 1
 	return result, err

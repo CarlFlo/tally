@@ -24,6 +24,7 @@ type Service struct {
 	wg            sync.WaitGroup
 	stopped       bool
 	notifications chan struct{}
+	scheduleWake  chan struct{}
 }
 
 func New(ctx context.Context, db *database.Store, c config.Config, m MetadataSource, p ProviderControl, b BackupCreator) *Service {
@@ -34,5 +35,17 @@ func New(ctx context.Context, db *database.Store, c config.Config, m MetadataSou
 	if c.JobConcurrency < 1 {
 		c.JobConcurrency = 1
 	}
-	return &Service{DB: db, Config: c, Metadata: m, Control: p, Backup: b, ctx: ctx, cancel: cancel, running: map[string]context.CancelFunc{}, sem: make(chan struct{}, c.JobConcurrency), notifications: make(chan struct{}, 1)}
+	return &Service{
+		DB:            db,
+		Config:        c,
+		Metadata:      m,
+		Control:       p,
+		Backup:        b,
+		ctx:           ctx,
+		cancel:        cancel,
+		running:       map[string]context.CancelFunc{},
+		sem:           make(chan struct{}, c.JobConcurrency),
+		notifications: make(chan struct{}, 1),
+		scheduleWake:  make(chan struct{}, 1),
+	}
 }

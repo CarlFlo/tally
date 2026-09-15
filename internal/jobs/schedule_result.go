@@ -16,10 +16,11 @@ func (s *Service) finishSchedule(key, status string) {
 	if s.DB.QueryRow("SELECT schedule,enabled,paused FROM jobs WHERE key=?", key).Scan(&spec, &enabled, &paused) == nil {
 		var next int64
 		if enabled && !paused {
-			if nextRun, e := s.nextScheduledRun(spec, time.Now()); e == nil {
+			if nextRun, err := s.nextScheduledRun(spec, time.Now()); err == nil {
 				next = nextRun.Unix()
 			}
 		}
 		_, _ = s.DB.Exec("UPDATE jobs SET next_run=? WHERE key=?", next, key)
 	}
+	s.wakeScheduler()
 }

@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 	_ "time/tzdata"
 
 	"github.com/gofrs/flock"
@@ -82,6 +83,12 @@ func Run(args []string) error {
 
 	if command == "serve" {
 		serveErr := serve(ctx, c, db, b)
+		slog.Info("Shutdown: checkpointing database")
+		checkpointCtx, checkpointDone := context.WithTimeout(context.Background(), 3*time.Second)
+		if checkpointErr := db.Checkpoint(checkpointCtx, true); checkpointErr != nil {
+			slog.Warn("Shutdown: database checkpoint did not finish", "error", checkpointErr)
+		}
+		checkpointDone()
 		slog.Info("Shutdown: closing database")
 		closeErr := db.Close()
 		if closeErr != nil {

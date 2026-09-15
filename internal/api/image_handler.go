@@ -5,46 +5,64 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"image"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/CarlFlo/tally/internal/auth"
 	"github.com/CarlFlo/tally/internal/providers"
 )
 
+func serveCachedImage(w http.ResponseWriter, r *http.Request, path string) bool {
+	file, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil || !info.Mode().IsRegular() {
+		return false
+	}
+	var header [512]byte
+	n, _ := file.Read(header[:])
+	if _, err = file.Seek(0, io.SeekStart); err != nil {
+		return false
+	}
+	w.Header().Set("Content-Type", http.DetectContentType(header[:n]))
+	w.Header().Set("Cache-Control", "private,max-age=604800")
+	http.ServeContent(w, r, filepath.Base(path), info.ModTime(), file)
+	return true
+}
+
 func (s *Server) image(w http.ResponseWriter, r *http.Request, _ auth.Session) error {
 	raw := r.URL.Query().Get("url")
-	u, e := url.Parse(raw)
-	if e != nil || u.Scheme != "https" || u.Host != "static.tvmaze.com" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || !strings.HasPrefix(u.Path, "/uploads/images/") {
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme != "https" || u.Host != "static.tvmaze.com" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || !strings.HasPrefix(u.Path, "/uploads/images/") {
 		return bad("image source is not allowed")
 	}
 	hash := sha256.Sum256([]byte(raw))
 	dir := filepath.Join(s.Config.DataDir, "cache", "images")
 	name := hex.EncodeToString(hash[:])
 	path := filepath.Join(dir, name)
-	if data, e := os.ReadFile(path); e == nil {
-		w.Header().Set("Content-Type", http.DetectContentType(data))
-		w.Header().Set("Cache-Control", "private,max-age=604800")
-		_, _ = w.Write(data)
+	if serveCachedImage(w, r, path) {
 		return nil
 	}
-	res, e := s.Control.Do(r.Context(), providers.Request{Provider: "tvmaze-images", URL: raw, Trigger: "image_cache", TTL: 7 * 24 * time.Hour, MaxBytes: 4 << 20})
-	if e != nil {
-		return remote(e)
+	res, err := s.Control.Do(r.Context(), providers.Request{Provider: "tvmaze-images", URL: raw, Trigger: "image_cache", Coalesce: true, MaxBytes: 4 << 20})
+	if err != nil {
+		return remote(err)
 	}
-	cfg, format, e := image.DecodeConfig(bytes.NewReader(res.Body))
-	if e != nil || (format != "png" && format != "jpeg" && format != "webp") || cfg.Width > 5000 || cfg.Height > 5000 || cfg.Width*cfg.Height > 20000000 {
+	cfg, format, err := image.DecodeConfig(bytes.NewReader(res.Body))
+	if err != nil || (format != "png" && format != "jpeg" && format != "webp") || cfg.Width > 5000 || cfg.Height > 5000 || cfg.Width*cfg.Height > 20000000 {
 		return bad("provider returned an invalid image")
 	}
-	if e = os.MkdirAll(dir, 0700); e != nil {
-		return e
+	if err = os.MkdirAll(dir, 0700); err != nil {
+		return err
 	}
-	if e = os.WriteFile(path, res.Body, 0600); e != nil {
-		return e
+	if err = os.WriteFile(path, res.Body, 0600); err != nil {
+		return err
 	}
 	w.Header().Set("Content-Type", http.DetectContentType(res.Body))
 	w.Header().Set("Cache-Control", "private,max-age=604800")

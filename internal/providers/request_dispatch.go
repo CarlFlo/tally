@@ -30,10 +30,10 @@ func (c *Coordinator) Do(ctx context.Context, r Request) (Response, error) {
 	if r.Header == nil {
 		r.Header = make(http.Header)
 	}
-	if e := c.ctx.Err(); e != nil {
-		return Response{}, e
+	if err := c.ctx.Err(); err != nil {
+		return Response{}, err
 	}
-	if r.Method != http.MethodGet || r.TTL <= 0 {
+	if r.Method != http.MethodGet || (r.TTL <= 0 && !r.Coalesce) {
 		return c.perform(ctx, r)
 	}
 	key := cacheKey(r)

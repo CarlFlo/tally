@@ -16,44 +16,53 @@ type Store struct {
 }
 
 func Open(ctx context.Context, dir string) (*Store, error) {
-	if e := os.MkdirAll(dir, 0700); e != nil {
-		return nil, e
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return nil, err
 	}
 	p := filepath.Join(dir, "app.db")
 	info, statErr := os.Stat(p)
 	existing := statErr == nil && info.Size() > 0
-	file, e := os.OpenFile(p, os.O_CREATE|os.O_RDWR, 0600)
-	if e != nil {
-		return nil, e
+	file, err := os.OpenFile(p, os.O_CREATE|os.O_RDWR, 0600)
+	if err != nil {
+		return nil, err
 	}
-	if e = file.Close(); e != nil {
-		return nil, e
+	if err = file.Close(); err != nil {
+		return nil, err
 	}
-	if e = os.Chmod(p, 0600); e != nil {
-		return nil, e
+	if err = os.Chmod(p, 0600); err != nil {
+		return nil, err
 	}
-	db, e := sql.Open("sqlite", filepath.ToSlash(p))
-	if e != nil {
-		return nil, e
+	db, err := sql.Open("sqlite", filepath.ToSlash(p))
+	if err != nil {
+		return nil, err
 	}
 	db.SetMaxOpenConns(1)
 	s := &Store{db, p}
-	fail := func(e error) (*Store, error) { db.Close(); return nil, e }
-	if _, e = db.ExecContext(ctx, "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;"); e != nil {
-		return fail(e)
+	fail := func(err error) (*Store, error) { db.Close(); return nil, err }
+	if _, err = db.ExecContext(ctx, "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000; PRAGMA wal_autocheckpoint=1000;"); err != nil {
+		return fail(err)
 	}
-	if e = s.migrate(ctx, dir, existing); e != nil {
-		return fail(e)
+	if err = s.migrate(ctx, dir, existing); err != nil {
+		return fail(err)
 	}
-	if e = Validate(ctx, db); e != nil {
-		return fail(e)
+	if err = Validate(ctx, db); err != nil {
+		return fail(err)
 	}
-	if e = ValidateSchema(ctx, db); e != nil {
-		return fail(e)
+	if err = ValidateSchema(ctx, db); err != nil {
+		return fail(err)
 	}
-	_, e = db.ExecContext(ctx, "UPDATE job_runs SET status='interrupted',ended_at=?,error='Application stopped during this run' WHERE status='running'", time.Now().Unix())
-	if e != nil {
-		return fail(e)
+	_, err = db.ExecContext(ctx, "UPDATE job_runs SET status='interrupted',ended_at=?,error='Application stopped during this run' WHERE status='running'", time.Now().Unix())
+	if err != nil {
+		return fail(err)
 	}
 	return s, nil
+}
+
+func (s *Store) Checkpoint(ctx context.Context, truncate bool) error {
+	mode := "PASSIVE"
+	if truncate {
+		mode = "TRUNCATE"
+	}
+	_, err := s.ExecContext(ctx, "PRAGMA wal_checkpoint("+mode+")")
+	return err
 }

@@ -10,7 +10,7 @@ type Request struct {
 	Header                                        http.Header
 	Body                                          []byte
 	TTL                                           time.Duration
-	Force, NoRetry                                bool
+	Force, NoRetry, Coalesce                      bool
 	MaxBytes                                      int64
 }
 
