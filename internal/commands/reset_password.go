@@ -10,7 +10,6 @@ import (
 )
 
 func resetPassword(ctx context.Context, db *database.Store, args []string) error {
-	var e error
 	if len(args) != 1 {
 		return fmt.Errorf("usage: tally reset-password <profile-id-or-name>")
 	}
