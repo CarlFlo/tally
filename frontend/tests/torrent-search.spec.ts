@@ -11,6 +11,18 @@ test("torrent search navigation and filters follow the saved Jackett state", asy
   const savedResponse = await page.request.get("/api/settings/search");
   expect(savedResponse.ok()).toBe(true);
   const saved = await savedResponse.json();
+  const savedTorrentResponse = await page.request.get("/api/settings/torrent");
+  expect(savedTorrentResponse.ok()).toBe(true);
+  const savedTorrent = await savedTorrentResponse.json();
+  let torrentRevision = savedTorrent.revision;
+  if (!savedTorrent.data.enabled) {
+    const enableDownloads = await page.request.put("/api/settings/torrent", {
+      headers,
+      data: { data: { enabled: true }, revision: torrentRevision },
+    });
+    expect(enableDownloads.ok()).toBe(true);
+    torrentRevision = (await enableDownloads.json()).revision;
+  }
 
   const enabledData = {
     base_url: "http://127.0.0.1:1",
@@ -179,6 +191,49 @@ test("torrent search navigation and filters follow the saved Jackett state", asy
     ).toHaveCount(0);
     await expect(
       sidebar.getByRole("link", { name: "Downloads", exact: true }),
+    ).toBeVisible();
+
+    await page.goto("/search");
+    await expect(page).toHaveURL(/\/calendar$/);
+
+    const reenabledResponse = await page.request.put("/api/settings/search", {
+      headers,
+      data: {
+        data: enabledData,
+        revision,
+      },
+    });
+    expect(reenabledResponse.ok()).toBe(true);
+    revision = (await reenabledResponse.json()).revision;
+    await expect(
+      sidebar.getByRole("link", { name: "Torrent search", exact: true }),
+    ).toBeVisible();
+
+    const downloadsDisabled = await page.request.put("/api/settings/torrent", {
+      headers,
+      data: {
+        data: { enabled: false },
+        revision: torrentRevision,
+      },
+    });
+    expect(downloadsDisabled.ok()).toBe(true);
+    torrentRevision = (await downloadsDisabled.json()).revision;
+
+    await expect(
+      sidebar.getByRole("link", { name: "Torrent search", exact: true }),
+    ).toBeVisible();
+    await expect(
+      sidebar.getByRole("link", { name: "Downloads", exact: true }),
+    ).toHaveCount(0);
+
+    await page.goto("/search");
+    await page.getByRole("textbox", { name: "Torrent search query" }).fill("Example");
+    await page.getByRole("button", { name: "Search torrents", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: /Copy magnet for Example S01 1080p/ }).first(),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Download", exact: true }),
     ).toHaveCount(0);
 
     await page.goto("/downloads");
@@ -190,5 +245,10 @@ test("torrent search navigation and filters follow the saved Jackett state", asy
       data: { data: saved.data, revision },
     });
     expect(restore.ok()).toBe(true);
+    const restoreTorrent = await page.request.put("/api/settings/torrent", {
+      headers,
+      data: { data: savedTorrent.data, revision: torrentRevision },
+    });
+    expect(restoreTorrent.ok()).toBe(true);
   }
 });
