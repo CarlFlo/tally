@@ -312,3 +312,47 @@ func TestRegistryRejectsMalformedTranslationPlaceholder(t *testing.T) {
 		return false
 	})
 }
+
+func TestRegistryDoesNotFollowEnglishSymlinkOnStartup(t *testing.T) {
+	dir := t.TempDir()
+	locales := filepath.Join(dir, "locales")
+	if err := os.MkdirAll(locales, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(dir, "outside-en.json")
+	if err := os.WriteFile(target, []byte(`{
+		"_meta":{"locale":"en","name":"English","direction":"ltr","catalogVersion":99},
+		"common":{"save":"Linked save"}
+	}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(locales, "en.json")
+	if err := os.Symlink(target, link); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+
+	registry, err := New(dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer registry.Close()
+
+	catalog, ok := registry.Catalog("en")
+	if !ok {
+		t.Fatal("embedded English fallback was not available")
+	}
+	if catalog.Meta.CatalogVersion != 6 {
+		t.Fatalf("catalog version=%d, want bundled version 6", catalog.Meta.CatalogVersion)
+	}
+	common := catalog.Messages["common"].(map[string]any)
+	if common["save"] != "Save" {
+		t.Fatalf("English symlink target was followed: %#v", common["save"])
+	}
+	info, err := os.Lstat(link)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode()&os.ModeSymlink == 0 {
+		t.Fatal("server unexpectedly rewrote the non-regular English path")
+	}
+}
