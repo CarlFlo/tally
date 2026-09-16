@@ -5,7 +5,7 @@ import (
 )
 
 type Config struct {
-	Addr, DataDir, AuthMode, PublicURL, Timezone, Language, Theme  string
+	Addr, DataDir, AuthMode, PublicURL, Timezone, Theme            string
 	MaxProfiles, PasswordMin, PasswordMax                          int
 	ResetCooldown, SessionIdle, SessionAbsolute                    time.Duration
 	JobConcurrency, JobRetries, BatchSize, ProviderConcurrency     int
