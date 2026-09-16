@@ -1,4 +1,4 @@
-import { dateTimeFormatter } from "./dateFormatting";
+import { dateTimeFormatter, displayLocale } from "./dateFormatting";
 import { i18n } from "./i18n";
 
 export const jobName = (key: string) =>
@@ -40,7 +40,7 @@ export function scheduleRunLabel(
   timeFormat: string,
   timezone: string,
 ) {
-  return dateTimeFormatter(i18n.resolvedLanguage || "en", {
+  return dateTimeFormatter(displayLocale(i18n.resolvedLanguage), {
     timeZone: timezone,
     day: "numeric",
     month: "short",
