@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowUpRight, Check, Download, Star } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   api,
   dateOnly,
@@ -19,6 +20,7 @@ export function EpisodeRow({
   episode: Episode;
   onOpen: () => void;
 }) {
+  const { t } = useTranslation();
   const [ep, setEp] = useState(episode);
   const [pending, setPending] = useState(false);
   const { boot, notify } = useApp();
@@ -57,24 +59,24 @@ export function EpisodeRow({
       >
         <strong>{ep.name}</strong>
         <small>
-          {episodeCode(ep)} · {ep.runtime ? `${ep.runtime} min` : "Runtime TBA"}
+          {episodeCode(ep)} · {ep.runtime ? `${ep.runtime} ${t("common.minuteShort")}` : t("calendar.runtimeTBA")}
         </small>
       </button>
       <span className="episode-airdate">
         {dateOnly(ep.airdate)}
         <small className="episode-status">
           {ep.watched
-            ? "Watched"
+            ? t("calendar.watched")
             : released(ep, boot.preferences.timezone)
-              ? "Available"
-              : "Upcoming"}
+              ? t("calendar.available")
+              : t("calendar.upcoming")}
         </small>
       </span>
       <button
         className={
           "icon-button state-icon " + (ep.downloaded ? "amber-text" : "")
         }
-        aria-label={ep.downloaded ? "Mark not downloaded" : "Mark downloaded"}
+        aria-label={ep.downloaded ? t("calendar.markNotDownloaded") : t("calendar.markDownloaded")}
         aria-pressed={!!ep.downloaded}
         disabled={pending}
         onClick={(e) => {
@@ -86,7 +88,7 @@ export function EpisodeRow({
       </button>
       <button
         className={"icon-button state-icon " + (ep.watched ? "mint-text" : "")}
-        aria-label={ep.watched ? "Mark unwatched" : "Mark watched"}
+        aria-label={ep.watched ? t("calendar.markUnwatched") : t("calendar.markWatched")}
         aria-pressed={!!ep.watched}
         disabled={pending}
         onClick={(e) => {
@@ -98,7 +100,7 @@ export function EpisodeRow({
       </button>
       <button
         className="icon-button"
-        aria-label={`Episode details: ${ep.name}`}
+        aria-label={t("calendar.detailsFor", { name: ep.name })}
         onClick={(e) => {
           e.stopPropagation();
           onOpen();
@@ -110,6 +112,7 @@ export function EpisodeRow({
   );
 }
 export function FavoriteButton({ show }: { show: Show }) {
+  const { t } = useTranslation();
   const { boot, notify } = useApp();
   const cache = useQueryClient();
   const [busy, setBusy] = useState(false);
@@ -126,7 +129,7 @@ export function FavoriteButton({ show }: { show: Show }) {
         (show.favorite ? "is-favorite" : "") +
         (stamping ? " is-stamping" : "")
       }
-      aria-label={`${show.favorite ? "Unfavorite" : "Favorite"} ${show.name}`}
+      aria-label={t(show.favorite ? "library.unfavorite" : "library.favorite", { name: show.name })}
       aria-pressed={!!show.favorite}
       disabled={busy}
       onClick={async (e) => {
