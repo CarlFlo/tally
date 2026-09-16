@@ -170,7 +170,8 @@
     "profile_name_required": "Profile name is required.",
     "profile_locale_invalid": "Choose an available language.",
     "password_change_required": "Replace the temporary password before continuing.",
-    "locale_unavailable": "The selected language is currently unavailable."
+    "locale_unavailable": "The selected language is currently unavailable.",
+    "requestTimedOut": "Request timed out"
   },
   "footer": {
     "metadata": "TV metadata by TVmaze ↗"
