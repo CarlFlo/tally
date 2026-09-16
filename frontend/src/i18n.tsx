@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -73,6 +74,15 @@ const LocaleContext = createContext<LocaleContextValue>({
   localeStatus: () => undefined,
 });
 
+function replaceResourceBundle(
+  locale: string,
+  messages: Record<string, unknown>,
+) {
+  if (i18n.hasResourceBundle(locale, "translation"))
+    i18n.removeResourceBundle(locale, "translation");
+  i18n.addResourceBundle(locale, "translation", messages, true, true);
+}
+
 export function useLocalization() {
   return useContext(LocaleContext);
 }
@@ -110,27 +120,15 @@ export function LocalizationProvider({
     enabled: !!index.data && activeLocale !== "en",
   });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!english.data) return;
-    i18n.addResourceBundle(
-      "en",
-      "translation",
-      english.data.messages,
-      true,
-      true,
-    );
+    replaceResourceBundle("en", english.data.messages);
   }, [english.data]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const catalog = activeLocale === "en" ? english.data : active.data;
     if (!catalog) return;
-    i18n.addResourceBundle(
-      catalog.meta.locale,
-      "translation",
-      catalog.messages,
-      true,
-      true,
-    );
+    replaceResourceBundle(catalog.meta.locale, catalog.messages);
     void i18n.changeLanguage(activeLocale);
     document.documentElement.lang = activeLocale;
     document.documentElement.dir = catalog.meta.direction || "ltr";
