@@ -35,7 +35,7 @@ import { ProfilePicker } from "./ProfilePicker";
 import { RegisterProfile } from "./RegisterProfile";
 import { queryKeys } from "./queryKeys";
 import { invalidateResources } from "./queryInvalidation";
-import { LocalizationProvider } from "./i18n";
+import { LocalizationProvider, useLocalization } from "./i18n";
 
 import "./style.css";
 import "./activity.css";
@@ -52,6 +52,22 @@ const SettingsPage = lazy(() =>
 const SystemPage = lazy(() =>
   import("./pages/System").then((module) => ({ default: module.SystemPage })),
 );
+
+function LocaleFallbackNotice() {
+  const { t } = useTranslation();
+  const { requestedLocale, activeLocale, localeStatus } = useLocalization();
+  if (requestedLocale === activeLocale) return null;
+  const status = localeStatus(requestedLocale);
+  return (
+    <div className="public-warning" role="status">
+      <AlertCircle size={19} />
+      <span>
+        {t("language.fallbackNotice")}
+        {status?.error ? ` ${status.error}` : ""}
+      </span>
+    </div>
+  );
+}
 
 function RouteFallback() {
   return (
@@ -247,6 +263,7 @@ function App() {
                   {boot.warning}
                 </div>
               )}
+              <LocaleFallbackNotice />
               <main id="main">
                 <Suspense fallback={<RouteFallback />}>
                   <Routes>
