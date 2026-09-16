@@ -219,3 +219,44 @@ func TestNewerPartialEnglishKeepsEmbeddedFallbackKeys(t *testing.T) {
 		t.Fatal("newer English config file was unexpectedly rewritten")
 	}
 }
+
+func TestRegistryRejectsSymlinkLocaleEntries(t *testing.T) {
+	dir := t.TempDir()
+	locales := filepath.Join(dir, "locales")
+	if err := os.MkdirAll(locales, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(dir, "outside.json")
+	if err := os.WriteFile(target, []byte(`{
+		"_meta":{"locale":"sv","name":"Svenska","direction":"ltr","catalogVersion":1},
+		"common":{"save":"Spara"}
+	}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(locales, "sv.json")
+	if err := os.Symlink(target, link); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+
+	registry, err := New(dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer registry.Close()
+
+	if registry.Valid("sv") {
+		t.Fatal("symlink locale was accepted")
+	}
+	var statusFound bool
+	for _, status := range registry.List() {
+		if status.Locale == "sv" {
+			statusFound = true
+			if status.Valid || status.ErrorCode != "language.notRegularFile" {
+				t.Fatalf("unexpected symlink status: %+v", status)
+			}
+		}
+	}
+	if !statusFound {
+		t.Fatal("symlink locale was not retained as a disabled entry")
+	}
+}
