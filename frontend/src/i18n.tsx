@@ -24,7 +24,13 @@ async function localeRequest<T>(path: string, signal?: AbortSignal): Promise<T> 
       });
       const data = await response.json();
       if (!response.ok)
-        throw new Error(data.error || `Request failed (${response.status})`);
+        throw new Error(
+          data.error ||
+            i18n.t("errors.requestFailed", {
+              status: response.status,
+              defaultValue: `Request failed (${response.status})`,
+            }),
+        );
       return data as T;
     });
   } catch (error) {
@@ -121,7 +127,7 @@ export function LocalizationProvider({
   );
   const requestedLocale = preview || profileLocale || "en";
   const requested = byCode.get(requestedLocale);
-  const activeLocale = requested?.valid ? requestedLocale : "en";
+  const candidateLocale = requested?.valid ? requestedLocale : "en";
 
   const english = useQuery<LocaleCatalog>({
     queryKey: queryKeys.localeCatalog("en"),
@@ -129,11 +135,13 @@ export function LocalizationProvider({
     enabled: !!index.data,
   });
   const active = useQuery<LocaleCatalog>({
-    queryKey: queryKeys.localeCatalog(activeLocale),
+    queryKey: queryKeys.localeCatalog(candidateLocale),
     queryFn: ({ signal }) =>
-      localeRequest("/locales/" + encodeURIComponent(activeLocale), signal),
-    enabled: !!index.data && activeLocale !== "en",
+      localeRequest("/locales/" + encodeURIComponent(candidateLocale), signal),
+    enabled: !!index.data && candidateLocale !== "en",
   });
+  const activeLocale =
+    candidateLocale !== "en" && active.isError ? "en" : candidateLocale;
 
   useLayoutEffect(() => {
     if (!english.data) return;
@@ -180,7 +188,30 @@ export function LocalizationProvider({
 
   // English must be available before user-facing copy is rendered. This also
   // guarantees a safe UI if another locale becomes unavailable.
-  if (index.isPending || english.isPending || (activeLocale !== "en" && active.isPending)) {
+  const criticalError = index.error || english.error;
+  if (criticalError) {
+    const retry = () => {
+      if (index.error) void index.refetch();
+      else void english.refetch();
+    };
+    return (
+      <div className="startup" role="alert">
+        <strong>
+          {i18n.t("errors.localizationLoadFailed", {
+            defaultValue: "Localization could not be loaded.",
+          })}
+        </strong>
+        <button className="button" type="button" onClick={retry}>
+          {i18n.t("common.retry", { defaultValue: "Retry" })}
+        </button>
+      </div>
+    );
+  }
+  if (
+    index.isPending ||
+    english.isPending ||
+    (candidateLocale !== "en" && active.isPending)
+  ) {
     return <div className="startup">Tally</div>;
   }
 
