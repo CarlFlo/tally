@@ -100,7 +100,7 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
     await (await page.request.get("/api/bootstrap")).json()
   ).profiles.some((profile: any) => profile.id === profileFixture.id);
   expect(profileStillExists).toBe(false);
-  await expect(page.locator(".sidebar").getByRole("link")).toHaveCount(4);
+  await expect(page.locator(".sidebar").getByRole("link")).toHaveCount(5);
   await expect(page.locator(".footer")).toContainText(
     "Tally · Your little TV universe",
   );

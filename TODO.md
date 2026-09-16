@@ -21,7 +21,8 @@ Branch: `feature/torrent-search-downloads`
 - [x] Added English and Ukrainian localization for new UI.
 - [x] Added backend tests for qBittorrent category/submission/download controls.
 - [x] Added browser regression coverage for navigation gating, Download label, OR quality filtering, and bounded scrolling.
-- [x] Fixed the existing Jackett torrent-file test fixture for the new qBittorrent category request.
+- [x] Fixed existing Jackett and browser qBittorrent fixtures for the new category request.
+- [x] Updated existing Playwright expectations for Download/Added labels and the Downloads sidebar entry.
 
 ## In progress
 - [ ] Complete the full GitHub Checks workflow on the latest code.

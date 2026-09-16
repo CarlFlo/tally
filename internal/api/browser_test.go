@@ -147,11 +147,18 @@ func TestBrowserServer(t *testing.T) {
 			w.Write([]byte("v5.2.0"))
 			return
 		}
-		if r.URL.Path != "/api/v2/torrents/add" || r.Method != "POST" {
+		switch r.URL.Path {
+		case "/api/v2/torrents/categories":
+			w.Write([]byte(`{"tally":{"name":"tally","savePath":""}}`))
+		case "/api/v2/torrents/add":
+			if r.Method != http.MethodPost {
+				http.NotFound(w, r)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		default:
 			http.NotFound(w, r)
-			return
 		}
-		w.Write([]byte("Ok."))
 	}))
 	defer client.Close()
 	// This opt-in fixture seeds only its temporary DB. Tests can edit and test the mock connection through the UI.

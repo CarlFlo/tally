@@ -111,13 +111,13 @@ test("configure, test, save and use a shared torrent client with visible API key
   await page
     .locator(".torrent-result")
     .first()
-    .getByRole("button", { name: "Send", exact: true })
+    .getByRole("button", { name: "Download", exact: true })
     .click();
   await expect(
     page
       .locator(".torrent-result")
       .first()
-      .getByRole("button", { name: "Sent", exact: true }),
+      .getByRole("button", { name: "Added", exact: true }),
   ).toBeDisabled();
   expect(errors).toEqual([]);
 });

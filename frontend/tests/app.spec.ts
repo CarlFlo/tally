@@ -185,12 +185,12 @@ test("library, calendar, episode state, profiles, jobs and responsive layout", a
   await expect(page.locator(".torrent-result")).toHaveCount(1);
   await page
     .locator(".torrent-result")
-    .getByRole("button", { name: "Send", exact: true })
+    .getByRole("button", { name: "Download", exact: true })
     .click();
   await expect(
     page
       .locator(".torrent-result")
-      .getByRole("button", { name: "Sent", exact: true }),
+      .getByRole("button", { name: "Added", exact: true }),
   ).toBeDisabled();
   await page.screenshot({
     path: "../docs/screenshots/torrent-search-desktop.png",
