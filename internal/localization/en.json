@@ -470,7 +470,17 @@
     "roleAdmin": "admin",
     "roleUser": "user",
     "appearance": "Appearance",
-    "exampleDate": "11 Sep 2026"
+    "exampleDate": "11 Sep 2026",
+    "useBrowserTimezone": "Use this browser's timezone",
+    "newProfile": "New profile",
+    "authentication": "Authentication",
+    "passwordChangeHelp": "Changing your password signs out your other sessions.",
+    "currentPassword": "Current password",
+    "newPasswordOrPin": "New password or PIN",
+    "changePassword": "Change password",
+    "authDisabled": "Authentication is disabled. Profiles are convenient personal spaces for a trusted network. Enable local or OIDC authentication through your deployment environment.",
+    "sessionsTitle": "Your sessions",
+    "lastActive": "Last active {{date}}"
   },
   "schedule": {
     "automatic": "Run automatically",
