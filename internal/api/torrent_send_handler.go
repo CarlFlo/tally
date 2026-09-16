@@ -11,6 +11,9 @@ import (
 )
 
 func (s *Server) torrentSend(w http.ResponseWriter, r *http.Request, session auth.Session) error {
+	if !s.torrentDownloadsEnabled(r.Context()) {
+		return bad("torrent downloads are disabled in Settings")
+	}
 	client, e := s.Clients.Current(r.Context())
 	if e != nil {
 		return bad(e.Error())
