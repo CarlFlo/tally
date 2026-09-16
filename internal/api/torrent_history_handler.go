@@ -11,7 +11,7 @@ func (s *Server) torrentHistory(w http.ResponseWriter, r *http.Request, session 
 	if e != nil {
 		return e
 	}
-	sends, e := s.DB.Rows(r.Context(), "SELECT name,status,error,created_at FROM torrent_send_history WHERE profile_id=? ORDER BY created_at DESC LIMIT 20", session.Profile)
+	sends, e := s.DB.Rows(r.Context(), "SELECT name,status,error,created_at FROM torrent_send_history WHERE profile_id=? AND name<>'' ORDER BY created_at DESC LIMIT 20", session.Profile)
 	if e != nil {
 		return e
 	}
@@ -20,16 +20,23 @@ func (s *Server) torrentHistory(w http.ResponseWriter, r *http.Request, session 
 }
 
 func (s *Server) clearTorrentHistory(w http.ResponseWriter, r *http.Request, session auth.Session) error {
-	var table string
+	var (
+		query string
+		args  []any
+	)
 	switch r.PathValue("kind") {
 	case "searches":
-		table = "torrent_search_history"
+		query = "DELETE FROM torrent_search_history WHERE profile_id=?"
+		args = []any{session.Profile}
 	case "submissions":
-		table = "torrent_send_history"
+		// Submission rows also provide idempotency protection. Hide them from
+		// recent history without deleting the request hash/key/status ledger.
+		query = "UPDATE torrent_send_history SET name='' WHERE profile_id=?"
+		args = []any{session.Profile}
 	default:
 		return apiError{404, "unknown torrent history"}
 	}
-	if _, e := s.DB.ExecContext(r.Context(), "DELETE FROM "+table+" WHERE profile_id=?", session.Profile); e != nil {
+	if _, e := s.DB.ExecContext(r.Context(), query, args...); e != nil {
 		return e
 	}
 	jsonResponse(w, 200, map[string]bool{"ok": true})

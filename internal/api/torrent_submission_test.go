@@ -44,9 +44,16 @@ func TestTorrentSubmissionIdempotency(t *testing.T) {
 	defer s.selections.Delete("choice")
 	body := map[string]string{"selection": "choice", "idempotency_key": "0123456789abcdef"}
 	expect(t, request(t, h, "POST", "/api/torrents/send", body), 200)
+	expect(t, request(t, h, "DELETE", "/api/torrents/history/submissions", nil), 200)
+	history := request(t, h, "GET", "/api/torrents/history", nil)
+	expect(t, history, 200)
+	if strings.Contains(history.Body.String(), "Example") {
+		t.Fatal("cleared submission remained visible")
+	}
+	// Clearing the view must not clear the idempotency ledger.
 	expect(t, request(t, h, "POST", "/api/torrents/send", body), 200)
 	if submissions.Load() != 1 {
-		t.Fatal("submission replayed")
+		t.Fatal("submission replayed after history was cleared")
 	}
 	var downloaded int
 	_ = s.DB.QueryRow("SELECT COUNT(*) FROM profile_episode_state WHERE downloaded=1").Scan(&downloaded)

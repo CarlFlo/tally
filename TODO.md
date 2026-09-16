@@ -30,6 +30,7 @@ Branch: `feature/torrent-search-downloads`
 
 ## Review findings resolved
 - [x] Failed downloader attempts now invalidate torrent history even though failed HTTP mutations do not emit live-update events.
+- [x] Clearing Recent submissions hides entries without deleting the idempotency ledger, so duplicate-send protection remains intact.
 
 ## Final validation
 - [ ] Re-review the final diff for missed requirements, stale code, or unsafe edge cases.
