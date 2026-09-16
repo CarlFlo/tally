@@ -3,6 +3,7 @@ import { dateTimeFormatter } from "./dateFormatting";
 import { requestPool } from "./requestPool";
 import { queryKeys } from "./queryKeys";
 import { invalidateResources } from "./queryInvalidation";
+import { i18n } from "./i18n";
 import {
   ArrowUpRight,
   Check,
@@ -64,7 +65,11 @@ export async function api<T = any>(
       if (!response.ok) {
         if (response.status === 401 || data.code === "password_change_required")
           void invalidateResources(queryClient, ["bootstrap"]);
-        throw new Error(data.error || `Request failed (${response.status})`);
+        const fallback = data.error || `Request failed (${response.status})`;
+        const message = data.code
+          ? i18n.t("errors." + data.code, { defaultValue: fallback })
+          : fallback;
+        throw new Error(message);
       }
       return data;
     });
@@ -76,6 +81,7 @@ export type Profile = {
   id: string;
   display_name: string;
   avatar: string;
+  locale: string;
   has_password?: boolean | number;
   is_admin?: boolean | number;
 };
