@@ -15,7 +15,7 @@
     "refresh": "Refresh",
     "edit": "Edit",
     "loading": "Loading…",
-    "retry": "Try again",
+    "retry": "Retry",
     "unknown": "Unknown",
     "add": "Add",
     "remove": "Remove",
@@ -262,7 +262,7 @@
     "restoreMessage": "Restore {{filename}}? Current Tally data and saved settings will be replaced only after the backup is fully validated.",
     "restoreVersionNote": " This backup was created by Tally {{backupVersion}}; the current version is {{currentVersion}}. Compatible database migrations will be applied before restore.",
     "deleteMessage": "Delete {{filename}}? This backup archive cannot be recovered after deletion.",
-    "retentionHelp": "Older automatic backups are removed after the next successful backup. Manual backups are kept until you remove them.",
+    "retentionHelp": "Older automatic backups are removed <strong>after</strong> the next successful backup. Manual backups are kept until you remove them.",
     "automaticKeep": "Automatic backups to keep",
     "saveSettings": "Save settings",
     "timezoneHelp": "Cron schedules use the server timezone: {{timezone}}."
