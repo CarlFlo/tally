@@ -161,7 +161,7 @@ func (r *Registry) syncEnglish() error {
 			return nil
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("read English localization: %w", err)
+		slog.Warn("English localization file could not be read; restoring bundled catalog", "file", path, "error", err)
 	}
 	tmp, err := os.CreateTemp(r.dir, ".en-*.json")
 	if err != nil {
