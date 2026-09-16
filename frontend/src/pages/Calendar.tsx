@@ -149,8 +149,8 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
   }
   const heading =
     view === "week"
-      ? `${start.toLocaleDateString(i18n.resolvedLanguage || "en", { month: "short", day: "numeric" })} – ${days[6].toLocaleDateString(i18n.resolvedLanguage || "en", { month: "short", day: "numeric" })}`
-      : date.toLocaleDateString(i18n.resolvedLanguage || "en", { month: "long", year: "numeric" });
+      ? `${start.toLocaleDateString(displayLocale(i18n.resolvedLanguage), { month: "short", day: "numeric" })} – ${days[6].toLocaleDateString(displayLocale(i18n.resolvedLanguage), { month: "short", day: "numeric" })}`
+      : date.toLocaleDateString(displayLocale(i18n.resolvedLanguage), { month: "long", year: "numeric" });
   return (
     <div className="page calendar-page">
       <div className="page-heading">
@@ -166,7 +166,7 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
         </button>
         <div className="heading-note calendar-date-note">
           <CalendarDays size={17} />
-          {today.toLocaleDateString(i18n.resolvedLanguage || "en", {
+          {today.toLocaleDateString(displayLocale(i18n.resolvedLanguage), {
             weekday: "short",
             month: "short",
             day: "numeric",
@@ -225,7 +225,7 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
               <div className="weekdays">
                 {Array.from({ length: 7 }, (_, i) => (
                   <span key={i}>
-                    {new Intl.DateTimeFormat(i18n.resolvedLanguage || "en", {
+                    {new Intl.DateTimeFormat(displayLocale(i18n.resolvedLanguage), {
                       weekday: "short",
                     })
                       .format(
@@ -236,7 +236,7 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
                           12,
                         ),
                       )
-                      .toLocaleUpperCase(i18n.resolvedLanguage || "en")}
+                      .toLocaleUpperCase(displayLocale(i18n.resolvedLanguage))}
                   </span>
                 ))}
               </div>
@@ -255,7 +255,7 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
                       >
                         <strong>{d.getDate()}</strong>
                         <span>
-                          {d.toLocaleDateString(i18n.resolvedLanguage || "en", {
+                          {d.toLocaleDateString(displayLocale(i18n.resolvedLanguage), {
                             month: "short",
                             weekday: "short",
                           })}
