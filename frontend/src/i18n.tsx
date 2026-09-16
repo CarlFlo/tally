@@ -166,7 +166,7 @@ export function LocalizationProvider({
 
   // English must be available before user-facing copy is rendered. This also
   // guarantees a safe UI if another locale becomes unavailable.
-  if (index.isPending || english.isPending) {
+  if (index.isPending || english.isPending || (activeLocale !== "en" && active.isPending)) {
     return <div className="startup">Tally</div>;
   }
 
