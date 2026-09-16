@@ -106,7 +106,6 @@ No personal qBittorrent address or API key was provided. No test or torrent subm
 
 The earlier disposable-container smoke test imported the real TVmaze show Severance: 19 episodes and three seasons, using four metadata requests. Calendar browsing and another profile's follow reused local data without additional metadata requests. Poster fetch, a verified backup, non-root execution, readiness, and restart persistence passed.
 
-`scripts/smoke.ps1` reproduces those checks against a **fresh disposable deployment** at `http://127.0.0.1:18081` by default. It creates profiles and imports a show; do not run it against a personal library.
 
 The 2026-09-11 dependency audit reported zero npm vulnerabilities and no reachable or imported-package Go vulnerabilities. GO-2026-5932 applied to the unused `golang.org/x/crypto/openpgp` package in a dependency module; Tally uses Argon2id, not OpenPGP. These are point-in-time results; dependencies were not changed in this update.
 
