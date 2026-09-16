@@ -28,6 +28,50 @@ func TestRegistrySeedsEnglishAndFallsBack(t *testing.T) {
 	if _, err = os.Stat(filepath.Join(dir, "locales", "en.json")); err != nil {
 		t.Fatal("English locale was not written to the config directory:", err)
 	}
+	if !registry.Valid("uk") {
+		t.Fatal("bundled Ukrainian locale was not available")
+	}
+	if _, err = os.Stat(filepath.Join(dir, "locales", "uk.json")); err != nil {
+		t.Fatal("Ukrainian locale was not written to the config directory:", err)
+	}
+}
+
+func TestRegistryPreservesExistingBundledLocale(t *testing.T) {
+	dir := t.TempDir()
+	locales := filepath.Join(dir, "locales")
+	if err := os.MkdirAll(locales, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	custom := []byte(`{
+		"_meta":{"locale":"uk","name":"Українська","direction":"ltr","catalogVersion":99},
+		"common":{"save":"Моє збереження"}
+	}`)
+	path := filepath.Join(locales, "uk.json")
+	if err := os.WriteFile(path, custom, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	registry, err := New(dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer registry.Close()
+
+	catalog, ok := registry.Catalog("uk")
+	if !ok {
+		t.Fatal("existing Ukrainian locale was not loaded")
+	}
+	common, ok := catalog.Messages["common"].(map[string]any)
+	if !ok || common["save"] != "Моє збереження" {
+		t.Fatalf("existing Ukrainian locale was overwritten: %#v", catalog.Messages["common"])
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != string(custom) {
+		t.Fatal("existing Ukrainian locale file was modified")
+	}
 }
 
 func TestRegistryShowsInvalidLocaleAndHotReloadsRepair(t *testing.T) {
