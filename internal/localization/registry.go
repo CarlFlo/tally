@@ -197,7 +197,15 @@ func (r *Registry) reload(notify bool) error {
 		path := filepath.Join(r.dir, file.Name())
 		data, readErr := os.ReadFile(path)
 		if readErr != nil {
+			code := strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))
 			slog.Warn("localization file unavailable", "file", file.Name(), "error", readErr)
+			next[code] = entry{status: Status{
+				Locale: code,
+				Name: code,
+				Valid: false,
+				Error: "Localization file could not be read.",
+				ErrorCode: "language.unreadableFile",
+			}}
 			continue
 		}
 		item, parseErr := parse(file.Name(), data)
