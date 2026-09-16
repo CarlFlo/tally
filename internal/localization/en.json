@@ -59,7 +59,8 @@
     "passwordHint": "Use {{min}}–{{max}} characters. Letters, numbers, and symbols are welcome.",
     "passwordOptional": "Password (optional)",
     "localeUnavailable": "This language cannot currently be selected because its localization file is invalid.",
-    "localeUnavailableReason": "{{reason}}"
+    "localeUnavailableReason": "{{reason}}",
+    "menuLink": "Profile"
   },
   "language": {
     "fallbackNotice": "The selected language is unavailable. Tally is temporarily using English.",
@@ -103,5 +104,26 @@
   },
   "footer": {
     "metadata": "TV metadata by TVmaze ↗"
+  },
+  "login": {
+    "eyebrow": "MAKE YOURSELF AT HOME",
+    "welcomeBack": "Welcome back, {{name}}.",
+    "setupPassword": "Set up your password, {{name}}.",
+    "who": "Who's keeping up?",
+    "subtitle": "Your shows, your progress, your next great episode.",
+    "footer": "A personal space for the shows you love.",
+    "choosePassword": "Choose a password to secure your profile before continuing.",
+    "passwordOrPin": "Password or PIN",
+    "setPasswordContinue": "Set password and continue",
+    "enterSpace": "Enter your space",
+    "forgotPassword": "Forgot password? Send recovery to server logs",
+    "chooseAnother": "Choose another profile",
+    "addProfile": "Add profile"
+  },
+  "passwordGate": {
+    "title": "Make it yours.",
+    "temporary": "Replace your temporary password to continue.",
+    "newPasswordOrPin": "New password or PIN",
+    "setNewPassword": "Set new password"
   }
 }
