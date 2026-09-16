@@ -27,6 +27,7 @@ Branch: `feature/torrent-search-downloads`
 ## In progress
 - [ ] Complete the full GitHub Checks workflow on the latest code.
 - [ ] Investigate and fix any remaining CI/test failures.
+- [x] Restored Jackett state in the existing settings persistence browser test so it cannot hide torrent navigation for subsequent shared-fixture tests.
 
 ## Review findings resolved
 - [x] Failed downloader attempts now invalidate torrent history even though failed HTTP mutations do not emit live-update events.

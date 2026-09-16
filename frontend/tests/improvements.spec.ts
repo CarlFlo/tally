@@ -213,6 +213,9 @@ test("settings categories persist connections, schedules, debug previews and sta
   ).json();
   expect(notificationSettings.data.timezone).toBe(deploymentSettings.timezone);
   const initialBoot = await (await page.request.get("/api/bootstrap")).json();
+  const initialSearchSettings = await (
+    await page.request.get("/api/settings/search")
+  ).json();
   const originalTimezone = initialBoot.preferences.timezone;
   const userTimezone =
     deploymentSettings.timezone === "America/New_York"
@@ -296,6 +299,17 @@ test("settings categories persist connections, schedules, debug previews and sta
   await expect(key).toHaveValue("plain-fixture-key");
   await expect(key).toHaveAttribute("type", "text");
   await expect(key).toHaveAttribute("autocomplete", "off");
+  const disabledSearchSettings = await (
+    await page.request.get("/api/settings/search")
+  ).json();
+  const restoreSearch = await page.request.put("/api/settings/search", {
+    headers,
+    data: {
+      data: initialSearchSettings.data,
+      revision: disabledSearchSettings.revision,
+    },
+  });
+  expect(restoreSearch.ok()).toBe(true);
   await page
     .getByRole("link", { name: "Scheduling & backups", exact: true })
     .click();
