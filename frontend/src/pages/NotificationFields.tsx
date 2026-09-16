@@ -2,15 +2,17 @@ import { ConnectionInput } from "../ConnectionInput";
 import type { ReactNode } from "react";
 import type { NotificationErrors } from "./notificationValidation";
 import { NotificationScheduleFields } from "./NotificationScheduleFields";
+import { useTranslation } from "react-i18next";
+import { i18n } from "../i18n";
 
 export const notificationEvents = [
-  ["system_error", "System errors", "Immediately"],
-  ["job_failed", "Failed jobs", "Immediately"],
-  ["show_added", "Shows added", "Immediately"],
-  ["show_removed", "Shows removed", "Immediately"],
-  ["watch_history_cleared", "Watch history cleared", "Immediately"],
-  ["profile_access_changed", "Profile access changes", "Immediately"],
-  ["episode_released", "New episode releases", "At your selected time"],
+  ["system_error", "notifications.systemErrors", "notifications.immediately"],
+  ["job_failed", "notifications.failedJobs", "notifications.immediately"],
+  ["show_added", "notifications.showsAdded", "notifications.immediately"],
+  ["show_removed", "notifications.showsRemoved", "notifications.immediately"],
+  ["watch_history_cleared", "notifications.historyCleared", "notifications.immediately"],
+  ["profile_access_changed", "notifications.profileAccess", "notifications.immediately"],
+  ["episode_released", "notifications.episodeReleased", "notifications.selectedTime"],
 ];
 
 export function NotificationFields({
@@ -28,16 +30,17 @@ export function NotificationFields({
   timeFormat: string;
   changeTime: (value: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <>
       <label>
-        Service
+        {t("notifications.service")}
         <select
           value={data.type}
           onChange={(e) => change("type", e.target.value)}
         >
-          <option value="webhook">Webhook</option>
-          <option value="discord">Discord</option>
+          <option value="webhook">{t("notifications.webhook")}</option>
+          <option value="discord">{t("notifications.discord")}</option>
         </select>
       </label>
       {data.type === "discord" ? (
@@ -46,7 +49,7 @@ export function NotificationFields({
         <WebhookFields data={data} change={change} errors={errors} />
       )}
       <fieldset className="notification-events">
-        <legend>Subscribe to events</legend>
+        <legend>{t("notifications.subscribe")}</legend>
         {notificationEvents.map(([key, label, timing]) => (
           <label key={key} className="toggle-setting">
             <input
@@ -62,8 +65,8 @@ export function NotificationFields({
               }
             />
             <span>
-              {label}
-              <small>{timing}</small>
+              {t(label)}
+              <small>{t(timing)}</small>
             </span>
           </label>
         ))}
@@ -80,12 +83,13 @@ export function NotificationFields({
 }
 
 function DiscordFields({ data, change, errors }: any) {
+  const { t } = useTranslation();
   return (
     <>
-      <Field label="Discord webhook URL" error={errors.discord_url}>
+      <Field label={t("notifications.discordURL")} error={errors.discord_url}>
         <ConnectionInput
-          label="Discord webhook URL"
-          aria-label="Discord webhook URL"
+          label={t("notifications.discordURL")}
+          aria-label={t("notifications.discordURL")}
           secret
           type="url"
           value={data.discord_url}
@@ -95,7 +99,7 @@ function DiscordFields({ data, change, errors }: any) {
           onChange={(e) => change("discord_url", e.target.value)}
         />
       </Field>
-      <Field label="Bot display name" error={errors.bot_name}>
+      <Field label={t("notifications.botName")} error={errors.bot_name}>
         <input
           value={data.bot_name}
           maxLength={80}
@@ -104,11 +108,11 @@ function DiscordFields({ data, change, errors }: any) {
           onChange={(e) => change("bot_name", e.target.value)}
         />
       </Field>
-      <Field label="Custom message prefix" error={errors.prefix}>
+      <Field label={t("notifications.prefix")} error={errors.prefix}>
         <input
           value={data.prefix}
           maxLength={500}
-          placeholder="TV update:"
+          placeholder={t("notifications.prefixPlaceholder")}
           aria-invalid={!!errors.prefix}
           onChange={(e) => change("prefix", e.target.value)}
         />
@@ -118,13 +122,14 @@ function DiscordFields({ data, change, errors }: any) {
 }
 
 function WebhookFields({ data, change, errors }: any) {
+  const { t } = useTranslation();
   const preview = webhookPreview(data.body);
   return (
     <>
-      <Field label="Webhook URL" error={errors.url}>
+      <Field label={t("notifications.webhookURL")} error={errors.url}>
         <ConnectionInput
-          label="Webhook URL"
-          aria-label="Webhook URL"
+          label={t("notifications.webhookURL")}
+          aria-label={t("notifications.webhookURL")}
           secret
           type="url"
           value={data.url}
@@ -134,7 +139,7 @@ function WebhookFields({ data, change, errors }: any) {
           onChange={(e) => change("url", e.target.value)}
         />
       </Field>
-      <Field label="Payload body (JSON)" error={errors.body}>
+      <Field label={t("notifications.payload")} error={errors.body}>
         <textarea
           className="notification-body"
           value={data.body}
@@ -146,14 +151,14 @@ function WebhookFields({ data, change, errors }: any) {
         />
       </Field>
       <p className="muted small-text">
-        Use{" "}
-        {"{{message}}, {{event}}, {{show}}, {{time}}, {{level}}, or {{key}}"} in
-        JSON string values.
+{t("notifications.placeholdersHelp", {
+          tokens: "{{message}}, {{event}}, {{show}}, {{time}}, {{level}}, or {{key}}",
+        })}
       </p>
       {preview && (
         <pre
           className="notification-preview"
-          aria-label="Webhook payload preview"
+          aria-label={t("notifications.preview")}
         >
           {preview}
         </pre>
@@ -183,7 +188,7 @@ function Field({
 function webhookPreview(body: string) {
   try {
     const values: Record<string, string> = {
-      message: "New episode available",
+      message: i18n.t("notifications.previewMessage"),
       event: "episode_released",
       show: "Breaking Bad",
       time: "2026-09-13T20:00:00Z",

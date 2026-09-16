@@ -10,6 +10,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, useApp } from "./lib";
 import { queryKeys } from "./queryKeys";
 import { invalidateResources } from "./queryInvalidation";
+import { useTranslation } from "react-i18next";
 
 type Action = {
   external_id: number;
@@ -29,6 +30,7 @@ const Context = createContext<{
 export const useLibraryActions = () => useContext(Context);
 
 export function LibraryActionsProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   const { boot, notify } = useApp();
   const cache = useQueryClient();
   const [optimistic, setOptimistic] = useState<Record<number, boolean>>({});
@@ -83,7 +85,7 @@ export function LibraryActionsProvider({ children }: { children: ReactNode }) {
       const token = `${action.external_id}:${action.revision}`;
       if (action.status === "failed" && !seen.current.has(token)) {
         seen.current.add(token);
-        notify(action.error || `Could not update ${action.name}.`, true, () =>
+        notify(action.error || t("library.updateFailed", { name: action.name }), true, () =>
           submit(
             {
               show: { id: action.external_id, name: action.name },

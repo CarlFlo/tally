@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Plus, Search, Star, X } from "lucide-react";
 import { api, Busy, Dialog, Empty, ErrorState, Poster, useApp } from "../lib";
@@ -6,6 +7,7 @@ import { useLibraryActions } from "../LibraryActions";
 import { queryKeys } from "../queryKeys";
 
 export function AddShow({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
   const [selected, setSelected] = useState<any>(null);
@@ -47,27 +49,27 @@ export function AddShow({ onClose }: { onClose: () => void }) {
       onClick={() => library.toggle(result)}
     >
       {library.followed(result) ? <Check size={17} /> : <Plus size={17} />}
-      <span>{library.followed(result) ? "Added" : "Add"}</span>
+      <span>{library.followed(result) ? t("discovery.added") : t("common.add")}</span>
     </button>
   );
   return (
     <>
       <Dialog
-        title="Find your next favorite"
+        title={t("discovery.title")}
         onClose={onClose}
         className="discovery-dialog"
       >
         <p className="muted dialog-subtitle">
           {browsing
-            ? "Highly rated shows airing recently. Find something worth following."
-            : "Search TVmaze. Your next story is out there."}
+            ? t("discovery.browsingHelp")
+            : t("discovery.searchHelp")}
         </p>
         <div className="search-input large-search">
           <Search size={21} />
           <input
             data-autofocus
-            aria-label="Search for a TV show"
-            placeholder="Search shows"
+            aria-label={t("discovery.searchLabel")}
+            placeholder={t("discovery.search")}
             value={query}
             maxLength={200}
             onChange={(e) => setQuery(e.target.value)}
@@ -78,7 +80,7 @@ export function AddShow({ onClose }: { onClose: () => void }) {
             query && (
               <button
                 className="icon-button"
-                aria-label="Clear search"
+                aria-label={t("discovery.clear")}
                 onClick={() => setQuery("")}
               >
                 <X size={17} />
@@ -88,11 +90,11 @@ export function AddShow({ onClose }: { onClose: () => void }) {
         </div>
         <div className="discovery-label">
           <span className="eyebrow">
-            {browsing ? "RECENTLY ON AIR · RATED 7+" : "SEARCH RESULTS"}
+            {browsing ? t("discovery.recently") : t("discovery.results")}
           </span>
           {library.pending > 0 && (
             <span className="muted small-text">
-              {library.pending} queued · keep exploring
+              {t("discovery.queued", { count: library.pending })}
             </span>
           )}
         </div>
@@ -100,18 +102,18 @@ export function AddShow({ onClose }: { onClose: () => void }) {
           <ErrorState error={results.error} retry={() => results.refetch()} />
         )}
         {!browsing && query.trim().length < 2 ? (
-          <Empty title="Keep typing" icon={<Search size={24} />}>
-            Use at least two characters to search.
+          <Empty title={t("discovery.keepTyping")} icon={<Search size={24} />}>
+            {t("discovery.twoChars")}
           </Empty>
         ) : results.isPending ? (
           <div className="discovery-loading">
-            <Busy /> Finding shows…
+            <Busy /> {t("discovery.finding")}
           </div>
         ) : !results.data?.length ? (
-          <Empty title={browsing ? "Find your next story" : "No shows found"}>
+          <Empty title={browsing ? t("discovery.findStory") : t("discovery.noShows")}>
             {browsing
-              ? "Search for a title to start your watchlist."
-              : "Try another title or check the spelling."}
+              ? t("discovery.startWatchlist")
+              : t("discovery.tryAnother")}
           </Empty>
         ) : (
           <div className="discovery-grid">
@@ -122,7 +124,7 @@ export function AddShow({ onClose }: { onClose: () => void }) {
                   role="button"
                   tabIndex={0}
                   onClick={() => setSelected(result)}
-                  aria-label={`About ${result.show.name}`}
+                  aria-label={t("discovery.about", { name: result.show.name })}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
@@ -163,21 +165,20 @@ export function AddShow({ onClose }: { onClose: () => void }) {
           </div>
         )}
         <div className="dialog-footnote">
-          TVmaze ratings · Recent US broadcast & worldwide streaming · Click
-          Added to undo
+{t("discovery.footnote")}
         </div>
         {boot.preferences.debug_mode && (
           <button
             className="text-button debug-button"
             onClick={() =>
               notify(
-                "Preview: the show could not be added. Your library has not changed.",
+                t("discovery.previewAddFailed"),
                 true,
-                () => notify("Preview retry complete."),
+                () => notify(t("discovery.previewRetry")),
               )
             }
           >
-            Preview add failure
+            {t("discovery.previewFailure")}
           </button>
         )}
       </Dialog>
@@ -204,7 +205,7 @@ export function AddShow({ onClose }: { onClose: () => void }) {
                 )}
               </div>
               <p className="description">
-                {selected.show.summary || "No summary available."}
+                {selected.show.summary || t("discovery.noSummary")}
               </p>
               <div className="genre-list">
                 {selected.show.genres?.map((g: string) => (

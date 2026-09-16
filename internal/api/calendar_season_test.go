@@ -8,7 +8,7 @@ import (
 
 func TestCalendarSeasonSizeUsesSharedDeclaredMetadata(t *testing.T) {
 	s, h, _ := testServer(t, "disabled")
-	if _, err := s.DB.Exec(`INSERT INTO profiles VALUES('profile-member','Alex','mint',1);
+	if _, err := s.DB.Exec(`INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-member','Alex','mint',1);
  INSERT INTO shows(id,name) VALUES('known','Known season'),('unknown','Unknown season');
  INSERT INTO seasons(id,show_id,number,episode_count) VALUES('season','known',2,8);
  INSERT INTO episodes(id,show_id,season,number,name,airdate) VALUES

@@ -13,7 +13,7 @@ import (
 
 func TestAdministratorRoleIsTransferableWithBackendGuard(t *testing.T) {
 	s, h, _ := testServer(t, "disabled")
-	if _, err := s.DB.Exec("INSERT INTO profiles VALUES('profile-member','Alex','mint',1); INSERT INTO profiles VALUES('profile-member-2','Sam','mint',2)"); err != nil {
+	if _, err := s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-member','Alex','mint',1); INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-member-2','Sam','mint',2)"); err != nil {
 		t.Fatal(err)
 	}
 	member := &http.Cookie{Name: "tally_profile", Value: "profile-member"}
@@ -52,7 +52,7 @@ func TestLocalAdminDemotionAndDeletionRequireActingAdminsPassword(t *testing.T) 
 	if _, err = s.DB.Exec("INSERT INTO local_credentials VALUES('profile-admin',?,0)", adminHash); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = s.DB.Exec("INSERT INTO profiles VALUES('profile-member','Alex','mint',1)"); err != nil {
+	if _, err = s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-member','Alex','mint',1)"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = s.DB.Exec("INSERT INTO local_credentials VALUES('profile-member',?,0)", userHash); err != nil {

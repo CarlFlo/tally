@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Plug, Save } from "lucide-react";
 import { api, Busy, ErrorState, useApp, useLocal } from "../lib";
 import { invalidateResources } from "../queryInvalidation";
+import { useTranslation } from "react-i18next";
 
 type Field = {
   key: string;
@@ -27,6 +28,7 @@ type ClientData = {
 };
 
 export function DownloaderSettings() {
+  const { t } = useTranslation();
   const query = useLocal<ClientData>(
     "downloader",
     "/downloader?reveal=1",
@@ -37,11 +39,10 @@ export function DownloaderSettings() {
     <section className="panel settings-card client-settings">
       <h3>
         <Plug size={19} />
-        Torrent client
+        {t("downloader.title")}
       </h3>
       <p className="muted">
-        Choose where to send the torrents you select. This connection is shared
-        by all profiles.
+{t("downloader.description")}
       </p>
       {query.error && (
         <ErrorState error={query.error} retry={() => query.refetch()} />
@@ -68,6 +69,7 @@ function ClientForm({
   data: ClientData;
   reload: () => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const { notify } = useApp();
   const cache = useQueryClient();
   const form = useRef<HTMLFormElement>(null);
@@ -137,7 +139,7 @@ function ClientForm({
           "downloader",
           "capabilities",
         ]);
-        notify(adapter ? "Torrent client saved" : "Torrent client disabled");
+        notify(t(adapter ? "downloader.saved" : "downloader.disabled"));
       }
     } catch (error) {
       if (signal?.aborted) return;
@@ -150,7 +152,7 @@ function ClientForm({
     <form ref={form} onSubmit={(event) => run("save", event)}>
       <fieldset disabled={busy !== null} className="client-fields">
         <label>
-          Torrent client
+          {t("downloader.title")}
           <select
             value={adapter}
             onChange={(event) => {
@@ -161,7 +163,7 @@ function ClientForm({
               setFeedback(null);
             }}
           >
-            <option value="">No torrent client</option>
+            <option value="">{t("downloader.none")}</option>
             {data.adapters.map((client) => (
               <option key={client.id} value={client.id}>
                 {client.name}
@@ -188,7 +190,7 @@ function ClientForm({
                   disabled={field.secret && cleared[field.key]}
                   placeholder={
                     field.secret && saved
-                      ? "Saved — leave blank to keep it"
+                      ? t("connection.savedPlaceholder")
                       : field.placeholder
                   }
                   aria-describedby={field.help ? `client-${field.key}-help` : undefined}
@@ -217,7 +219,7 @@ function ClientForm({
                       setFeedback(null);
                     }}
                   />
-                  Clear saved {field.label.toLowerCase()}
+                  {t("connection.clearSaved", { label: field.label.toLowerCase() })}
                 </label>
               )}
             </div>
@@ -225,8 +227,7 @@ function ClientForm({
         })}
         {!adapter && (
           <p className="muted small-text">
-            You can still search and copy magnets. Sending becomes available
-            after you configure a client.
+{t("downloader.noClientHelp")}
           </p>
         )}
         <div className="client-actions">
@@ -236,10 +237,10 @@ function ClientForm({
             disabled={!adapter}
             onClick={() => run("test")}
           >
-            {busy === "test" ? <Busy /> : <Plug size={17} />}Test connection
+            {busy === "test" ? <Busy /> : <Plug size={17} />}{t("connection.test")}
           </button>
           <button className="button primary" type="submit">
-            {busy === "save" ? <Busy /> : <Save size={17} />}Save torrent client
+            {busy === "save" ? <Busy /> : <Save size={17} />}{t("downloader.save")}
           </button>
         </div>
       </fieldset>
@@ -259,7 +260,7 @@ function ClientForm({
           disabled={busy !== null}
           onClick={reload}
         >
-          Reload saved settings
+          {t("connection.reload")}
         </button>
       )}
     </form>

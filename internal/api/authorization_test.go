@@ -13,7 +13,7 @@ import (
 func TestCSRFAndAuthenticatedIsolation(t *testing.T) {
 	s, h, _ := testServer(t, "local")
 	hash, _ := auth.Hash("1234")
-	_, e := s.DB.Exec("INSERT INTO local_credentials VALUES('profile-admin',?,0); INSERT INTO profiles VALUES('profile-member','Second','mint',?); INSERT INTO local_credentials VALUES('profile-member',?,0)", hash, time.Now().Unix(), hash)
+	_, e := s.DB.Exec("INSERT INTO local_credentials VALUES('profile-admin',?,0); INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-member','Second','mint',?); INSERT INTO local_credentials VALUES('profile-member',?,0)", hash, time.Now().Unix(), hash)
 	if e != nil {
 		t.Fatal(e)
 	}

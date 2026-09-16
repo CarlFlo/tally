@@ -1,8 +1,9 @@
 import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
-import { dateTimeFormatter } from "./dateFormatting";
-import { requestPool } from "./requestPool";
+import { dateTimeFormatter, displayLocale } from "./dateFormatting";
+import { requestPool, RequestPoolOverloadError } from "./requestPool";
 import { queryKeys } from "./queryKeys";
 import { invalidateResources } from "./queryInvalidation";
+import { i18n } from "./i18n";
 import {
   ArrowUpRight,
   Check,
@@ -38,7 +39,7 @@ export async function api<T = any>(
 ): Promise<T> {
   const deadline = new AbortController();
   const timer = window.setTimeout(
-    () => deadline.abort(new DOMException("Request timed out", "TimeoutError")),
+    () => deadline.abort(new DOMException(i18n.t("errors.requestTimedOut"), "TimeoutError")),
     90_000,
   );
   const combined = signal
@@ -64,10 +65,22 @@ export async function api<T = any>(
       if (!response.ok) {
         if (response.status === 401 || data.code === "password_change_required")
           void invalidateResources(queryClient, ["bootstrap"]);
-        throw new Error(data.error || `Request failed (${response.status})`);
+        const fallback = data.error || i18n.t("errors.requestFailed", { status: response.status });
+        const message = data.code
+          ? i18n.t("errors." + data.code, { defaultValue: fallback })
+          : fallback;
+        throw new Error(message);
       }
       return data;
     });
+  } catch (error) {
+    if (error instanceof RequestPoolOverloadError)
+      throw new Error(
+        i18n.t("errors.tooManyRequests", {
+          defaultValue: "Too many pending requests. Please try again.",
+        }),
+      );
+    throw error;
   } finally {
     window.clearTimeout(timer);
   }
@@ -76,6 +89,7 @@ export type Profile = {
   id: string;
   display_name: string;
   avatar: string;
+  locale: string;
   has_password?: boolean | number;
   is_admin?: boolean | number;
 };
@@ -160,22 +174,6 @@ export type Episode = {
   network: string;
   type: string;
 };
-export const en = {
-  nav: {
-    system: "System",
-    calendar: "Calendar",
-    shows: "My shows",
-    search: "Torrent search",
-    jobs: "Jobs",
-    statistics: "Statistics",
-    settings: "Settings",
-    logs: "Logs",
-    profile: "My profile",
-    login: "Sign in",
-  },
-  brand: "Tally",
-  tagline: "A little more in the loop.",
-};
 export const AppContext = createContext<{
   boot: Boot;
   notify: (message: string, error?: boolean, retry?: () => void) => void;
@@ -205,7 +203,7 @@ export function SignOutButton({
       }}
     >
       {busy ? <Busy /> : <LogOut size={17} />}
-      {busy ? "Signing out…" : "Sign out"}
+      {busy ? i18n.t("profile.signingOut") : i18n.t("profile.signOut")}
     </button>
   );
 }
@@ -260,7 +258,7 @@ export function Poster({
       {image && !failed ? (
         <img
           src={imageURL(image)}
-          alt={name + " poster"}
+          alt={i18n.t("common.poster", { name })}
           loading="lazy"
           onError={() => setFailed(true)}
         />
@@ -274,7 +272,7 @@ export function Poster({
   );
 }
 export function Busy() {
-  return <LoaderCircle size={17} className="spin" aria-label="Loading" />;
+  return <LoaderCircle size={17} className="spin" aria-label={i18n.t("common.loading")} />;
 }
 export function Empty({
   icon = <Tv size={30} />,
@@ -308,7 +306,7 @@ export function ErrorState({
       <span>{error.message}</span>
       {retry && (
         <button className="button small" onClick={retry}>
-          Try again
+          {i18n.t("common.retry")}
         </button>
       )}
     </div>
@@ -358,7 +356,7 @@ export function Dialog({
         <h2>{title}</h2>
         <button
           className="icon-button"
-          aria-label="Close dialog"
+          aria-label={i18n.t("common.closeDialog")}
           onClick={onClose}
         >
           <X size={20} />
@@ -386,7 +384,7 @@ export function Confirm({
       <p className="muted">{message}</p>
       <div className="dialog-actions">
         <button className="button" onClick={onClose}>
-          Cancel
+          {i18n.t("common.cancel")}
         </button>
         <button
           className="button danger"
@@ -403,7 +401,7 @@ export function Confirm({
             }
           }}
         >
-          {busy && <Busy />}Confirm
+          {busy && <Busy />}{i18n.t("common.confirm")}
         </button>
       </div>
     </Dialog>
@@ -423,7 +421,7 @@ export function useLocal<T>(
 export function episodeCode(e: Episode) {
   return e.number
     ? `S${String(e.season).padStart(2, "0")}E${String(e.number).padStart(2, "0")}`
-    : `S${String(e.season).padStart(2, "0")} · Special`;
+    : `S${String(e.season).padStart(2, "0")} · ${i18n.t("common.special")}`;
 }
 export function localDay(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -440,19 +438,19 @@ export function episodeDay(e: Episode, timezone: string) {
 }
 export function timeLabel(e: Episode, prefs: Prefs) {
   return e.airstamp && Number.isFinite(new Date(e.airstamp).getTime())
-    ? dateTimeFormatter("en", {
+    ? dateTimeFormatter(displayLocale(i18n.resolvedLanguage), {
         timeZone: prefs.timezone,
         hour: "numeric",
         minute: "2-digit",
         hour12: prefs.time_format === "12h",
       }).format(new Date(e.airstamp))
-    : "Time TBA";
+    : i18n.t("calendar.timeTBA");
 }
 export function dateLabel(value: number | string | null) {
-  if (!value) return "Not yet";
+  if (!value) return i18n.t("calendar.notYet");
   const prefs = queryClient.getQueryData<Boot>(queryKeys.bootstrap())?.preferences;
   const date = new Date(typeof value === "number" ? value * 1000 : value);
-  if (!Number.isFinite(date.getTime())) return "Date TBA";
+  if (!Number.isFinite(date.getTime())) return i18n.t("calendar.dateTBA");
   const day = dateTimeFormatter("en-CA", {
     timeZone: prefs?.timezone,
     year: "numeric",
@@ -462,7 +460,7 @@ export function dateLabel(value: number | string | null) {
   return (
     dateOnly(day) +
     " · " +
-    dateTimeFormatter("en", {
+    dateTimeFormatter(displayLocale(i18n.resolvedLanguage), {
       timeZone: prefs?.timezone,
       hour: "2-digit",
       minute: "2-digit",
@@ -471,15 +469,15 @@ export function dateLabel(value: number | string | null) {
   );
 }
 export function dateOnly(day: string) {
-  if (!day) return "Date TBA";
+  if (!day) return i18n.t("calendar.dateTBA");
   const date = new Date(day + "T12:00:00Z");
-  if (!Number.isFinite(date.getTime())) return "Date TBA";
+  if (!Number.isFinite(date.getTime())) return i18n.t("calendar.dateTBA");
   const format = queryClient.getQueryData<Boot>(queryKeys.bootstrap())?.preferences
     ?.date_format;
   const [year, month, dateNumber] = day.split("-");
   if (format === "yyyy-MM-dd") return day;
   if (format === "MM/dd/yyyy") return `${month}/${dateNumber}/${year}`;
-  return dateTimeFormatter("en-GB", {
+  return dateTimeFormatter(displayLocale(i18n.resolvedLanguage), {
     timeZone: "UTC",
     day: "numeric",
     month: "short",
@@ -511,9 +509,13 @@ export function EpisodeDrawer({
     try {
       await api("/episodes/" + ep.id, "PATCH", { [field]: value });
       notify(
-        value
-          ? `Marked ${field}`
-          : `Marked ${field === "watched" ? "unwatched" : "not downloaded"}`,
+        field === "watched"
+          ? value
+            ? i18n.t("calendar.markedWatched")
+            : i18n.t("calendar.markedUnwatched")
+          : value
+            ? i18n.t("calendar.markedDownloaded")
+            : i18n.t("calendar.markedNotDownloaded"),
       );
       await invalidateResources(cache, ["calendar", "show", "shows"]);
     } catch (e) {
@@ -524,7 +526,7 @@ export function EpisodeDrawer({
     }
   }
   return (
-    <Dialog title="Episode details" onClose={onClose} drawer>
+    <Dialog title={i18n.t("calendar.episodeDetails")} onClose={onClose} drawer>
       <div className="episode-hero">
         <Poster image={ep.show_image} name={ep.show_name} />
         <div>
@@ -534,12 +536,12 @@ export function EpisodeDrawer({
           <span className="muted small-text">
             {dateOnly(episodeDay(ep, boot.preferences.timezone))} ·{" "}
             {timeLabel(ep, boot.preferences)}
-            {ep.runtime ? ` · ${ep.runtime} min` : ""}
+            {ep.runtime ? ` · ${ep.runtime} ${i18n.t("common.minuteShort")}` : ""}
           </span>
         </div>
       </div>
       <p className="description">
-        {ep.summary || "No episode summary is available yet."}
+        {ep.summary || i18n.t("calendar.noEpisodeSummary")}
       </p>
       <div className="drawer-actions">
         <button
@@ -548,7 +550,7 @@ export function EpisodeDrawer({
           onClick={() => toggle("watched")}
         >
           <Check size={18} />
-          {ep.watched ? "Watched" : "Mark watched"}
+          {ep.watched ? i18n.t("calendar.watched") : i18n.t("calendar.markWatched")}
         </button>
         <button
           className={"button " + (ep.downloaded ? "active" : "")}
@@ -556,7 +558,7 @@ export function EpisodeDrawer({
           onClick={() => toggle("downloaded")}
         >
           <Download size={18} />
-          {ep.downloaded ? "Downloaded" : "Mark downloaded"}
+          {ep.downloaded ? i18n.t("calendar.downloaded") : i18n.t("calendar.markDownloaded")}
         </button>
         <button
           className="button primary"
@@ -567,13 +569,13 @@ export function EpisodeDrawer({
                 encodeURIComponent(
                   ep.show_name +
                     " " +
-                    episodeCode(ep).replace(" · Special", ""),
+                    episodeCode(ep).replace(` · ${i18n.t("common.special")}`, ""),
                 ),
             );
           }}
         >
           <Search size={18} />
-          Search torrents
+          {i18n.t("shows.searchTorrents")}
         </button>
         <button
           className="button ghost"
@@ -582,7 +584,7 @@ export function EpisodeDrawer({
             navigate("/shows/" + ep.show_id);
           }}
         >
-          View show
+          {i18n.t("shows.viewShow")}
           <ArrowUpRight size={17} />
         </button>
       </div>

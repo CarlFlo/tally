@@ -16,6 +16,7 @@ import (
 	"github.com/CarlFlo/tally/internal/config"
 	"github.com/CarlFlo/tally/internal/database"
 	"github.com/CarlFlo/tally/internal/live"
+	"github.com/CarlFlo/tally/internal/localization"
 	"github.com/CarlFlo/tally/internal/metadata"
 	"github.com/CarlFlo/tally/internal/providers"
 	"github.com/CarlFlo/tally/internal/torrent"
@@ -59,8 +60,13 @@ func testServer(t *testing.T, mode string) (*Server, http.Handler, *fakeTV) {
 	t.Cleanup(func() { p.Close() })
 	tv := &fakeTV{}
 	hub := live.New()
+	locales, e := localization.New(dir, func() { hub.Publish("", "locales") })
+	if e != nil {
+		t.Fatal(e)
+	}
+	t.Cleanup(func() { locales.Close() })
 	b := &backup.Service{DB: db, DataDir: dir, Path: filepath.Join(dir, "backups"), Keep: 2}
-	s := &Server{DB: db, Backup: b, Config: c, Auth: auth.New(db, c), Metadata: &metadata.Service{DB: db, Provider: tv}, Control: p, Events: hub}
+	s := &Server{DB: db, Backup: b, Config: c, Auth: auth.New(db, c), Metadata: &metadata.Service{DB: db, Provider: tv}, Control: p, Events: hub, Locales: locales}
 	s.Metadata.OnChange = hub.Publish
 	s.Clients = &torrent.ClientStore{DB: db, Control: p}
 	return s, s.Handler(), tv

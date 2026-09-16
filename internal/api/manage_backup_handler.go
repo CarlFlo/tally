@@ -43,9 +43,6 @@ func (s *Server) deleteBackup(w http.ResponseWriter, r *http.Request, _ auth.Ses
 	if err != nil {
 		return apiError{409, "backup could not be deleted: " + err.Error()}
 	}
-	if s.Events != nil {
-		s.Events.Publish("", "backups")
-	}
 	jsonResponse(w, 200, map[string]string{"status": "deleted"})
 	return nil
 }

@@ -16,3 +16,9 @@ export function dateTimeFormatter(
   }
   return formatter;
 }
+
+
+export function displayLocale(locale?: string | null): string {
+  if (!locale || locale === "en") return "en-GB";
+  return locale;
+}

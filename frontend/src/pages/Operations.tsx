@@ -19,6 +19,8 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
+import { displayLocale } from "../dateFormatting";
 import { NavLink } from "react-router-dom";
 import {
   api,
@@ -45,10 +47,17 @@ import { DownloaderSettings } from "./DownloaderSettings";
 import { NotificationSettings } from "./NotificationSettings";
 import { invalidateResources } from "../queryInvalidation";
 import { queryKeys } from "../queryKeys";
+import { useLocalization } from "../i18n";
+
+function normalizeHexColor(value: string) {
+  if (!value || value.startsWith("#")) return value;
+  return `#${value}`;
+}
 
 export { JobsPage } from "./Jobs";
 
 export function StatisticsPage() {
+  const { t, i18n } = useTranslation();
   const { boot, notify } = useApp();
   const cache = useQueryClient();
   const requestLimit = boot.preferences.request_limit || 20,
@@ -65,7 +74,7 @@ export function StatisticsPage() {
   ) {
     return (
       <label className="row-limit">
-        Show{" "}
+        {t("statistics.show")}{" "}
         <select
           aria-label={label}
           value={value}
@@ -110,9 +119,9 @@ export function StatisticsPage() {
     <div className="page">
       <div className="page-heading">
         <div>
-          <span className="eyebrow">LESS GUESSWORK. MORE VISIBILITY.</span>
+          <span className="eyebrow">{t("statistics.eyebrow")}</span>
           <h1>
-            Statistics<span className="accent">.</span>
+            {t("statistics.title")}<span className="accent">.</span>
           </h1>
         </div>
       </div>
@@ -120,25 +129,25 @@ export function StatisticsPage() {
       <div className="stats-grid">
         {[
           {
-            label: "Provider requests",
+            label: t("statistics.providerRequests"),
             value: sum("requests"),
             icon: <Globe size={21} />,
             cls: "purple",
           },
           {
-            label: "Calls avoided",
+            label: t("statistics.callsAvoided"),
             value: sum("avoided"),
             icon: <ShieldCheck size={21} />,
             cls: "mint",
           },
           {
-            label: "Cache hits",
+            label: t("statistics.cacheHits"),
             value: sum("cache_hits") + sum("conditional_hits"),
             icon: <Database size={21} />,
             cls: "amber",
           },
           {
-            label: "Failed requests",
+            label: t("statistics.failedRequests"),
             value: sum("failures"),
             icon: <Activity size={21} />,
             cls: "rose",
@@ -146,35 +155,35 @@ export function StatisticsPage() {
         ].map((m) => (
           <div className="panel stat-card" key={m.label}>
             <span className={"metric-icon " + m.cls}>{m.icon}</span>
-            <strong>{m.value.toLocaleString()}</strong>
+            <strong>{m.value.toLocaleString(displayLocale(i18n.resolvedLanguage))}</strong>
             <span>{m.label}</span>
-            <small>Last 30 days</small>
+            <small>{t("statistics.last30")}</small>
           </div>
         ))}
       </div>
       <section className="panel chart-panel">
         <div className="section-heading">
-          <h3>Request activity</h3>
+          <h3>{t("statistics.requestActivity")}</h3>
           <div className="legend">
             <span>
               <i className="legend-dot purple" />
-              Requests
+              {t("statistics.requests")}
             </span>
             <span>
               <i className="legend-dot mint" />
-              Avoided
+              {t("statistics.avoided")}
             </span>
           </div>
         </div>
         <div
           className="bar-chart"
           role="img"
-          aria-label={`Last 30 days: ${sum("requests")} requests and ${sum("avoided")} calls avoided`}
+          aria-label={t("statistics.chartSummary", { requests: sum("requests"), avoided: sum("avoided") })}
         >
           {days.map((d) => (
             <div
               key={d.day}
-              title={`${d.day}: ${d.requests} requests, ${d.avoided} avoided`}
+              title={t("statistics.chartPoint", { day: d.day, requests: d.requests, avoided: d.avoided })}
             >
               <i
                 className="chart-avoided"
@@ -189,25 +198,25 @@ export function StatisticsPage() {
         </div>
         <div className="chart-axis">
           <span>{days[0].day}</span>
-          <span>Today</span>
+          <span>{t("statistics.today")}</span>
         </div>
       </section>
       <div className="section-heading run-heading">
-        <h2>Providers</h2>
-        <span className="muted small-text">Shared across all profiles</span>
+        <h2>{t("statistics.providers")}</h2>
+        <span className="muted small-text">{t("statistics.shared")}</span>
       </div>
       <div className="panel table-scroll">
         {data?.summary.length ? (
           <table>
             <thead>
               <tr>
-                <th>Provider</th>
-                <th>Status</th>
-                <th>Success / failed</th>
-                <th>Retries / 429s</th>
-                <th>304s</th>
-                <th>Avg. latency</th>
-                <th>Backoff until</th>
+                <th>{t("statistics.provider")}</th>
+                <th>{t("common.status")}</th>
+                <th>{t("statistics.successFailed")}</th>
+                <th>{t("statistics.retries429")}</th>
+                <th>{t("statistics.notModified")}</th>
+                <th>{t("statistics.avgLatency")}</th>
+                <th>{t("statistics.backoff")}</th>
               </tr>
             </thead>
             <tbody>
@@ -222,7 +231,7 @@ export function StatisticsPage() {
                     </td>
                     <td>
                       <span className={"badge " + (state?.state || "healthy")}>
-                        {state?.state || "healthy"}
+                        {state?.state || t("statistics.healthy")}
                       </span>
                     </td>
                     <td>
@@ -244,27 +253,27 @@ export function StatisticsPage() {
             </tbody>
           </table>
         ) : (
-          <Empty title="A quiet start.">
-            Provider statistics appear after your first search or sync.
+          <Empty title={t("statistics.quietTitle")}>
+            {t("statistics.quietHelp")}
           </Empty>
         )}
       </div>
       <div className="section-heading run-heading">
-        <h2>Recent requests</h2>
-        {limitControl("request_limit", "Recent requests rows", requestLimit)}
+        <h2>{t("statistics.recent")}</h2>
+        {limitControl("request_limit", t("statistics.recentRows"), requestLimit)}
       </div>
       <div className="panel table-scroll">
         {data?.requests.length ? (
           <table>
             <thead>
               <tr>
-                <th>Provider</th>
-                <th>Trigger</th>
-                <th>Entity</th>
-                <th>Outcome</th>
-                <th>HTTP</th>
-                <th>Latency</th>
-                <th>Time</th>
+                <th>{t("statistics.provider")}</th>
+                <th>{t("statistics.trigger")}</th>
+                <th>{t("statistics.entity")}</th>
+                <th>{t("statistics.outcome")}</th>
+                <th>{t("statistics.http")}</th>
+                <th>{t("statistics.latency")}</th>
+                <th>{t("common.time")}</th>
               </tr>
             </thead>
             <tbody>
@@ -282,16 +291,16 @@ export function StatisticsPage() {
             </tbody>
           </table>
         ) : (
-          <Empty title="Nothing to report yet.">
-            Local calendar browsing doesn't make provider requests.
+          <Empty title={t("statistics.emptyRequests")}>
+            {t("statistics.emptyRequestsHelp")}
           </Empty>
         )}
       </div>
       {data && (
         <section className="panel next-scans">
           <div className="section-heading">
-            <h3>Next metadata checks</h3>
-            {limitControl("scan_limit", "Next metadata checks rows", scanLimit)}
+            <h3>{t("statistics.nextChecks")}</h3>
+            {limitControl("scan_limit", t("statistics.nextRows"), scanLimit)}
           </div>
           {data.next_scans.map((s: any) => (
             <div className="setting-row" key={s.id}>
@@ -320,6 +329,8 @@ export function SettingsPage({
     | "torrent"
     | "debug";
 }) {
+  const { t, i18n } = useTranslation();
+  const { locales, previewLocale } = useLocalization();
   const { boot, notify } = useApp();
   const cache = useQueryClient();
   const personal = tab === "personal" || tab === "security" || tab === "danger";
@@ -334,6 +345,7 @@ export function SettingsPage({
     tab === "security",
   );
   const [name, setName] = useState(boot.profile!.display_name);
+  const [locale, setLocale] = useState(boot.profile!.locale || "en");
   const [avatar, setAvatar] = useState(boot.profile!.avatar);
   const [customColor, setCustomColor] = useState(
     /^#[0-9A-Fa-f]{6}$/.test(boot.profile!.avatar) ? boot.profile!.avatar : "",
@@ -352,11 +364,15 @@ export function SettingsPage({
   const [busy, setBusy] = useState(false);
   const [password, setPassword] = useState("");
   const [current, setCurrent] = useState("");
+  useEffect(() => {
+    setLocale(boot.profile!.locale || "en");
+  }, [boot.profile!.locale]);
+  useEffect(() => () => previewLocale(null), [previewLocale]);
   async function prefs(key: string, value: any) {
     try {
       await api("/preferences", "PATCH", { [key]: value });
       await invalidateResources(cache, ["bootstrap"]);
-      notify("Preference saved");
+      notify(t("settings.preferenceSaved"));
     } catch (e) {
       notify((e as Error).message, true);
     }
@@ -368,10 +384,13 @@ export function SettingsPage({
       await api("/profile", "PATCH", {
         name,
         avatar: customColor || (avatar.endsWith(".png") ? "" : avatar),
+        locale,
       });
       await invalidateResources(cache, ["bootstrap"]);
-      notify("Profile updated");
+      notify(t("settings.profileUpdated"));
     } catch (e) {
+      setLocale(boot.profile!.locale || "en");
+      previewLocale(boot.profile!.locale || "en");
       notify((e as Error).message, true);
     } finally {
       setBusy(false);
@@ -383,7 +402,7 @@ export function SettingsPage({
       password,
     });
     await invalidateResources(cache, ["bootstrap", "settings", "capabilities"]);
-    notify(isAdmin ? "Administrator access granted" : "Administrator access removed");
+    notify(t(isAdmin ? "admin.granted" : "admin.removed"));
   }
   async function removeProfile(profile: Profile, password = "") {
     await api(
@@ -407,75 +426,75 @@ export function SettingsPage({
             }
           : current,
     );
-    notify("Profile deleted");
+    notify(t("settings.profileDeleted"));
   }
   return (
     <div className="page settings-page">
       <PageHeader
-        title={personal ? "My profile" : "Settings"}
-        eyebrow={personal ? "JUST THE WAY YOU LIKE IT" : "YOUR SHARED SPACE"}
+        title={personal ? t("settings.myProfile") : t("settings.title")}
+        eyebrow={personal ? t("settings.personalEyebrow") : t("settings.sharedEyebrow")}
         description={
           personal
-            ? "Your profile, preferences, and account."
-            : "Manage profiles and your Tally deployment."
+            ? t("settings.personalDescription")
+            : t("settings.sharedDescription")
         }
       />
       <nav
         className="settings-tabs"
-        aria-label={personal ? "Personal settings" : "Deployment settings"}
+        aria-label={personal ? t("settings.personalNav") : t("settings.deploymentNav")}
       >
         {(personal
           ? [
               {
                 path: "/profile",
-                label: "Profile & preferences",
+                label: t("settings.profilePreferences"),
                 icon: <UserRound size={17} />,
               },
               {
                 path: "/profile/security",
-                label: "Security",
+                label: t("settings.security"),
                 icon: <ShieldCheck size={17} />,
               },
               {
                 path: "/profile/danger",
-                label: "Danger zone",
+                label: t("settings.dangerZone"),
                 icon: <Trash2 size={17} />,
               },
             ]
           : [
               {
                 path: "/settings",
-                label: "Scheduling & backups",
+                label: t("settings.schedulingBackups"),
                 icon: <HardDrive size={17} />,
               },
               {
                 path: "/settings/torrent",
-                label: "Torrent client",
+                label: t("settings.torrentClient"),
                 icon: <Download size={17} />,
               },
               {
                 path: "/settings/search",
-                label: "Torrent search",
+                label: t("settings.torrentSearch"),
                 icon: <Globe size={17} />,
               },
               {
                 path: "/settings/notifications",
-                label: "Notifications",
+                label: t("settings.notifications"),
                 icon: <Bell size={17} />,
               },
               {
                 path: "/settings/bell",
-                label: "Bell Notifications",
+                label: t("settings.bell"),
                 icon: <Bell size={17} />,
               },
               {
                 path: "/settings/debug",
-                label: "Debug",
+                label: t("settings.debug"),
                 icon: <Activity size={17} />,
               },
               {
                 path: "/settings/profiles",
-                label: "Profiles",
+                label: t("settings.profiles"),
                 icon: <Laptop size={17} />,
               },
             ]
@@ -492,7 +511,7 @@ export function SettingsPage({
             <DownloaderSettings />
           ) : (
             <p className="muted">
-              The deployment owner manages this connection.
+{t("settings.ownerConnection")}
             </p>
           )}
         </>
@@ -510,7 +529,7 @@ export function SettingsPage({
           )
         ) : (
           <p className="muted">
-            Only the deployment owner can change these settings.
+{t("settings.ownerOnly")}
           </p>
         ))}
       {tab === "debug" && <DebugSettings />}
@@ -518,8 +537,11 @@ export function SettingsPage({
       {tab === "personal" && (
         <div className="settings-columns">
           <section className="panel settings-card">
-            <h3>Your profile</h3>
-            <p className="muted">A familiar face in your own little space.</p>
+            <h3>
+              {t("settings.yourProfile")}
+              {boot.profile!.is_admin && <> · {t("settings.adminAccount")}</>}
+            </h3>
+            <p className="muted">{t("settings.profileHelp")}</p>
             <form onSubmit={saveProfile}>
               <div className="profile-editor">
                 <Avatar
@@ -541,7 +563,7 @@ export function SettingsPage({
                           (!customColor && avatar === color ? " selected" : "")
                         }
                         type="button"
-                        aria-label={color + " avatar"}
+                        aria-label={t("accessibility.avatar", { color })}
                         onClick={() => {
                           setAvatar(color);
                           setCustomColor("");
@@ -552,7 +574,7 @@ export function SettingsPage({
                     ),
                   )}
                   <label className="avatar-upload">
-                    Upload image
+                    {t("settings.uploadImage")}
                     <input
                       type="file"
                       accept="image/png,image/jpeg,image/webp"
@@ -569,7 +591,7 @@ export function SettingsPage({
                           setAvatar(response.avatar);
                           setCustomColor("");
                           await invalidateResources(cache, ["bootstrap"]);
-                          notify("Avatar updated");
+                          notify(t("settings.avatarUpdated"));
                         } catch (e) {
                           notify((e as Error).message, true);
                         }
@@ -579,19 +601,19 @@ export function SettingsPage({
                 </div>
               </div>
               <label>
-                Custom avatar color
+                {t("profile.customAvatarColor")}
                 <input
                   value={customColor}
                   pattern="#[0-9A-Fa-f]{6}"
                   maxLength={7}
                   placeholder="#4F46E5"
                   spellCheck={false}
-                  onChange={(e) => setCustomColor(e.target.value)}
+                  onChange={(e) => setCustomColor(normalizeHexColor(e.target.value))}
                 />
-                <small className="muted">Optional six-digit HTML color.</small>
+                <small className="muted">{t("profile.customAvatarHelp")}</small>
               </label>
               <label>
-                Display name
+                {t("profile.displayName")}
                 <input
                   maxLength={80}
                   required
@@ -599,25 +621,60 @@ export function SettingsPage({
                   onChange={(e) => setName(e.target.value)}
                 />
               </label>
-              <p className="small-text muted">
-                {boot.profile!.is_admin
-                  ? "Administrator account"
-                  : "Your personal account"}
-              </p>
+              <label>
+                {t("profile.language")}
+                <select
+                  aria-label={t("profile.language")}
+                  value={locale}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    setLocale(next);
+                    previewLocale(next);
+                  }}
+                >
+                  {!locales.some((item) => item.locale === locale) && (
+                    <option value={locale} disabled>
+                      {locale} — {t("common.unavailable")}
+                    </option>
+                  )}
+                  {locales.map((item) => (
+                    <option
+                      key={item.locale}
+                      value={item.locale}
+                      disabled={!item.valid}
+                    >
+                      {item.name}{item.valid ? "" : ` — ${t("common.unavailable")}`}
+                    </option>
+                  ))}
+                </select>
+                <small className="muted">{t("profile.languageHelp")}</small>
+                {locales
+                  .filter((item) => !item.valid)
+                  .map((item) => (
+                    <small className="muted" key={item.locale}>
+                      {item.name}: {item.error_code ? t(item.error_code, { defaultValue: item.error }) : item.error || t("profile.localeUnavailable")}
+                    </small>
+                  ))}
+                {!locales.some((item) => item.locale === locale) && (
+                  <small className="muted">
+                    {locale}: {t("language.missingFile")}
+                  </small>
+                )}
+              </label>
               <button className="button primary" disabled={busy}>
-                {busy && <Busy />}Save profile
+                {busy && <Busy />}{t("settings.saveProfile")}
               </button>
             </form>
           </section>
           <section className="panel settings-card">
-            <h3>Make yourself comfortable</h3>
-            <p className="muted">These choices follow your profile.</p>
-            <label>Appearance</label>
+            <h3>{t("settings.comfort")}</h3>
+            <p className="muted">{t("settings.comfortHelp")}</p>
+            <label>{t("appearance.title")}</label>
             <div className="theme-options">
               {[
-                { id: "system", icon: <Laptop size={21} />, label: "System" },
-                { id: "light", icon: <Sun size={21} />, label: "Light" },
-                { id: "dark", icon: <Moon size={21} />, label: "Dark" },
+                { id: "system", icon: <Laptop size={21} />, label: t("appearance.system") },
+                { id: "light", icon: <Sun size={21} />, label: t("appearance.light") },
+                { id: "dark", icon: <Moon size={21} />, label: t("appearance.dark") },
               ].map((t) => (
                 <button
                   key={t.id}
@@ -630,7 +687,7 @@ export function SettingsPage({
               ))}
             </div>
             <label>
-              Timezone
+              {t("settings.timezone")}
               <input
                 key={boot.preferences.timezone}
                 defaultValue={boot.preferences.timezone}
@@ -655,37 +712,44 @@ export function SettingsPage({
                 )
               }
             >
-              Use this browser's timezone
+{t("settings.useBrowserTimezone")}
             </button>
             <div className="two-fields">
               <label>
-                Week starts
+                {t("settings.weekStarts")}
                 <select
                   value={boot.preferences.week_start}
                   onChange={(e) => prefs("week_start", Number(e.target.value))}
                 >
-                  <option value={1}>Monday</option>
-                  <option value={0}>Sunday</option>
+                  <option value={1}>{t("settings.monday")}</option>
+                  <option value={0}>{t("settings.sunday")}</option>
                 </select>
               </label>
               <label>
-                Time format
+                {t("settings.timeFormat")}
                 <select
                   value={boot.preferences.time_format}
                   onChange={(e) => prefs("time_format", e.target.value)}
                 >
-                  <option value="24h">24-hour</option>
-                  <option value="12h">12-hour</option>
+                  <option value="24h">{t("settings.hour24")}</option>
+                  <option value="12h">{t("settings.hour12")}</option>
                 </select>
               </label>
             </div>
             <label>
-              Date format
+              {t("settings.dateFormat")}
               <select
                 value={boot.preferences.date_format}
                 onChange={(e) => prefs("date_format", e.target.value)}
               >
-                <option value="d MMM yyyy">11 Sep 2026</option>
+                <option value="d MMM yyyy">
+                  {new Intl.DateTimeFormat(displayLocale(i18n.resolvedLanguage), {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                    timeZone: "UTC",
+                  }).format(new Date("2026-09-11T12:00:00Z"))}
+                </option>
                 <option value="yyyy-MM-dd">2026-09-11</option>
                 <option value="MM/dd/yyyy">09/11/2026</option>
               </select>
@@ -697,9 +761,9 @@ export function SettingsPage({
         <section className="panel settings-card">
           <div className="section-heading">
             <div>
-              <h3>Everyone gets their own space</h3>
+              <h3>{t("settings.everyoneSpace")}</h3>
               <p className="muted">
-                {boot.profiles.length} of {boot.max_profiles} profiles used.
+{t("settings.usedProfiles", { used: boot.profiles.length, max: boot.max_profiles })}
               </p>
             </div>
             {settings.data?.operator && boot.auth_mode !== "oidc" && (
@@ -709,7 +773,7 @@ export function SettingsPage({
                 onClick={() => setNewProfile(true)}
               >
                 <Plus size={17} />
-                New profile
+                {t("settings.newProfile")}
               </button>
             )}
           </div>
@@ -725,8 +789,8 @@ export function SettingsPage({
                   <span>
                     <strong>{p.display_name}</strong>
                     <small>
-                      {isAdmin ? "admin" : "user"}
-                      {p.id === boot.profile?.id ? " · Current profile" : ""}
+                      {t(isAdmin ? "settings.roleAdmin" : "settings.roleUser")}
+                      {p.id === boot.profile?.id ? t("settings.currentSuffix") : ""}
                     </small>
                   </span>
                   <span className="profile-role-actions">
@@ -735,7 +799,7 @@ export function SettingsPage({
                       disabled={isAdmin && !canDemote}
                       title={
                         isAdmin && !canDemote
-                          ? "Promote another administrator first."
+                          ? t("admin.promoteFirst")
                           : ""
                       }
                       onClick={() =>
@@ -743,13 +807,13 @@ export function SettingsPage({
                       }
                     >
                       <ShieldCheck size={16} />
-                      {isAdmin ? "Remove admin" : "Make admin"}
+                      {t(isAdmin ? "settings.removeAdmin" : "settings.makeAdmin")}
                     </button>
                     <button
                       className="button small danger"
-                      aria-label={"Delete " + p.display_name}
+                      aria-label={t("settings.deleteProfile", { name: p.display_name })}
                       disabled={!canDelete}
-                      title={!canDelete ? "Promote another administrator first." : ""}
+                      title={!canDelete ? t("admin.promoteFirst") : ""}
                       onClick={() => {
                         if (isAdmin && boot.auth_mode === "local") {
                           setSensitiveAction({ profile: p, kind: "delete" });
@@ -759,7 +823,7 @@ export function SettingsPage({
                       }}
                     >
                       <Trash2 size={16} />
-                      Delete
+                      {t("common.delete")}
                     </button>
                   </span>
                 </div>
@@ -767,7 +831,7 @@ export function SettingsPage({
             })}
           </div>
           <p className="muted small-text">
-            To use another profile, sign out first.
+            {t("admin.signOutSwitch")}
           </p>
         </section>
       )}
@@ -777,7 +841,7 @@ export function SettingsPage({
           <section className="panel settings-card">
             <h3>
               <KeyRound size={19} />
-              Authentication
+              {t("settings.authentication")}
             </h3>
             {boot.auth_mode === "local" ? (
               <form
@@ -789,7 +853,7 @@ export function SettingsPage({
                     setCurrent("");
                     setPassword("");
                     await invalidateResources(cache, ["bootstrap", "sessions"]);
-                    notify("Password changed; other sessions revoked");
+                    notify(t("settings.passwordChanged"));
                   } catch (e) {
                     notify((e as Error).message, true);
                   } finally {
@@ -798,10 +862,10 @@ export function SettingsPage({
                 }}
               >
                 <p className="muted">
-                  Changing your password signs out your other sessions.
+                  {t("settings.passwordChangeHelp")}
                 </p>
                 <label>
-                  Current password
+                  {t("settings.currentPassword")}
                   <input
                     type="password"
                     autoComplete="current-password"
@@ -811,7 +875,7 @@ export function SettingsPage({
                   />
                 </label>
                 <label>
-                  New password or PIN
+                  {t("settings.newPasswordOrPin")}
                   <input
                     type="password"
                     autoComplete="new-password"
@@ -823,21 +887,21 @@ export function SettingsPage({
                   />
                 </label>
                 <button className="button primary" disabled={busy}>
-                  {busy && <Busy />}Change password
+                  {busy && <Busy />}{t("settings.changePassword")}
                 </button>
               </form>
             ) : (
               <p className="muted">
                 {boot.auth_mode === "disabled"
-                  ? "Authentication is disabled. Profiles are convenient personal spaces for a trusted network. Enable local or OIDC authentication through your deployment environment."
-                  : "Your identity provider manages sign-in and credentials."}
+                  ? t("settings.authDisabled")
+                  : t("settings.identityManaged")}
               </p>
             )}
           </section>
           <section className="panel settings-card">
             <h3>
               <ShieldCheck size={19} />
-              Your sessions
+              {t("settings.sessionsTitle")}
             </h3>
             {sessions.data?.length ? (
               sessions.data.map((session) => (
@@ -845,14 +909,14 @@ export function SettingsPage({
                   <Laptop size={21} />
                   <div>
                     <strong>
-                      {session.current ? "This browser" : "Browser session"}
+                      {session.current ? t("settings.thisBrowser") : t("settings.browserSession")}
                     </strong>
                     <small>{session.user_agent.slice(0, 90)}</small>
-                    <small>Last active {dateLabel(session.last_seen)}</small>
+                    <small>{t("settings.lastActive", { date: dateLabel(session.last_seen) })}</small>
                   </div>
                   <button
                     className="icon-button"
-                    aria-label="Revoke session"
+                    aria-label={t("settings.revokeSession")}
                     onClick={async () => {
                       try {
                         await api("/auth/sessions/" + session.id, "DELETE");
@@ -862,7 +926,7 @@ export function SettingsPage({
                             "bootstrap",
                             "sessions",
                           ]);
-                        notify("Session revoked");
+                        notify(t("settings.sessionRevoked"));
                       } catch (e) {
                         notify((e as Error).message, true);
                       }
@@ -873,7 +937,7 @@ export function SettingsPage({
                 </div>
               ))
             ) : (
-              <p className="muted">No authenticated sessions.</p>
+              <p className="muted">{t("settings.noSessions")}</p>
             )}
           </section>
         </div>
@@ -881,8 +945,8 @@ export function SettingsPage({
       {newProfile && <CreateProfile onClose={() => setNewProfile(false)} />}{" "}
       {deleting && (
         <Confirm
-          title={"Delete " + deleting.display_name + "?"}
-          message="This permanently removes this profile, preferences, follows, and episode progress. Other profiles keep their data."
+          title={t("admin.deleteTitle", { name: deleting.display_name })}
+          message={t("admin.deleteMessage")}
           onClose={() => setDeleting(null)}
           onConfirm={() => removeProfile(deleting)}
         />
@@ -891,13 +955,13 @@ export function SettingsPage({
         <Confirm
           title={
             adminConfirmation.isAdmin
-              ? "Grant administrator access?"
-              : "Remove administrator access?"
+              ? t("admin.grantTitle")
+              : t("admin.removeTitle")
           }
           message={
             adminConfirmation.isAdmin
-              ? `Make ${adminConfirmation.profile.display_name} an administrator? They will be able to manage shared settings, profiles, and other administrator actions.`
-              : `Remove administrator access from ${adminConfirmation.profile.display_name}? They will lose access to shared administration settings.`
+              ? t("admin.grantMessage", { name: adminConfirmation.profile.display_name })
+              : t("admin.removeMessage", { name: adminConfirmation.profile.display_name })
           }
           onClose={() => setAdminConfirmation(null)}
           onConfirm={async () => {
@@ -918,8 +982,8 @@ export function SettingsPage({
         <AdminReauthDialog
           title={
             sensitiveAction.kind === "demote"
-              ? "Confirm administrator change"
-              : "Confirm profile deletion"
+              ? t("admin.confirmChange")
+              : t("admin.confirmDelete")
           }
           onClose={() => setSensitiveAction(null)}
           onConfirm={async (password) => {
@@ -936,6 +1000,8 @@ export function SettingsPage({
   );
 }
 function CreateProfile({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
+  const { locales, previewLocale } = useLocalization();
   const { boot, notify } = useApp();
   const cache = useQueryClient();
   const [name, setName] = useState("");
@@ -946,10 +1012,15 @@ function CreateProfile({ onClose }: { onClose: () => void }) {
       ],
   );
   const [customColor, setCustomColor] = useState("");
+  const [locale, setLocale] = useState("en");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    previewLocale("en");
+    return () => previewLocale(null);
+  }, [previewLocale]);
   return (
-    <Dialog title="A new personal space" onClose={onClose}>
+    <Dialog title={t("profile.newSpace")} onClose={onClose}>
       <form
         onSubmit={async (e) => {
           e.preventDefault();
@@ -959,9 +1030,10 @@ function CreateProfile({ onClose }: { onClose: () => void }) {
               name,
               avatar: customColor || avatar,
               password,
+              locale,
             });
             await invalidateResources(cache, ["bootstrap"]);
-            notify("Profile created");
+            notify(t("profile.created"));
             onClose();
           } catch (e) {
             notify((e as Error).message, true);
@@ -971,7 +1043,7 @@ function CreateProfile({ onClose }: { onClose: () => void }) {
         }}
       >
         <label>
-          Display name
+          {t("profile.displayName")}
           <input
             autoFocus
             required
@@ -981,20 +1053,50 @@ function CreateProfile({ onClose }: { onClose: () => void }) {
           />
         </label>
         <label>
-          Custom avatar color
+          {t("profile.customAvatarColor")}
           <input
             value={customColor}
             pattern="#[0-9A-Fa-f]{6}"
             maxLength={7}
             placeholder="#4F46E5"
             spellCheck={false}
-            onChange={(e) => setCustomColor(e.target.value)}
+            onChange={(e) => setCustomColor(normalizeHexColor(e.target.value))}
           />
-          <small className="muted">Optional six-digit HTML color.</small>
+          <small className="muted">{t("profile.customAvatarHelp")}</small>
+        </label>
+        <label>
+          {t("profile.language")}
+          <select
+            aria-label={t("profile.language")}
+            value={locale}
+            onChange={(event) => {
+              const next = event.target.value;
+              setLocale(next);
+              previewLocale(next);
+            }}
+          >
+            {locales.map((item) => (
+              <option
+                key={item.locale}
+                value={item.locale}
+                disabled={!item.valid}
+              >
+                {item.name}{item.valid ? "" : ` — ${t("common.unavailable")}`}
+              </option>
+            ))}
+          </select>
+          <small className="muted">{t("profile.languageHelp")}</small>
+          {locales
+            .filter((item) => !item.valid)
+            .map((item) => (
+              <small className="muted" key={item.locale}>
+                {item.name}: {item.error_code ? t(item.error_code, { defaultValue: item.error }) : item.error || t("profile.localeUnavailable")}
+              </small>
+            ))}
         </label>
         {boot.auth_mode === "local" && (
           <label>
-            Password (optional)
+            {t("profile.passwordOptional")}
             <input
               type="password"
               autoComplete="new-password"
@@ -1007,10 +1109,10 @@ function CreateProfile({ onClose }: { onClose: () => void }) {
         )}
         <div className="dialog-actions">
           <button type="button" className="button" onClick={onClose}>
-            Cancel
+            {t("common.cancel")}
           </button>
           <button className="button primary" disabled={busy}>
-            {busy && <Busy />}Create profile
+            {busy && <Busy />}{t("profile.create")}
           </button>
         </div>
       </form>
@@ -1027,6 +1129,7 @@ function AdminReauthDialog({
   onClose: () => void;
   onConfirm: (password: string) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const { notify } = useApp();
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1045,10 +1148,10 @@ function AdminReauthDialog({
         }}
       >
         <p className="muted">
-          Re-enter your password to confirm this administrator action.
+          {t("admin.reauth")}
         </p>
         <label>
-          Your password
+          {t("admin.yourPassword")}
           <input
             data-autofocus
             required
@@ -1060,10 +1163,10 @@ function AdminReauthDialog({
         </label>
         <div className="dialog-actions">
           <button type="button" className="button" onClick={onClose}>
-            Cancel
+            {t("common.cancel")}
           </button>
           <button className="button danger" disabled={busy}>
-            {busy && <Busy />}Confirm
+            {busy && <Busy />}{t("common.confirm")}
           </button>
         </div>
       </form>

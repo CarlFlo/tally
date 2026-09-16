@@ -3,7 +3,9 @@ import { Moon, Sun, Monitor } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, type Boot } from "./lib";
 import { queryKeys } from "./queryKeys";
+import { useTranslation } from "react-i18next";
 export function LoginAppearance({ boot }: { boot: Boot }) {
+  const { t } = useTranslation();
   const cache = useQueryClient(),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -11,7 +13,7 @@ export function LoginAppearance({ boot }: { boot: Boot }) {
     <div className="login-appearance">
       <div
         role="group"
-        aria-label="Appearance"
+        aria-label={t("appearance.title")}
         data-selection={boot.browser_theme || "system"}
       >
         <span className="appearance-thumb" aria-hidden="true" />
@@ -25,8 +27,8 @@ export function LoginAppearance({ boot }: { boot: Boot }) {
           <button
             key={theme}
             className="icon-button"
-            aria-label={`${theme[0].toUpperCase() + theme.slice(1)} appearance`}
-            title={`${theme[0].toUpperCase() + theme.slice(1)} appearance`}
+            aria-label={`${t(`appearance.${theme}`)} ${t("appearance.title").toLowerCase()}`}
+            title={`${t(`appearance.${theme}`)} ${t("appearance.title").toLowerCase()}`}
             aria-pressed={(boot.browser_theme || "system") === theme}
             disabled={busy}
             onClick={async () => {

@@ -75,7 +75,7 @@ func TestLocalSignOutRevokesSessionBeforeAnotherSignIn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = s.DB.Exec("INSERT INTO profiles VALUES('profile-member','Alex','mint',?)", time.Now().Unix()); err != nil {
+	if _, err = s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-member','Alex','mint',?)", time.Now().Unix()); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = s.DB.Exec("INSERT INTO local_credentials VALUES('profile-member',?,0)", hash); err != nil {

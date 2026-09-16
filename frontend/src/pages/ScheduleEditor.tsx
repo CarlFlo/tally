@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Save } from "lucide-react";
 import { api, Busy, ErrorState, useApp } from "../lib";
@@ -19,6 +20,7 @@ export type Schedule = {
 };
 
 export function ScheduleEditor({ job }: { job: Schedule }) {
+  const { t } = useTranslation();
   const { boot, notify } = useApp();
   const cache = useQueryClient();
   const [saved, setSaved] = useState(job);
@@ -58,9 +60,13 @@ export function ScheduleEditor({ job }: { job: Schedule }) {
       });
       setSaved({ ...saved, schedule, enabled: automatic, revision: result.revision });
       await invalidateResources(cache, ["schedules"]);
-      notify(automatic !== !!saved.enabled
-        ? `${jobName(job.key)} ${automatic ? "enabled" : "disabled"}`
-        : "Schedule saved");
+      notify(
+        automatic !== !!saved.enabled
+          ? t(automatic ? "schedule.enabled" : "schedule.disabled", {
+              name: jobName(job.key),
+            })
+          : t("schedule.saved"),
+      );
     } catch (error) {
       setEnabled(!!saved.enabled);
       setSaveError(error as Error);
@@ -79,17 +85,17 @@ export function ScheduleEditor({ job }: { job: Schedule }) {
       <fieldset disabled={busy}>
         <div className="schedule-heading">
           <div><h3>{jobName(job.key)}</h3><p>{jobDescription(job.key)}</p></div>
-          <label className="toggle-setting"><input type="checkbox" checked={enabled} onChange={(event) => void save(saved.schedule, event.target.checked)} />Run automatically</label>
+          <label className="toggle-setting"><input type="checkbox" checked={enabled} onChange={(event) => void save(saved.schedule, event.target.checked)} />{t("schedule.automatic")}</label>
         </div>
         <div className="schedule-editor-body">
           <div className="schedule-fields">
-            <label>Common schedule<select value={selectedPreset} aria-label={`${jobName(job.key)} common schedule`} onChange={(event) => event.target.value !== "custom" && setSpec(event.target.value)}><option value="custom">Custom cron</option>{presets.map(([label, value]) => <option key={value} value={value}>{label}</option>)}</select><small aria-hidden="true">&nbsp;</small></label>
-            <label>Cron expression<input name={`cron-${job.key}`} value={spec} required maxLength={100} spellCheck={false} autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-bwignore="true" data-protonpass-ignore="true" data-form-type="other" onChange={(event) => setSpec(event.target.value)} /><small>Minute · hour · day-of-month · month · weekday</small></label>
-            <button className="button primary small">{busy ? <Busy /> : <Save size={16} />}Save schedule</button>
+            <label>{t("schedule.common")}<select value={selectedPreset} aria-label={t("schedule.commonFor", { name: jobName(job.key) })} onChange={(event) => event.target.value !== "custom" && setSpec(event.target.value)}><option value="custom">{t("schedule.custom")}</option>{presets.map(([label, value]) => <option key={value} value={value}>{t(label)}</option>)}</select><small aria-hidden="true">&nbsp;</small></label>
+            <label>{t("schedule.expression")}<input name={`cron-${job.key}`} value={spec} required maxLength={100} spellCheck={false} autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-bwignore="true" data-protonpass-ignore="true" data-form-type="other" onChange={(event) => setSpec(event.target.value)} /><small>{t("schedule.fields")}</small></label>
+            <button className="button primary small">{busy ? <Busy /> : <Save size={16} />}{t("schedule.save")}</button>
           </div>
           <SchedulePreview preview={currentPreview || initialPreview} loading={!settled || preview.isFetching} error={settled ? preview.error as Error | undefined : undefined} timeFormat={boot.preferences.time_format} />
         </div>
-        {!!job.paused && <p className="error-box">Paused after {job.failures} consecutive failures. Resume from System → Jobs when ready.</p>}
+        {!!job.paused && <p className="error-box">{t("schedule.paused", { count: job.failures })}</p>}
       </fieldset>
       {saveError && <ErrorState error={saveError} />}
     </form>

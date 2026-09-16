@@ -32,7 +32,7 @@ func TestQueueSurvivesReopenAndSharesMetadataAcrossProfiles(t *testing.T) {
 	if _, e = s.ProcessNext(ctx); e != nil {
 		t.Fatal(e)
 	}
-	db.Exec("INSERT INTO profiles VALUES('profile-b','Second','mint',1)")
+	db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-b','Second','mint',1)")
 	if e = s.QueueFollow(ctx, "profile-b", 7, "Saved queue", true); e != nil {
 		t.Fatal(e)
 	}

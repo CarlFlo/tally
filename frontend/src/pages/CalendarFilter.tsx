@@ -1,11 +1,8 @@
 import { Check, ChevronDown, ListFilter } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
-const options = [
-  ["all", "All episodes"],
-  ["unwatched", "Unwatched"],
-  ["watched", "Watched"],
-] as const;
+const options = ["all", "unwatched", "watched"] as const;
 
 export function CalendarFilter({
   value,
@@ -14,10 +11,10 @@ export function CalendarFilter({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const selected =
-    options.find(([key]) => key === value)?.[1] || "All episodes";
+  const selected = t(`calendar.${value === "all" ? "allEpisodes" : value}`);
 
   useEffect(() => {
     function close(event: MouseEvent) {
@@ -45,9 +42,9 @@ export function CalendarFilter({
         <div
           className="calendar-filter-options"
           role="listbox"
-          aria-label="Filter episodes"
+          aria-label={t("calendar.filter")}
         >
-          {options.map(([key, label]) => (
+          {options.map((key) => (
             <button
               key={key}
               type="button"
@@ -58,7 +55,7 @@ export function CalendarFilter({
                 setOpen(false);
               }}
             >
-              <span>{label}</span>
+              <span>{t(`calendar.${key === "all" ? "allEpisodes" : key}`)}</span>
               {value === key && <Check size={15} />}
             </button>
           ))}

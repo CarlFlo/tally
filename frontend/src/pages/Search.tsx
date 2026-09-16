@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -23,6 +24,7 @@ import {
   useLocal,
 } from "../lib";
 import { invalidateResources } from "../queryInvalidation";
+import { i18n } from "../i18n";
 
 type Result = {
   id: string;
@@ -39,14 +41,15 @@ type Result = {
 
 function torrentAge(value: string) {
   const published = new Date(value).getTime();
-  if (!Number.isFinite(published)) return "Date unknown";
+  if (!Number.isFinite(published)) return i18n.t("search.dateUnknown");
   const hours = Math.max(0, Math.floor((Date.now() - published) / 3_600_000));
-  if (hours < 24) return `${hours}h old`;
+  if (hours < 24) return i18n.t("search.hoursOld", { count: hours });
   const days = Math.floor(hours / 24);
-  return days < 30 ? `${days}d old` : dateLabel(value);
+  return days < 30 ? i18n.t("search.daysOld", { count: days }) : dateLabel(value);
 }
 
 export function SearchPage() {
+  const { t } = useTranslation();
   const [params] = useSearchParams();
   const { notify } = useApp();
   const cache = useQueryClient();
@@ -151,7 +154,7 @@ export function SearchPage() {
         idempotency_key: keys.get(result.id),
       });
       setSent([...sent, result.id]);
-      notify("Torrent sent");
+      notify(t("search.sent"));
       await invalidateResources(cache, ["torrent-history"]);
     } catch (e) {
       notify((e as Error).message, true);
@@ -163,19 +166,19 @@ export function SearchPage() {
     <div className="page">
       <div className="page-heading">
         <div>
-          <span className="eyebrow">YOU'RE IN THE DRIVER'S SEAT</span>
+          <span className="eyebrow">{t("search.eyebrow")}</span>
           <h1>
-            Torrent search<span className="accent">.</span>
+            {t("search.title")}<span className="accent">.</span>
           </h1>
-          <p>Find what you're looking for. Choose exactly what happens next.</p>
+          <p>{t("search.description")}</p>
         </div>
       </div>
       <form onSubmit={search} className="torrent-search-form">
         <div className="search-input large-search">
           <Search size={22} />
           <input
-            aria-label="Torrent search query"
-            placeholder="A show, an episode, or anything else…"
+            aria-label={t("search.query")}
+            placeholder={t("search.placeholder")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             required
@@ -189,7 +192,7 @@ export function SearchPage() {
             busy || !settings.data?.jackett_configured
           }
         >
-          {busy ? <Busy /> : <Search size={18} />}Search torrents
+          {busy ? <Busy /> : <Search size={18} />}{t("search.searchButton")}
         </button>
       </form>
       {settings.data && !settings.data.jackett_configured && (
@@ -198,10 +201,9 @@ export function SearchPage() {
             <ExternalLink size={19} />
           </span>
           <div>
-            <strong>Connect Jackett to get started.</strong>
+            <strong>{t("search.addJackett")}</strong>
             <p>
-              Add the Jackett base URL and API key under Settings, then test and
-              save the connection.
+{t("search.jackettHelp")}
             </p>
           </div>
         </div>
@@ -210,10 +212,10 @@ export function SearchPage() {
         <aside className="filter-panel panel">
           <h3>
             <SlidersHorizontal size={17} />
-            Refine your search
+            {t("search.refine")}
           </h3>
           <label>
-            Minimum seeders
+            {t("search.minSeeders")}
             <input
               type="number"
               min="0"
@@ -224,45 +226,45 @@ export function SearchPage() {
           </label>
           <div className="two-fields">
             <label>
-              Min size (GB)
+              {t("search.minSize")}
               <input
                 type="number"
                 min="0"
                 step="0.1"
-                placeholder="Any"
+                placeholder={t("search.any")}
                 value={minSize}
                 onChange={(e) => setMinSize(e.target.value)}
               />
             </label>
             <label>
-              Max size (GB)
+              {t("search.maxSize")}
               <input
                 type="number"
                 min="0"
                 step="0.1"
-                placeholder="Any"
+                placeholder={t("search.any")}
                 value={maxSize}
                 onChange={(e) => setMaxSize(e.target.value)}
               />
             </label>
           </div>
           <label>
-            Include keywords
+            {t("search.include")}
             <input
-              placeholder="e.g. extended"
+              placeholder={t("search.includeExample")}
               value={include}
               onChange={(e) => setInclude(e.target.value)}
             />
           </label>
           <label>
-            Exclude keywords
+            {t("search.exclude")}
             <input
-              placeholder="e.g. cam"
+              placeholder={t("search.excludeExample")}
               value={exclude}
               onChange={(e) => setExclude(e.target.value)}
             />
           </label>
-          <label className="field-title">QUALITY & FORMAT</label>
+          <label className="field-title">{t("search.quality")}</label>
           <div className="quality-chips">
             {[
               "720p",
@@ -295,8 +297,7 @@ export function SearchPage() {
             ))}
           </div>
           <p className="small-text muted">
-            Filters match title keywords and combine. They don't inspect media
-            files.
+{t("search.filtersHelp")}
           </p>
           <button
             className="text-button"
@@ -309,25 +310,25 @@ export function SearchPage() {
               setQuality([]);
             }}
           >
-            Reset filters
+            {t("search.resetFilters")}
           </button>
         </aside>
         <section className="search-results">
           {error && <ErrorState error={error} />}
           <div className="results-toolbar">
             <h3>
-              {searched ? `${filtered.length} results` : "Search results"}
+              {searched ? t("search.resultCount", { count: filtered.length }) : t("search.results")}
             </h3>
             <label className="inline-select">
               <ArrowDownWideNarrow size={16} />
               <select
-                aria-label="Sort torrent results"
+                aria-label={t("search.sort")}
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
               >
-                <option value="seeders">Most seeders</option>
-                <option value="size">Smallest size</option>
-                <option value="name">Name A–Z</option>
+                <option value="seeders">{t("search.mostSeeders")}</option>
+                <option value="size">{t("search.smallest")}</option>
+                <option value="name">{t("search.nameAZ")}</option>
               </select>
             </label>
           </div>
@@ -335,14 +336,13 @@ export function SearchPage() {
             {!searched ? (
               <Empty
                 icon={<Search size={31} />}
-                title="A search starts with you."
+                title={t("search.emptyStart")}
               >
-                Enter a query above. Results appear only when you search, and
-                nothing is sent until you choose it.
+{t("search.startHelp")}
               </Empty>
             ) : !filtered.length ? (
-              <Empty title="No matching torrents">
-                Try a broader query or adjust your filters.
+              <Empty title={t("search.noMatches")}>
+                {t("search.noMatchesHelp")}
               </Empty>
             ) : (
               <div className="torrent-results-list">
@@ -356,9 +356,9 @@ export function SearchPage() {
                       <div className="torrent-meta">
                         <span>{bytes(result.size)}</span>
                         <span className="mint-text">
-                          ↑ {result.seeders} seeders
+                          ↑ {t("search.seeders", { count: result.seeders })}
                         </span>
-                        <span>↓ {result.leechers} leechers</span>
+                        <span>↓ {t("search.leechers", { count: result.leechers })}</span>
                         <span>{result.provider}</span>
                         <span>{result.download_type}</span>
                         {result.published && (
@@ -371,16 +371,16 @@ export function SearchPage() {
                     <div className="torrent-actions">
                       <button
                         className="icon-button"
-                        title="Copy magnet"
-                        aria-label={"Copy magnet for " + result.name}
+                        title={t("search.copyMagnet")}
+                        aria-label={t("search.copyMagnetFor", { name: result.name })}
                         disabled={!result.magnet}
                         onClick={async () => {
                           try {
                             await navigator.clipboard.writeText(result.magnet);
-                            notify("Magnet copied");
+                            notify(t("search.copied"));
                           } catch {
                             notify(
-                              "Clipboard access requires HTTPS or localhost.",
+                              t("search.clipboardError"),
                               true,
                             );
                           }
@@ -409,7 +409,7 @@ export function SearchPage() {
                           <Send size={16} />
                         )}
                         <span>
-                          {sent.includes(result.id) ? "Sent" : "Send"}
+                          {sent.includes(result.id) ? t("search.sentShort") : t("search.send")}
                         </span>
                       </button>
                     </div>
@@ -420,13 +420,13 @@ export function SearchPage() {
           </div>
           <div className="search-footnote">
             <Check size={14} />
-            Sending a torrent never marks an episode as downloaded.
+            {t("search.sendingNote")}
           </div>
           {history.data?.searches?.length > 0 && (
             <section className="recent-searches">
               <h3>
                 <Clock3 size={17} />
-                Recent searches
+                {t("search.recentSearches")}
               </h3>
               <div>
                 {history.data.searches.slice(0, 6).map((h: any, i: number) => (
@@ -444,7 +444,7 @@ export function SearchPage() {
           )}
           {history.data?.sends?.length > 0 && (
             <section className="recent-searches">
-              <h3>Recent submissions</h3>
+              <h3>{t("search.recent")}</h3>
               {history.data.sends.slice(0, 5).map((h: any, i: number) => (
                 <div className="history-send" key={i}>
                   <span>{h.name}</span>

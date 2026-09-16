@@ -6,6 +6,7 @@ import { api, Busy, dateLabel, ErrorState, useApp } from "./lib";
 import { usePopover } from "./usePopover";
 import { queryKeys } from "./queryKeys";
 import { invalidateResources } from "./queryInvalidation";
+import { useTranslation } from "react-i18next";
 
 type Entry = {
   id: number;
@@ -17,6 +18,7 @@ type Entry = {
 type Inbox = { entries: Entry[]; unread: number; latest_id: number };
 
 export function InboxDropdown() {
+  const { t } = useTranslation();
   const { boot, notify } = useApp();
   const cache = useQueryClient();
   const { open, setOpen, root, trigger } = usePopover();
@@ -51,7 +53,7 @@ export function InboxDropdown() {
         className={
           "icon-button inbox-bell " + (query.data?.unread ? "has-unread" : "")
         }
-        aria-label={`Notifications${query.data?.unread ? `, ${query.data.unread} unread` : ""}`}
+        aria-label={`${t("inbox.title")}${query.data?.unread ? `, ${t("inbox.unread", { count: query.data.unread })}` : ""}`}
         aria-expanded={open}
         aria-controls="notification-inbox"
         onClick={() => setOpen(!open)}
@@ -65,10 +67,10 @@ export function InboxDropdown() {
         <section
           className="header-dropdown inbox-dropdown"
           id="notification-inbox"
-          aria-label="Notifications"
+          aria-label={t("inbox.title")}
         >
           <div className="inbox-heading">
-            <h3>Bell notifications</h3>
+            <h3>{t("inbox.label")}</h3>
             <button
               className="text-button"
               disabled={!query.data?.entries.length}
@@ -76,7 +78,7 @@ export function InboxDropdown() {
                 void update("/inbox/clear", "POST", { through: latest })
               }
             >
-              Clear all
+              {t("inbox.clearAll")}
             </button>
           </div>
           {query.isPending && <Busy />}
@@ -98,15 +100,15 @@ export function InboxDropdown() {
                   <small>{dateLabel(entry.created_at)}</small>
                   <span className={"inbox-status " + entry.status}>
                     {entry.status === "failed"
-                      ? "Failed"
+                      ? t("inbox.failed")
                       : entry.status === "started"
-                        ? "Started"
-                        : "Success"}
+                        ? t("inbox.started")
+                        : t("inbox.success")}
                   </span>
                 </div>
                 <button
                   className="icon-button"
-                  aria-label={`Dismiss ${entry.message}`}
+                  aria-label={t("inbox.dismissEntry", { message: entry.message })}
                   onClick={() => void update(`/inbox/${entry.id}`, "DELETE")}
                 >
                   <X size={15} />
@@ -114,11 +116,11 @@ export function InboxDropdown() {
               </article>
             ))}
             {query.data && !query.data.entries.length && (
-              <p className="inbox-empty muted">You're all caught up.</p>
+              <p className="inbox-empty muted">{t("inbox.empty")}</p>
             )}
           </div>
           <Link className="inbox-all" to="/logs" onClick={() => setOpen(false)}>
-            View all logs
+            {t("inbox.viewLogs")}
           </Link>
         </section>
       )}

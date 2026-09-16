@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { api, Avatar, Busy, resetSession, useApp, type Profile } from "./lib";
 
 export function LoginCredentials({ profile }: { profile: Profile }) {
+  const { t } = useTranslation();
   const { boot, notify } = useApp();
   const setup = !profile.has_password;
   const [password, setPassword] = useState("");
@@ -12,7 +14,7 @@ export function LoginCredentials({ profile }: { profile: Profile }) {
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (setup && password !== confirm) {
-      notify("Passwords do not match", true);
+      notify(t("profile.passwordMismatch"), true);
       return;
     }
     setBusy(true);
@@ -33,11 +35,11 @@ export function LoginCredentials({ profile }: { profile: Profile }) {
       <Avatar profile={profile} large />
       {setup && (
         <p className="muted">
-          Choose a password to secure your profile before continuing.
+          {t("login.choosePassword")}
         </p>
       )}
       <label>
-        {setup ? "New password" : "Password or PIN"}
+        {setup ? t("profile.newPassword") : t("login.passwordOrPin")}
         <input
           type="password"
           autoComplete={setup ? "new-password" : "current-password"}
@@ -51,7 +53,7 @@ export function LoginCredentials({ profile }: { profile: Profile }) {
       </label>
       {setup && (
         <label>
-          Confirm password
+          {t("profile.confirmPassword")}
           <input
             type="password"
             autoComplete="new-password"
@@ -64,7 +66,7 @@ export function LoginCredentials({ profile }: { profile: Profile }) {
       )}
       <button className="button primary" disabled={busy}>
         {busy ? <Busy /> : <ArrowRight size={18} />}
-        {setup ? "Set password and continue" : "Enter your space"}
+        {setup ? t("login.setPasswordContinue") : t("login.enterSpace")}
       </button>
       {!setup && (
         <button
@@ -81,11 +83,11 @@ export function LoginCredentials({ profile }: { profile: Profile }) {
             }
           }}
         >
-          Forgot password? Send recovery to server logs
+          {t("login.forgotPassword")}
         </button>
       )}
       <NavLink className="text-button" to="/login">
-        Choose another profile
+        {t("login.chooseAnother")}
       </NavLink>
     </form>
   );

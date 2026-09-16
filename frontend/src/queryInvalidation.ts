@@ -18,7 +18,8 @@ export type Resource =
   | "inbox"
   | "torrent-history"
   | "capabilities"
-  | "sessions";
+  | "sessions"
+  | "locales";
 
 export type Change = {
   resource: Resource;
@@ -43,6 +44,7 @@ const prefixes: Record<Resource, () => QueryKey> = {
   "torrent-history": queryKeys.torrentHistory,
   capabilities: queryKeys.capabilities,
   sessions: queryKeys.sessions,
+  locales: queryKeys.locales,
 };
 
 type Waiter = {
@@ -154,6 +156,6 @@ export async function revalidateActiveServerData(client: QueryClient) {
           String(query.queryKey[0]),
         ),
     },
-    { cancelRefetch: true },
+    { cancelRefetch: false },
   );
 }

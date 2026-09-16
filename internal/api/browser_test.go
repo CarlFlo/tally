@@ -63,6 +63,24 @@ func TestBrowserServer(t *testing.T) {
 		mode, port = "local", "18082"
 	}
 	s, _, _ := testServer(t, mode)
+	browserLocale := []byte(`{
+		"_meta":{"locale":"zz-Test","name":"Test locale","direction":"ltr","catalogVersion":1},
+		"settings":{"myProfile":"Test profile"},
+		"profile":{"newSpace":"Test personal space","create":"Create test profile"},
+		"calendar":{"yourCalendar":"Test calendar"},
+		"nav":{"calendar":"Test calendar"},
+		"common":{"save":"Test save"}
+	}`)
+	if err := os.WriteFile(filepath.Join(s.Config.DataDir, "locales", "zz-Test.json"), browserLocale, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(3 * time.Second)
+	for !s.Locales.Valid("zz-Test") && time.Now().Before(deadline) {
+		time.Sleep(20 * time.Millisecond)
+	}
+	if !s.Locales.Valid("zz-Test") {
+		t.Fatal("browser fixture test locale did not load")
+	}
 	// Browser tests deliberately avoid legacy userN IDs so UI authorization
 	// cannot accidentally pass by coupling administrator access to an ID.
 	if _, err := s.DB.Exec("DELETE FROM profiles WHERE id='profile-admin'"); err != nil {
@@ -96,6 +114,11 @@ func TestBrowserServer(t *testing.T) {
 	s.Metadata.Provider = &browserTV{}
 	b := &backup.Service{DB: s.DB, DataDir: s.Config.DataDir, Path: filepath.Join(s.Config.DataDir, "backups"), Keep: 2}
 	s.Backup = b
+	archiveWatcher, e := backup.WatchArchives(b.Path, func() { s.Events.Publish("", "backups") })
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer archiveWatcher.Close()
 	s.Jobs = jobs.New(context.Background(), s.DB, s.Config, s.Metadata, s.Control, b)
 	s.Jobs.OnChange = s.Events.Publish
 	s.Control.Alert = s.Jobs.Alert

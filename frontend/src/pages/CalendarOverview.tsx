@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 export function CalendarOverview({
   shows,
   episodes,
@@ -7,19 +8,20 @@ export function CalendarOverview({
   episodes: number;
   watched: number;
 }) {
+  const { t } = useTranslation();
   return (
-    <section className="calendar-overview" aria-label="Calendar overview">
+    <section className="calendar-overview" aria-label={t("calendar.overviewLabel")}>
       <div>
         <strong>{shows}</strong>
-        <small>shows in your orbit</small>
+        <small>{t("calendar.showsInOrbit", { count: shows })}</small>
       </div>
       <div>
         <strong>{episodes}</strong>
-        <small>episodes this view</small>
+        <small>{t("calendar.episodesThisView", { count: episodes })}</small>
       </div>
       <div>
         <strong>{watched}</strong>
-        <small>already caught up</small>
+        <small>{t("calendar.caughtUp", { count: watched })}</small>
       </div>
     </section>
   );

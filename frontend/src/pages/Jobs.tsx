@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Archive,
   Activity,
@@ -22,6 +23,7 @@ import { queryKeys } from "../queryKeys";
 import { invalidateResources } from "../queryInvalidation";
 
 export function JobsPage() {
+  const { t } = useTranslation();
   const { boot, notify } = useApp();
   const cache = useQueryClient();
   const prefs = boot.preferences;
@@ -47,7 +49,7 @@ export function JobsPage() {
     setBusy(key);
     try {
       await api(`/jobs/${key}${resume ? "/resume" : ""}`, "POST", {});
-      notify(resume ? "Schedule resumed" : "Job started");
+      notify(resume ? t("jobs.scheduleResumed") : t("jobs.startedNotice"));
       await invalidateResources(cache, ["jobs", "schedules"]);
     } catch (e) {
       notify((e as Error).message, true);
@@ -62,19 +64,18 @@ export function JobsPage() {
     <div className="page">
       <div className="page-heading">
         <div>
-          <span className="eyebrow">QUIETLY KEEPING THINGS CURRENT</span>
+          <span className="eyebrow">{t("jobs.eyebrow")}</span>
           <h1>
-            Jobs<span className="accent">.</span>
+            {t("jobs.title")}<span className="accent">.</span>
           </h1>
         </div>
       </div>
       {jobs.error && <ErrorState error={jobs.error} />}
       {prefs.debug_mode && (
         <div className="panel debug-panel">
-          <strong>Appearance preview</strong>
+          <strong>{t("jobs.appearancePreview")}</strong>
           <span className="muted small-text">
-            Preview the metadata card. Real jobs and their history are
-            unchanged.
+{t("jobs.previewHelp")}
           </span>
           <div className="debug-actions">
             {["failed", "paused", "disabled", "normal"].map((state) => (
@@ -85,7 +86,7 @@ export function JobsPage() {
                 }
                 onClick={() => preference("debug_job_state", state)}
               >
-                {state === "normal" ? "Reset preview" : `Preview ${state}`}
+                {state === "normal" ? t("jobs.resetPreview") : t("jobs.previewState", { state })}
               </button>
             ))}
           </div>
@@ -129,47 +130,49 @@ export function JobsPage() {
                 </span>
                 <span className={"badge " + (job.paused ? "failed" : "")}>
                   {!job.enabled
-                    ? "Off"
+                    ? t("jobs.off")
                     : job.paused
-                      ? "Paused"
+                      ? t("jobs.paused")
                       : job.last_status === "running"
-                        ? "Running"
-                        : "Scheduled"}
+                        ? t("jobs.running")
+                        : t("jobs.scheduled")}
                 </span>
               </div>
               <h3>{jobName(job.key)}</h3>
               <p>
                 {job.key === "metadata"
-                  ? "Refresh only the shows that are due."
+                  ? t("jobs.metadataCardHelp")
                   : job.key === "backup"
-                    ? "Create backups of application data and saved settings."
-                    : "Keep caches, sessions, and history tidy."}
+                    ? t("jobs.backupCardHelp")
+                    : t("jobs.maintenanceCardHelp")}
               </p>
               <dl>
                 <div>
-                  <dt>Schedule</dt>
+                  <dt>{t("jobs.schedule")}</dt>
                   <dd title={job.schedule}>
                     {job.description || job.schedule}
                   </dd>
                 </div>
                 <div>
-                  <dt>Next run</dt>
+                  <dt>{t("jobs.nextRun")}</dt>
                   <dd>
                     {!job.enabled
-                      ? "Turned off"
+                      ? t("jobs.turnedOff")
                       : job.paused
-                        ? "Paused"
+                        ? t("jobs.paused")
                         : dateLabel(job.next_run)}
                   </dd>
                 </div>
               </dl>
               <p className="job-mini-stats">
-                Last 7 days · {real.successes_7d} succeeded · {real.failures_7d}{" "}
-                failed
+{t("jobs.last7", {
+                  successes: real.successes_7d,
+                  failures: real.failures_7d,
+                })}
               </p>
               {!!job.paused && (
                 <p className="job-pause-notice">
-                  Paused after {job.failures} consecutive failures.
+                  {t("jobs.pausedFailures", { count: job.failures })}
                 </p>
               )}
               <div className="job-actions">
@@ -183,14 +186,14 @@ export function JobsPage() {
                   onClick={() => action(job.key)}
                 >
                   {busy === job.key ? <Busy /> : <Play size={15} />}
-                  {real.paused ? "Retry now" : "Run now"}
+                  {real.paused ? t("jobs.retryNow") : t("jobs.runNow")}
                 </button>
                 {!!real.paused && operator && (
                   <button
                     className="button"
                     onClick={() => action(job.key, true)}
                   >
-                    Resume schedule
+                    {t("jobs.resumeSchedule")}
                   </button>
                 )}
               </div>
@@ -199,25 +202,25 @@ export function JobsPage() {
         })}
       </div>
       <div className="section-heading run-heading">
-        <h2>Run history</h2>
+        <h2>{t("jobs.history")}</h2>
         <div className="history-filters">
           <label>
-            Job
+            {t("jobs.job")}
             <select
-              aria-label="Filter history by job"
+              aria-label={t("jobs.filterJob")}
               value={kind}
               onChange={(e) => preference("job_type_filter", e.target.value)}
             >
-              <option value="all">All jobs</option>
-              <option value="metadata">Metadata sync</option>
-              <option value="backup">Backup</option>
-              <option value="maintenance">Maintenance</option>
+              <option value="all">{t("jobs.all")}</option>
+              <option value="metadata">{t("jobs.metadata")}</option>
+              <option value="backup">{t("jobs.backup")}</option>
+              <option value="maintenance">{t("jobs.maintenance")}</option>
             </select>
           </label>
           <label>
-            Result
+            {t("common.result")}
             <select
-              aria-label="Filter history by result"
+              aria-label={t("jobs.filterResult")}
               value={status}
               onChange={(e) => preference("job_status_filter", e.target.value)}
             >
@@ -231,27 +234,27 @@ export function JobsPage() {
               ].map((value) => (
                 <option key={value} value={value}>
                   {value === "all"
-                    ? "All results"
-                    : value[0].toUpperCase() + value.slice(1)}
+                    ? t("jobs.allResults")
+                    : t(`jobs.${value}`)}
                 </option>
               ))}
             </select>
           </label>
         </div>
       </div>
-      <p className="muted small-text">Latest 100 matching runs</p>
+      <p className="muted small-text">{t("jobs.latest")}</p>
       <div className="panel table-scroll">
         {jobs.data?.runs.length ? (
           <table>
             <thead>
               <tr>
-                <th>Job / trigger</th>
-                <th>Started</th>
-                <th>Duration</th>
-                <th>Processed</th>
-                <th>API / cache</th>
-                <th>Changes</th>
-                <th>Result</th>
+                <th>{t("jobs.jobTrigger")}</th>
+                <th>{t("jobs.started")}</th>
+                <th>{t("jobs.duration")}</th>
+                <th>{t("jobs.processed")}</th>
+                <th>{t("jobs.apiCache")}</th>
+                <th>{t("jobs.changes")}</th>
+                <th>{t("common.result")}</th>
               </tr>
             </thead>
             <tbody>
@@ -277,7 +280,10 @@ export function JobsPage() {
                   <td>
                     {run.processed}/{run.candidates}
                     <small>
-                      {run.skipped} skipped · attempt {run.attempt}
+{t("jobs.skippedAttempt", {
+                        skipped: run.skipped,
+                        attempt: run.attempt,
+                      })}
                     </small>
                   </td>
                   <td>
@@ -289,11 +295,11 @@ export function JobsPage() {
                     {run.status === "running" && operator && (
                       <button
                         className="icon-button"
-                        aria-label="Cancel job"
+                        aria-label={t("jobs.cancel")}
                         onClick={async () => {
                           try {
                             await api("/jobs/runs/" + run.id, "DELETE");
-                            notify("Cancellation requested");
+                            notify(t("jobs.cancelRequested"));
                             await invalidateResources(cache, ["jobs"]);
                           } catch (e) {
                             notify((e as Error).message, true);
@@ -309,8 +315,8 @@ export function JobsPage() {
             </tbody>
           </table>
         ) : (
-          <Empty icon={<Activity size={28} />} title="No matching runs">
-            Completed and running jobs appear here. Try changing the filters.
+          <Empty icon={<Activity size={28} />} title={t("jobs.empty")}>
+            {t("jobs.emptyHelp")}
           </Empty>
         )}
       </div>

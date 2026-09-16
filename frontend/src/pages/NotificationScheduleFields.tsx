@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { api, useApp } from "../lib";
-import { dateTimeFormatter } from "../dateFormatting";
+import { dateTimeFormatter, displayLocale } from "../dateFormatting";
 import type { NotificationErrors } from "./notificationValidation";
 import { parseNotificationTime } from "./notificationValidation";
+import { useTranslation } from "react-i18next";
 
 export function NotificationScheduleFields({
   data,
@@ -17,6 +18,7 @@ export function NotificationScheduleFields({
   timeFormat: string;
   changeTime: (value: string) => void;
 }) {
+  const { t, i18n } = useTranslation();
   const { boot } = useApp();
   const serverTimezone = data.timezone || "UTC";
   const userTimezone = boot.preferences.timezone || "UTC";
@@ -35,7 +37,7 @@ export function NotificationScheduleFields({
   });
   const userTime =
     preview.data?.next_delivery && userTimezone !== serverTimezone
-      ? dateTimeFormatter("en-GB", {
+      ? dateTimeFormatter(displayLocale(i18n.resolvedLanguage), {
           timeZone: userTimezone,
           hour: "2-digit",
           minute: "2-digit",
@@ -48,16 +50,16 @@ export function NotificationScheduleFields({
       <div className="notification-schedule">
         <label className={errors.delivery_time ? "field-invalid" : ""}>
           <span className="notification-time-label">
-            Daily release notification time
+            {t("notifications.releaseTime")}
             <span
               className="notification-timezone-chip"
-              title="Server timezone"
+              title={t("notifications.serverTimezone")}
             >
               {serverTimezone}
             </span>
           </span>
           <input
-            aria-label="Daily release notification time"
+            aria-label={t("notifications.releaseTime")}
             value={timeText}
             placeholder={timeFormat === "12h" ? "9:00 AM" : "09:00"}
             aria-invalid={!!errors.delivery_time}
@@ -68,15 +70,13 @@ export function NotificationScheduleFields({
           )}
           {!errors.delivery_time && userTime && (
             <small className="notification-local-time">
-              Your time: <strong>{userTime}</strong> · {userTimezone}
+              {t("notifications.userTime", { time: userTime, timezone: userTimezone })}
             </small>
           )}
         </label>
       </div>
       <p className="muted small-text">
-        New episodes with an announced release time are sent at the next daily
-        delivery time. System errors and other selected activity arrive
-        immediately. Only shows followed on this server are included.
+{t("notifications.scheduleHelp")}
       </p>
     </>
   );

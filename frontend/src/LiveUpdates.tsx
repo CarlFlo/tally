@@ -20,7 +20,9 @@ export function LiveUpdates({ enabled }: { enabled: boolean }) {
   useEffect(() => {
     if (!enabled) return;
     let disposed = false;
-    let needsRecovery = false;
+    // Revalidate once the initial stream is established as well as after
+    // reconnects, so changes made while the connection was opening cannot be lost.
+    let needsRecovery = true;
     let hiddenAt = 0;
 
     const apply = (changes: Change[]) => {

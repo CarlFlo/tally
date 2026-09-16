@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Episode } from "./lib";
 import { dateTimeFormatter } from "./dateFormatting";
+import { i18n } from "./i18n";
 export function useNow(interval = 1000) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
@@ -20,13 +21,17 @@ export function released(ep: Episode, timezone: string, now = Date.now()) {
 export function countdown(ep: Episode, timezone: string, now: number) {
   const stamp = Date.parse(ep.airstamp);
   if (!Number.isFinite(stamp))
-    return released(ep, timezone, now) ? "Available" : "Time TBA";
+    return released(ep, timezone, now) ? i18n.t("calendar.available") : i18n.t("calendar.timeTBA");
   const seconds = Math.max(0, Math.ceil((stamp - now) / 1000));
-  if (!seconds) return "Available";
+  if (!seconds) return i18n.t("calendar.available");
   const days = Math.floor(seconds / 86400),
     hours = Math.floor((seconds % 86400) / 3600),
     minutes = Math.floor((seconds % 3600) / 60);
   return days
-    ? `in ${days}d ${hours}h ${minutes}m`
-    : `in ${hours ? hours + "h " : ""}${minutes}m ${seconds % 60}s`;
+    ? i18n.t("calendar.countdownDays", { days, hours, minutes })
+    : i18n.t("calendar.countdownTime", {
+        hours: hours ? hours + "h " : "",
+        minutes,
+        seconds: seconds % 60,
+      });
 }

@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { ShieldCheck, Trash2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, Busy, Confirm, Dialog, resetSession, useApp } from "../lib";
@@ -7,6 +8,7 @@ import { invalidateResources } from "../queryInvalidation";
 type SensitiveAction = "demote" | "delete";
 
 export function DangerZone() {
+  const { t } = useTranslation();
   const { boot, notify } = useApp();
   const cache = useQueryClient();
   const profile = boot.profile!;
@@ -25,7 +27,7 @@ export function DangerZone() {
       password,
     });
     await invalidateResources(cache, ["bootstrap", "settings", "capabilities"]);
-    notify("Administrator access removed");
+    notify(t("danger.adminRemoved"));
   }
 
   async function remove(password = "") {
@@ -51,33 +53,29 @@ export function DangerZone() {
         <section className="panel settings-card danger-zone">
           <h3>
             <ShieldCheck size={19} />
-            Administrator access
+            {t("danger.adminTitle")}
           </h3>
           <p className="muted">
-            Remove your own administrator permission. Another administrator
-            must remain so the deployment cannot be locked out.
+{t("danger.adminHelp")}
           </p>
           <button
             className="button danger"
             disabled={!canDemote}
-            title={!canDemote ? "Promote another administrator first." : ""}
+            title={!canDemote ? t("admin.promoteFirst") : ""}
             onClick={requestDemotion}
           >
-            Remove my administrator access
+            {t("danger.removeOwnAdmin")}
           </button>
         </section>
       )}
       <section className="panel settings-card danger-zone">
-        <h3>Delete my account</h3>
+        <h3>{t("danger.deleteAccount")}</h3>
         <p className="muted">
-          Permanently delete your profile, preferences, follows, and episode
-          progress. You will be signed out on every device. Other profiles keep
-          their data.
+{t("danger.deleteHelp")}
         </p>
         {!canDelete && (
           <p className="muted small-text">
-            Promote another profile to administrator before deleting this
-            account.
+{t("danger.promoteBeforeDelete")}
           </p>
         )}
         <button
@@ -86,28 +84,28 @@ export function DangerZone() {
           onClick={requestDelete}
         >
           <Trash2 size={17} />
-          Delete my account
+          {t("danger.deleteAccount")}
         </button>
       </section>
       {confirmDemote && (
         <Confirm
-          title="Remove your administrator access?"
-          message="You will immediately lose access to deployment settings and administrator tools."
+          title={t("danger.removeAdminTitle")}
+          message={t("danger.removeAdminMessage")}
           onClose={() => setConfirmDemote(false)}
           onConfirm={() => demote()}
         />
       )}
       {confirmDelete && (
         <Confirm
-          title="Permanently delete your account?"
-          message="This cannot be undone. Your profile and all personal progress will be removed."
+          title={t("danger.deleteTitle")}
+          message={t("danger.deleteMessage")}
           onClose={() => setConfirmDelete(false)}
           onConfirm={() => remove()}
         />
       )}
       {reauth && (
         <Reauthenticate
-          title={reauth === "demote" ? "Confirm administrator change" : "Confirm account deletion"}
+          title={reauth === "demote" ? t("admin.confirmChange") : t("danger.confirmAccountDelete")}
           onClose={() => setReauth(null)}
           onConfirm={async (password) => {
             if (reauth === "demote") await demote(password);
@@ -129,6 +127,7 @@ function Reauthenticate({
   onClose: () => void;
   onConfirm: (password: string) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const { notify } = useApp();
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -146,10 +145,10 @@ function Reauthenticate({
     <Dialog title={title} onClose={onClose}>
       <form onSubmit={submit}>
         <p className="muted">
-          Re-enter your password to confirm this administrator action.
+{t("admin.reauth")}
         </p>
         <label>
-          Your password
+          {t("admin.yourPassword")}
           <input
             data-autofocus
             required
@@ -161,10 +160,10 @@ function Reauthenticate({
         </label>
         <div className="dialog-actions">
           <button type="button" className="button" onClick={onClose}>
-            Cancel
+            {t("common.cancel")}
           </button>
           <button className="button danger" disabled={busy}>
-            {busy && <Busy />}Confirm
+            {busy && <Busy />}{t("common.confirm")}
           </button>
         </div>
       </form>

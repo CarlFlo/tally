@@ -71,7 +71,7 @@ func TestConnectionSecretsVisibleOnlyInExplicitOperatorView(t *testing.T) {
 	if !strings.Contains(response.Body.String(), fixtureClientKey) || response.Header().Get("Cache-Control") != "no-store" {
 		t.Fatal("explicit reveal unavailable or cacheable")
 	}
-	s.DB.Exec("INSERT INTO profiles VALUES('profile-member','Other','mint',1)")
+	s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-member','Other','mint',1)")
 	ordinary := httptest.NewRecorder()
 	s.Auth.NewSession(ctx, ordinary, httptest.NewRequest("GET", "/", nil), "profile-member", false)
 	for _, path := range []string{"/api/downloader?reveal=1", "/api/settings/search", "/api/settings/notifications", "/api/settings/scheduling"} {
@@ -84,7 +84,7 @@ func TestFavoritesEpisodeResetAndPersistentViewPreferences(t *testing.T) {
 	expect(t, response, 201)
 	id := value(t, response, "id")
 	expect(t, request(t, h, "PATCH", "/api/shows/"+id+"/favorite", map[string]bool{"favorite": true}), 200)
-	s.DB.Exec("INSERT INTO profiles VALUES('profile-member','Other','mint',1)")
+	s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-member','Other','mint',1)")
 	other := &http.Cookie{Name: "tally_profile", Value: "profile-member"}
 	owner := &http.Cookie{Name: "tally_profile", Value: "profile-admin"}
 	expect(t, request(t, h, "POST", "/api/shows", map[string]int{"tvmaze_id": 7}, other), 201)

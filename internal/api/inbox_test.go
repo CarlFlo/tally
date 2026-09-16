@@ -11,7 +11,7 @@ import (
 
 func TestInboxMarkersDismissalsAndLogsAreProfileScoped(t *testing.T) {
 	s, h, _ := testServer(t, "disabled")
-	if _, err := s.DB.Exec(`INSERT INTO profiles VALUES('profile-member','Alex','mint',1);
+	if _, err := s.DB.Exec(`INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-member','Alex','mint',1);
  INSERT INTO activity_log(id,action,profile_id,message,created_at) VALUES
  (1,'show_added','profile-member','Added personal show',1),
  (2,'settings_updated','profile-admin','Private operator action',2),

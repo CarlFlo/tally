@@ -1,6 +1,7 @@
 import { Check, Download, Star } from "lucide-react";
 import { localDay, timeLabel, type Episode, type Prefs } from "../lib";
 import { groupReleases, releaseLabel } from "../calendarReleases";
+import { useTranslation } from "react-i18next";
 
 type Props = {
   days: Date[];
@@ -25,6 +26,7 @@ export function CalendarGrid({
   expand,
   select,
 }: Props) {
+  const { t } = useTranslation();
   return (
     <div className="month-grid">
       {days.map((day) => {
@@ -44,7 +46,7 @@ export function CalendarGrid({
               <span className={today ? "today-number" : ""}>
                 {day.getDate()}
               </span>
-              {today && <small>TODAY</small>}
+              {today && <small>{t("calendar.today").toLocaleUpperCase()}</small>}
             </div>
             <div className="day-entries">
               {visible.map((episodes) => {
@@ -66,7 +68,7 @@ export function CalendarGrid({
                           className="calendar-favorite"
                           size={11}
                           fill="currentColor"
-                          aria-label="Favorite show"
+                          aria-label={t("calendar.favorite")}
                         />
                       )}
                       {episode.show_name}
@@ -74,8 +76,8 @@ export function CalendarGrid({
                     <span className="release-codes">
                       {releaseLabel(episodes)}
                       <span className="calendar-state-icons">
-                        {downloaded && <Download size={11} aria-label="Downloaded" />}
-                        {watched && <Check size={11} aria-label="Watched" />}
+                        {downloaded && <Download size={11} aria-label={t("calendar.downloaded")} />}
+                        {watched && <Check size={11} aria-label={t("calendar.watched")} />}
                       </span>
                     </span>
                     {view === "week" && (
@@ -88,7 +90,7 @@ export function CalendarGrid({
                 !expanded.includes(key) &&
                 view !== "week" && (
                   <button className="more-episodes" onClick={() => expand(key)}>
-                    + {groups.length - 3} more
+                    {t("calendar.more", { count: groups.length - 3 })}
                   </button>
                 )}
             </div>

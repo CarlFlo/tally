@@ -30,6 +30,11 @@ func (s *Server) wrap(fn handler, public bool) http.HandlerFunc {
 			}
 		}
 		if e = fn(w, r, session); e != nil {
+			var coded codedAPIError
+			if errors.As(e, &coded) {
+				jsonResponse(w, coded.Status, map[string]string{"error": coded.Message, "code": coded.Code})
+				return
+			}
 			var ae apiError
 			if errors.As(e, &ae) {
 				jsonResponse(w, ae.Status, map[string]string{"error": ae.Message})

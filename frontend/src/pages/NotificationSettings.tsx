@@ -6,6 +6,7 @@ import { NotificationFields } from "./NotificationFields";
 import { useLatestRequest } from "../useLatestRequest";
 import { invalidateResources } from "../queryInvalidation";
 import { queryKeys } from "../queryKeys";
+import { useTranslation } from "react-i18next";
 import {
   displayNotificationTime,
   notificationErrors,
@@ -43,6 +44,7 @@ export function NotificationSettings() {
   );
 }
 function NotificationForm({ saved }: { saved: any }) {
+  const { t } = useTranslation();
   const startTest = useLatestRequest();
   const { boot, notify } = useApp(),
     cache = useQueryClient();
@@ -67,7 +69,7 @@ function NotificationForm({ saved }: { saved: any }) {
   const savedValid = Object.keys(notificationErrors(stored)).length === 0;
   const toggleMessage = savedValid
     ? ""
-    : "Save valid notification service settings before enabling alerts.";
+    : t("notifications.saveBeforeEnable");
   useEffect(() => {
     setTimeText(
       displayNotificationTime(data.delivery_time, boot.preferences.time_format),
@@ -110,7 +112,7 @@ function NotificationForm({ saved }: { saved: any }) {
     try {
       await persist({ ...stored, enabled });
       change("enabled", enabled);
-      notify(enabled ? "Notifications enabled" : "All notifications disabled");
+      notify(t(enabled ? "notifications.enabledNotice" : "notifications.disabledNotice"));
     } catch (e) {
       setStored(previous);
       setFeedback((e as Error).message);
@@ -128,7 +130,7 @@ function NotificationForm({ saved }: { saved: any }) {
     try {
       await persist(normalized);
       setData(normalized);
-      notify("Notification settings saved");
+      notify(t("notifications.saved"));
     } catch (e) {
       setFeedback((e as Error).message);
     } finally {
@@ -141,9 +143,9 @@ function NotificationForm({ saved }: { saved: any }) {
         <div>
           <h3>
             <Bell size={19} />
-            Notification Services
+            {t("notifications.services")}
           </h3>
-          <p className="muted">Choose where Tally sends your alerts.</p>
+          <p className="muted">{t("notifications.description")}</p>
         </div>
         <span title={toggleMessage}>
           <label
@@ -152,12 +154,12 @@ function NotificationForm({ saved }: { saved: any }) {
             <input
               type="checkbox"
               role="switch"
-              aria-label="Enable all notifications"
+              aria-label={t("notifications.enableAll")}
               checked={stored.enabled}
               disabled={busy || !savedValid}
               onChange={(e) => void toggle(e.target.checked)}
             />
-            {stored.enabled ? "Alerts on" : "Alerts off"}
+            {stored.enabled ? t("notifications.alertsOn") : t("notifications.alertsOff")}
           </label>
         </span>
       </div>
@@ -180,7 +182,7 @@ function NotificationForm({ saved }: { saved: any }) {
         <div className="notification-buttons">
           <button className="button primary" disabled={busy}>
             <Save size={17} />
-            Save settings
+            {t("notifications.saveSettings")}
           </button>
           <button
             className="button"
@@ -210,7 +212,7 @@ function NotificationForm({ saved }: { saved: any }) {
             }}
           >
             <Send size={17} />
-            Test Notification
+            {t("notifications.testNotification")}
           </button>
         </div>
       </form>

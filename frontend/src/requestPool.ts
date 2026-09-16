@@ -1,3 +1,10 @@
+export class RequestPoolOverloadError extends Error {
+  constructor() {
+    super("request pool overloaded");
+    this.name = "RequestPoolOverloadError";
+  }
+}
+
 // Queries deduplicate through React Query. This pool bounds transport work,
 // including manual actions, and removes cancelled requests before dispatch.
 export class RequestPool {
@@ -20,7 +27,7 @@ export class RequestPool {
       };
       if (this.active < this.limit) start();
       else if (this.waiting.length >= this.queueLimit)
-        reject(new Error("Too many pending requests. Please try again."));
+        reject(new RequestPoolOverloadError());
       else {
         this.waiting.push(start);
         signal.addEventListener("abort", abort, { once: true });

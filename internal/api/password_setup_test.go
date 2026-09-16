@@ -9,7 +9,7 @@ import (
 
 func TestPasswordlessProfileSetupCannotReplaceExistingCredentials(t *testing.T) {
 	s, h, _ := testServer(t, "local")
-	if _, err := s.DB.Exec("INSERT INTO profiles VALUES('profile-member','Alex','mint',1)"); err != nil {
+	if _, err := s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-member','Alex','mint',1)"); err != nil {
 		t.Fatal(err)
 	}
 	boot := request(t, h, "GET", "/api/bootstrap", nil)

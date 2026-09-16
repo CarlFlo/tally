@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AlertCircle, CheckCircle2, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 export type Toast = { message: string; error: boolean; retry?: () => void };
 export function Notice({
   toast,
@@ -9,6 +10,7 @@ export function Notice({
   toast: Toast;
   dismiss: () => void;
 }) {
+  const { t } = useTranslation();
   const [host, setHost] = useState<HTMLElement>(document.body);
   const [leaving, setLeaving] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -81,10 +83,10 @@ export function Notice({
           className="button small"
           onClick={() => close(toast.retry)}
         >
-          Retry
+          {t("common.retry")}
         </button>
       )}
-      <button aria-label="Dismiss notification" onClick={() => close()}>
+      <button aria-label={t("inbox.dismiss")} onClick={() => close()}>
         <X size={16} />
       </button>
     </div>,

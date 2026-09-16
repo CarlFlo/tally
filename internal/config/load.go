@@ -51,7 +51,6 @@ func Load() (Config, error) {
 	c.AuthMode = s("APP_AUTH_MODE", "disabled")
 	c.PublicURL = s("APP_PUBLIC_URL", "")
 	c.Timezone = s("TZ", "UTC")
-	c.Language = s("APP_LANGUAGE", "en")
 	c.Theme = s("APP_THEME_DEFAULT", "system")
 	c.MaxProfiles = i("APP_MAX_PROFILES", 8, 1, 100)
 	c.PasswordMin = i("LOCAL_PASSWORD_MIN_LENGTH", 6, 1, 128)
@@ -108,9 +107,6 @@ func Load() (Config, error) {
 		if err == nil && ((u.Path != "" && u.Path != "/") || u.RawQuery != "") {
 			errors = append(errors, "APP_PUBLIC_URL must be the root HTTP(S) origin")
 		}
-	}
-	if c.Language != "en" {
-		errors = append(errors, "only APP_LANGUAGE=en is currently supported")
 	}
 	if len(errors) > 0 {
 		return c, fmt.Errorf("invalid configuration: %s", strings.Join(errors, "; "))
