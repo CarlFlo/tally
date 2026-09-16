@@ -12,7 +12,7 @@ Locale files live in:
 
 More generally, this is `<APP_DATA_DIR>/locales/`.
 
-On startup Tally creates the directory when needed and installs the bundled English catalog as `en.json`. English is the canonical translation-key contract and the final fallback.
+On startup Tally creates the directory when needed and installs the bundled catalogs: English as `en.json` and Ukrainian as `uk.json`. English is the canonical translation-key contract and the final fallback. Bundled non-English catalogs are seeded only when missing, so local edits are never overwritten.
 
 ## File format
 
@@ -96,7 +96,7 @@ On startup:
 
 When the canonical English key set is intentionally changed for a release, increment `_meta.catalogVersion` in `internal/localization/en.json`.
 
-Non-English locale files are never overwritten by Tally.
+Non-English locale files are never overwritten by Tally. Bundled non-English locales, such as Ukrainian, are installed only when their locale file does not already exist.
 
 ## What is localized
 
