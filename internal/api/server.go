@@ -9,6 +9,7 @@ import (
 	"github.com/CarlFlo/tally/internal/database"
 	"github.com/CarlFlo/tally/internal/jobs"
 	"github.com/CarlFlo/tally/internal/live"
+	"github.com/CarlFlo/tally/internal/localization"
 	"github.com/CarlFlo/tally/internal/metadata"
 	"github.com/CarlFlo/tally/internal/providers"
 	"github.com/CarlFlo/tally/internal/torrent"
@@ -24,6 +25,7 @@ type Server struct {
 	Control    *providers.Coordinator
 	Jobs       *jobs.Service
 	Events     *live.Hub
+	Locales    *localization.Registry
 	Clients    *torrent.ClientStore
 	Assets     fs.FS
 	selections selectionStore
