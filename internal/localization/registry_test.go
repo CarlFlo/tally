@@ -126,8 +126,8 @@ func TestRegistryUpdatesOlderEnglishCatalog(t *testing.T) {
 	if !ok {
 		t.Fatal("English locale was not available")
 	}
-	if catalog.Meta.CatalogVersion != 2 {
-		t.Fatalf("catalog version=%d, want 2", catalog.Meta.CatalogVersion)
+	if catalog.Meta.CatalogVersion != 3 {
+		t.Fatalf("catalog version=%d, want 3", catalog.Meta.CatalogVersion)
 	}
 	common, ok := catalog.Messages["common"].(map[string]any)
 	if !ok || common["save"] != "Save" {
