@@ -1,66 +1,29 @@
 import { BellRing } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { invalidateResources } from "../queryInvalidation";
 import { api, useApp } from "../lib";
 
 const categoryGroups = [
   {
-    title: "Needs attention",
-    description: "Problems that may need you to take action.",
+    title: "needsAttention",
     categories: [
-      [
-        "scheduled_job_failures",
-        "Scheduled job failures",
-        "Problems with metadata or maintenance jobs.",
-      ],
-      [
-        "backup_failures",
-        "Backup failures",
-        "A scheduled or manual backup could not complete.",
-      ],
-      [
-        "provider_api_failures",
-        "Provider and API failures",
-        "A metadata or search provider cannot be reached.",
-      ],
-      [
-        "torrent_client_failures",
-        "Torrent client failures",
-        "Sending a torrent to the configured client failed.",
-      ],
+      "scheduled_job_failures",
+      "backup_failures",
+      "provider_api_failures",
+      "torrent_client_failures",
     ],
   },
+  { title: "mediaUpdates", categories: ["episode_releases"] },
   {
-    title: "Media updates",
-    description: "New episodes becoming available for followed shows.",
-    categories: [
-      [
-        "episode_releases",
-        "New episode releases",
-        "An episode from a followed show is available.",
-      ],
-    ],
-  },
-  {
-    title: "Successful activity",
-    description: "Optional confirmations for work that completed normally.",
-    categories: [
-      [
-        "backup_successes",
-        "Successful backups",
-        "A backup finished successfully.",
-      ],
-      [
-        "routine_background",
-        "Routine background tasks",
-        "Successful maintenance and metadata work.",
-      ],
-    ],
+    title: "successfulActivity",
+    categories: ["backup_successes", "routine_background"],
   },
 ] as const;
 
 export function BellNotificationSettings() {
+  const { t } = useTranslation();
   const { boot, notify } = useApp();
   const cache = useQueryClient();
   const [selected, setSelected] = useState(boot.preferences.bell_categories);
@@ -89,17 +52,17 @@ export function BellNotificationSettings() {
     <section className="panel settings-card bell-settings">
       <h3>
         <BellRing size={19} />
-        Bell Notifications
+        {t("bell.title")}
       </h3>
-      <p className="muted">Choose what appears in the bell.</p>
+      <p className="muted">{t("notifications.bellHelp")}</p>
       <div className="bell-category-list">
         {categoryGroups.map((group) => (
           <section className="bell-category-group" key={group.title}>
             <div className="bell-category-heading">
-              <h4>{group.title}</h4>
-              <p>{group.description}</p>
+              <h4>{t(`bell.${group.title}`)}</h4>
+              <p>{t(`bell.${group.title}Help`)}</p>
             </div>
-            {group.categories.map(([key, label, description]) => (
+            {group.categories.map((key) => (
               <label key={key} className="toggle-setting">
                 <input
                   type="checkbox"
@@ -108,8 +71,8 @@ export function BellNotificationSettings() {
                   onChange={(event) => void toggle(key, event.target.checked)}
                 />
                 <span>
-                  <strong>{label}</strong>
-                  <small>{description}</small>
+                  <strong>{t(`bell.${key}`)}</strong>
+                  <small>{t(`bell.${key}Help`)}</small>
                 </span>
               </label>
             ))}
