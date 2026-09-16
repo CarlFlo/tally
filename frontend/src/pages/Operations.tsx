@@ -49,6 +49,11 @@ import { invalidateResources } from "../queryInvalidation";
 import { queryKeys } from "../queryKeys";
 import { useLocalization } from "../i18n";
 
+function normalizeHexColor(value: string) {
+  if (!value || value.startsWith("#")) return value;
+  return `#${value}`;
+}
+
 export { JobsPage } from "./Jobs";
 
 export function StatisticsPage() {
@@ -603,7 +608,7 @@ export function SettingsPage({
                   maxLength={7}
                   placeholder="#4F46E5"
                   spellCheck={false}
-                  onChange={(e) => setCustomColor(e.target.value)}
+                  onChange={(e) => setCustomColor(normalizeHexColor(e.target.value))}
                 />
                 <small className="muted">{t("profile.customAvatarHelp")}</small>
               </label>
@@ -1055,7 +1060,7 @@ function CreateProfile({ onClose }: { onClose: () => void }) {
             maxLength={7}
             placeholder="#4F46E5"
             spellCheck={false}
-            onChange={(e) => setCustomColor(e.target.value)}
+            onChange={(e) => setCustomColor(normalizeHexColor(e.target.value))}
           />
           <small className="muted">{t("profile.customAvatarHelp")}</small>
         </label>
