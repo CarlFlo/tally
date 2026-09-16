@@ -73,7 +73,22 @@ func TestJackettTorrentFileSelectionIsFetchedAndSent(t *testing.T) {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		w.Write([]byte("Ok."))
+		switch r.URL.Path {
+		case "/api/v2/torrents/categories":
+			w.Write([]byte(`{"tally":{"name":"tally","savePath":""}}`))
+		case "/api/v2/torrents/add":
+			if e := r.ParseMultipartForm(1 << 20); e != nil {
+				t.Error(e)
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			if r.FormValue("category") != torrent.TallyCategory {
+				t.Error("torrent file was not assigned to the Tally category")
+			}
+			w.WriteHeader(http.StatusOK)
+		default:
+			http.NotFound(w, r)
+		}
 	}))
 	defer client.Close()
 	ctx := context.Background()
