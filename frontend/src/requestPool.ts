@@ -22,7 +22,13 @@ export class RequestPool {
       };
       if (this.active < this.limit) start();
       else if (this.waiting.length >= this.queueLimit)
-        reject(new Error(i18n.t("errors.tooManyRequests")));
+        reject(
+          new Error(
+            i18n.t("errors.tooManyRequests", {
+              defaultValue: "Too many pending requests. Please try again.",
+            }),
+          ),
+        );
       else {
         this.waiting.push(start);
         signal.addEventListener("abort", abort, { once: true });
