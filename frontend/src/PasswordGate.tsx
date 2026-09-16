@@ -1,5 +1,6 @@
 import { Sparkles } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { api, Busy, resetSession, SignOutButton } from "./lib";
 import { Logo } from "./Logo";
 
@@ -8,6 +9,7 @@ export function PasswordGate({
 }: {
   notify: (s: string, e?: boolean) => void;
 }) {
+  const { t } = useTranslation();
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   return (
@@ -15,8 +17,8 @@ export function PasswordGate({
       <Logo />
       <div className="password-gate">
         <Sparkles size={30} />
-        <h1>Make it yours.</h1>
-        <p className="muted">Replace your temporary password to continue.</p>
+        <h1>{t("passwordGate.title")}</h1>
+        <p className="muted">{t("passwordGate.temporary")}</p>
         <form
           onSubmit={async (e) => {
             e.preventDefault();
@@ -32,7 +34,7 @@ export function PasswordGate({
           }}
         >
           <label>
-            New password or PIN
+            {t("passwordGate.newPasswordOrPin")}
             <input
               type="password"
               autoComplete="new-password"
@@ -42,7 +44,7 @@ export function PasswordGate({
             />
           </label>
           <button className="button primary" disabled={busy}>
-            {busy && <Busy />}Set new password
+            {busy && <Busy />}{t("passwordGate.setNewPassword")}
           </button>
         </form>
         <SignOutButton className="text-button" />
