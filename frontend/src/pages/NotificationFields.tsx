@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { NotificationErrors } from "./notificationValidation";
 import { NotificationScheduleFields } from "./NotificationScheduleFields";
 import { useTranslation } from "react-i18next";
+import { i18n } from "../i18n";
 
 export const notificationEvents = [
   ["system_error", "notifications.systemErrors", "notifications.immediately"],
@@ -187,7 +188,7 @@ function Field({
 function webhookPreview(body: string) {
   try {
     const values: Record<string, string> = {
-      message: t("notifications.previewMessage"),
+      message: i18n.t("notifications.previewMessage"),
       event: "episode_released",
       show: "Breaking Bad",
       time: "2026-09-13T20:00:00Z",
