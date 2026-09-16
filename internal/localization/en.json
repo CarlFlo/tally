@@ -88,7 +88,8 @@
     "missingMetadata": "Localization metadata is incomplete.",
     "unsupportedFormat": "Localization file uses an unsupported format.",
     "missingFile": "Localization file is missing.",
-    "unreadableFile": "Localization file could not be read."
+    "unreadableFile": "Localization file could not be read.",
+    "notRegularFile": "Localization entry must be a regular file."
   },
   "calendar": {
     "title": "Calendar",
