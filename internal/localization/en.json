@@ -1,0 +1,101 @@
+{
+  "_meta": {
+    "locale": "en",
+    "name": "English",
+    "direction": "ltr",
+    "catalogVersion": 1
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "close": "Close",
+    "create": "Create",
+    "refresh": "Refresh",
+    "edit": "Edit",
+    "loading": "Loading…",
+    "retry": "Try again",
+    "unknown": "Unknown"
+  },
+  "brand": {
+    "tagline": "Your little TV universe",
+    "workspace": "YOUR LITTLE TV UNIVERSE"
+  },
+  "nav": {
+    "system": "System",
+    "calendar": "Calendar",
+    "shows": "My shows",
+    "search": "Torrent search",
+    "jobs": "Jobs",
+    "statistics": "Statistics",
+    "settings": "Settings",
+    "logs": "Logs",
+    "profile": "My profile",
+    "login": "Sign in"
+  },
+  "profile": {
+    "menu": "Profile menu",
+    "openMenu": "Open profile menu",
+    "language": "Language",
+    "languageHelp": "Choose the language used by the Tally interface for this profile.",
+    "displayName": "Display name",
+    "create": "Create profile",
+    "created": "Profile created",
+    "newSpace": "A new personal space",
+    "newProfile": "New profile",
+    "current": "Current profile",
+    "signOut": "Sign out",
+    "signingOut": "Signing out…",
+    "backToProfiles": "Back to profiles",
+    "spacesFull": "All profile spaces are in use.",
+    "continueSSO": "Continue with single sign-on",
+    "customAvatarColor": "Custom avatar color",
+    "customAvatarHelp": "Optional six-digit HTML color.",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "passwordMismatch": "Passwords do not match",
+    "passwordHint": "Use {{min}}–{{max}} characters. Letters, numbers, and symbols are welcome.",
+    "passwordOptional": "Password (optional)",
+    "localeUnavailable": "This language cannot currently be selected because its localization file is invalid.",
+    "localeUnavailableReason": "{{reason}}"
+  },
+  "language": {
+    "fallbackNotice": "The selected language is unavailable. Tally is temporarily using English.",
+    "invalidFile": "Localization file is invalid.",
+    "invalidJson": "Localization file contains invalid JSON.",
+    "missingMetadata": "Localization metadata is incomplete.",
+    "unsupportedFormat": "Localization file uses an unsupported format."
+  },
+  "calendar": {
+    "title": "Calendar",
+    "onHorizon": "On the horizon",
+    "timeTBA": "Time TBA",
+    "dateTBA": "Date TBA",
+    "notYet": "Not yet",
+    "episodeDetails": "Episode details",
+    "noEpisodeSummary": "No episode summary is available yet.",
+    "watched": "Watched",
+    "markWatched": "Mark watched",
+    "downloaded": "Downloaded",
+    "markDownloaded": "Mark downloaded"
+  },
+  "shows": {
+    "viewShow": "View show",
+    "searchTorrents": "Search torrents"
+  },
+  "accessibility": {
+    "mainNavigation": "Main navigation",
+    "openNavigation": "Open navigation",
+    "closeNavigation": "Close navigation",
+    "chooseAvatar": "Choose avatar",
+    "avatar": "{{color}} avatar"
+  },
+  "errors": {
+    "pageNotFound": "Page not found",
+    "backToCalendar": "Back to calendar",
+    "requestFailed": "Request failed ({{status}})",
+    "profile_name_required": "Profile name is required.",
+    "profile_locale_invalid": "Choose an available language."
+  }
+}
