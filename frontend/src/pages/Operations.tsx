@@ -366,7 +366,7 @@ export function SettingsPage({
     try {
       await api("/preferences", "PATCH", { [key]: value });
       await invalidateResources(cache, ["bootstrap"]);
-      notify("Preference saved");
+      notify(t("settings.preferenceSaved"));
     } catch (e) {
       notify((e as Error).message, true);
     }
@@ -381,7 +381,7 @@ export function SettingsPage({
         locale,
       });
       await invalidateResources(cache, ["bootstrap"]);
-      notify("Profile updated");
+      notify(t("settings.profileUpdated"));
     } catch (e) {
       setLocale(boot.profile!.locale || "en");
       previewLocale(boot.profile!.locale || "en");
@@ -396,7 +396,7 @@ export function SettingsPage({
       password,
     });
     await invalidateResources(cache, ["bootstrap", "settings", "capabilities"]);
-    notify(isAdmin ? "Administrator access granted" : "Administrator access removed");
+    notify(t(isAdmin ? "admin.granted" : "admin.removed"));
   }
   async function removeProfile(profile: Profile, password = "") {
     await api(
@@ -420,75 +420,75 @@ export function SettingsPage({
             }
           : current,
     );
-    notify("Profile deleted");
+    notify(t("settings.profileDeleted"));
   }
   return (
     <div className="page settings-page">
       <PageHeader
-        title={personal ? "My profile" : "Settings"}
-        eyebrow={personal ? "JUST THE WAY YOU LIKE IT" : "YOUR SHARED SPACE"}
+        title={personal ? t("settings.myProfile") : t("settings.title")}
+        eyebrow={personal ? t("settings.personalEyebrow") : t("settings.sharedEyebrow")}
         description={
           personal
-            ? "Your profile, preferences, and account."
-            : "Manage profiles and your Tally deployment."
+            ? t("settings.personalDescription")
+            : t("settings.sharedDescription")
         }
       />
       <nav
         className="settings-tabs"
-        aria-label={personal ? "Personal settings" : "Deployment settings"}
+        aria-label={personal ? t("settings.personalNav") : t("settings.deploymentNav")}
       >
         {(personal
           ? [
               {
                 path: "/profile",
-                label: "Profile & preferences",
+                label: t("settings.profilePreferences"),
                 icon: <UserRound size={17} />,
               },
               {
                 path: "/profile/security",
-                label: "Security",
+                label: t("settings.security"),
                 icon: <ShieldCheck size={17} />,
               },
               {
                 path: "/profile/danger",
-                label: "Danger zone",
+                label: t("settings.dangerZone"),
                 icon: <Trash2 size={17} />,
               },
             ]
           : [
               {
                 path: "/settings",
-                label: "Scheduling & backups",
+                label: t("settings.schedulingBackups"),
                 icon: <HardDrive size={17} />,
               },
               {
                 path: "/settings/torrent",
-                label: "Torrent client",
+                label: t("settings.torrentClient"),
                 icon: <Download size={17} />,
               },
               {
                 path: "/settings/search",
-                label: "Torrent search",
+                label: t("settings.torrentSearch"),
                 icon: <Globe size={17} />,
               },
               {
                 path: "/settings/notifications",
-                label: "Notifications",
+                label: t("settings.notifications"),
                 icon: <Bell size={17} />,
               },
               {
                 path: "/settings/bell",
-                label: "Bell Notifications",
+                label: t("settings.bell"),
                 icon: <Bell size={17} />,
               },
               {
                 path: "/settings/debug",
-                label: "Debug",
+                label: t("settings.debug"),
                 icon: <Activity size={17} />,
               },
               {
                 path: "/settings/profiles",
-                label: "Profiles",
+                label: t("settings.profiles"),
                 icon: <Laptop size={17} />,
               },
             ]
@@ -505,7 +505,7 @@ export function SettingsPage({
             <DownloaderSettings />
           ) : (
             <p className="muted">
-              The deployment owner manages this connection.
+{t("settings.ownerConnection")}
             </p>
           )}
         </>
@@ -523,7 +523,7 @@ export function SettingsPage({
           )
         ) : (
           <p className="muted">
-            Only the deployment owner can change these settings.
+{t("settings.ownerOnly")}
           </p>
         ))}
       {tab === "debug" && <DebugSettings />}
@@ -531,8 +531,8 @@ export function SettingsPage({
       {tab === "personal" && (
         <div className="settings-columns">
           <section className="panel settings-card">
-            <h3>Your profile</h3>
-            <p className="muted">A familiar face in your own little space.</p>
+            <h3>{t("settings.yourProfile")}</h3>
+            <p className="muted">{t("settings.profileHelp")}</p>
             <form onSubmit={saveProfile}>
               <div className="profile-editor">
                 <Avatar
@@ -554,7 +554,7 @@ export function SettingsPage({
                           (!customColor && avatar === color ? " selected" : "")
                         }
                         type="button"
-                        aria-label={color + " avatar"}
+                        aria-label={t("accessibility.avatar", { color })}
                         onClick={() => {
                           setAvatar(color);
                           setCustomColor("");
@@ -565,7 +565,7 @@ export function SettingsPage({
                     ),
                   )}
                   <label className="avatar-upload">
-                    Upload image
+                    {t("settings.uploadImage")}
                     <input
                       type="file"
                       accept="image/png,image/jpeg,image/webp"
@@ -582,7 +582,7 @@ export function SettingsPage({
                           setAvatar(response.avatar);
                           setCustomColor("");
                           await invalidateResources(cache, ["bootstrap"]);
-                          notify("Avatar updated");
+                          notify(t("settings.avatarUpdated"));
                         } catch (e) {
                           notify((e as Error).message, true);
                         }
@@ -592,7 +592,7 @@ export function SettingsPage({
                 </div>
               </div>
               <label>
-                Custom avatar color
+                {t("profile.customAvatarColor")}
                 <input
                   value={customColor}
                   pattern="#[0-9A-Fa-f]{6}"
@@ -601,10 +601,10 @@ export function SettingsPage({
                   spellCheck={false}
                   onChange={(e) => setCustomColor(e.target.value)}
                 />
-                <small className="muted">Optional six-digit HTML color.</small>
+                <small className="muted">{t("profile.customAvatarHelp")}</small>
               </label>
               <label>
-                Display name
+                {t("profile.displayName")}
                 <input
                   maxLength={80}
                   required
@@ -628,7 +628,7 @@ export function SettingsPage({
                       value={item.locale}
                       disabled={!item.valid}
                     >
-                      {item.name}{item.valid ? "" : " — unavailable"}
+                      {item.name}{item.valid ? "" : ` — ${t("common.unavailable")}`}
                     </option>
                   ))}
                 </select>
@@ -643,23 +643,23 @@ export function SettingsPage({
               </label>
               <p className="small-text muted">
                 {boot.profile!.is_admin
-                  ? "Administrator account"
-                  : "Your personal account"}
+                  ? t("settings.adminAccount")
+                  : t("settings.personalAccount")}
               </p>
               <button className="button primary" disabled={busy}>
-                {busy && <Busy />}Save profile
+                {busy && <Busy />}{t("settings.saveProfile")}
               </button>
             </form>
           </section>
           <section className="panel settings-card">
-            <h3>Make yourself comfortable</h3>
-            <p className="muted">These choices follow your profile.</p>
-            <label>Appearance</label>
+            <h3>{t("settings.comfort")}</h3>
+            <p className="muted">{t("settings.comfortHelp")}</p>
+            <label>{t("appearance.title")}</label>
             <div className="theme-options">
               {[
-                { id: "system", icon: <Laptop size={21} />, label: "System" },
-                { id: "light", icon: <Sun size={21} />, label: "Light" },
-                { id: "dark", icon: <Moon size={21} />, label: "Dark" },
+                { id: "system", icon: <Laptop size={21} />, label: t("appearance.system") },
+                { id: "light", icon: <Sun size={21} />, label: t("appearance.light") },
+                { id: "dark", icon: <Moon size={21} />, label: t("appearance.dark") },
               ].map((t) => (
                 <button
                   key={t.id}
@@ -672,7 +672,7 @@ export function SettingsPage({
               ))}
             </div>
             <label>
-              Timezone
+              {t("settings.timezone")}
               <input
                 key={boot.preferences.timezone}
                 defaultValue={boot.preferences.timezone}
@@ -697,32 +697,32 @@ export function SettingsPage({
                 )
               }
             >
-              Use this browser's timezone
+{t("settings.useBrowserTimezone")}
             </button>
             <div className="two-fields">
               <label>
-                Week starts
+                {t("settings.weekStarts")}
                 <select
                   value={boot.preferences.week_start}
                   onChange={(e) => prefs("week_start", Number(e.target.value))}
                 >
-                  <option value={1}>Monday</option>
-                  <option value={0}>Sunday</option>
+                  <option value={1}>{t("settings.monday")}</option>
+                  <option value={0}>{t("settings.sunday")}</option>
                 </select>
               </label>
               <label>
-                Time format
+                {t("settings.timeFormat")}
                 <select
                   value={boot.preferences.time_format}
                   onChange={(e) => prefs("time_format", e.target.value)}
                 >
-                  <option value="24h">24-hour</option>
-                  <option value="12h">12-hour</option>
+                  <option value="24h">{t("settings.hour24")}</option>
+                  <option value="12h">{t("settings.hour12")}</option>
                 </select>
               </label>
             </div>
             <label>
-              Date format
+              {t("settings.dateFormat")}
               <select
                 value={boot.preferences.date_format}
                 onChange={(e) => prefs("date_format", e.target.value)}
@@ -739,9 +739,9 @@ export function SettingsPage({
         <section className="panel settings-card">
           <div className="section-heading">
             <div>
-              <h3>Everyone gets their own space</h3>
+              <h3>{t("settings.everyoneSpace")}</h3>
               <p className="muted">
-                {boot.profiles.length} of {boot.max_profiles} profiles used.
+{t("settings.usedProfiles", { used: boot.profiles.length, max: boot.max_profiles })}
               </p>
             </div>
             {settings.data?.operator && boot.auth_mode !== "oidc" && (
@@ -751,7 +751,7 @@ export function SettingsPage({
                 onClick={() => setNewProfile(true)}
               >
                 <Plus size={17} />
-                New profile
+                {t("settings.newProfile")}
               </button>
             )}
           </div>
@@ -767,8 +767,8 @@ export function SettingsPage({
                   <span>
                     <strong>{p.display_name}</strong>
                     <small>
-                      {isAdmin ? "admin" : "user"}
-                      {p.id === boot.profile?.id ? " · Current profile" : ""}
+                      {t(isAdmin ? "settings.roleAdmin" : "settings.roleUser")}
+                      {p.id === boot.profile?.id ? t("settings.currentSuffix") : ""}
                     </small>
                   </span>
                   <span className="profile-role-actions">
@@ -777,7 +777,7 @@ export function SettingsPage({
                       disabled={isAdmin && !canDemote}
                       title={
                         isAdmin && !canDemote
-                          ? "Promote another administrator first."
+                          ? t("admin.promoteFirst")
                           : ""
                       }
                       onClick={() =>
@@ -785,13 +785,13 @@ export function SettingsPage({
                       }
                     >
                       <ShieldCheck size={16} />
-                      {isAdmin ? "Remove admin" : "Make admin"}
+                      {t(isAdmin ? "settings.removeAdmin" : "settings.makeAdmin")}
                     </button>
                     <button
                       className="button small danger"
-                      aria-label={"Delete " + p.display_name}
+                      aria-label={t("settings.deleteProfile", { name: p.display_name })}
                       disabled={!canDelete}
-                      title={!canDelete ? "Promote another administrator first." : ""}
+                      title={!canDelete ? t("admin.promoteFirst") : ""}
                       onClick={() => {
                         if (isAdmin && boot.auth_mode === "local") {
                           setSensitiveAction({ profile: p, kind: "delete" });
@@ -801,7 +801,7 @@ export function SettingsPage({
                       }}
                     >
                       <Trash2 size={16} />
-                      Delete
+                      {t("common.delete")}
                     </button>
                   </span>
                 </div>
@@ -809,7 +809,7 @@ export function SettingsPage({
             })}
           </div>
           <p className="muted small-text">
-            To use another profile, sign out first.
+            {t("admin.signOutSwitch")}
           </p>
         </section>
       )}
@@ -819,7 +819,7 @@ export function SettingsPage({
           <section className="panel settings-card">
             <h3>
               <KeyRound size={19} />
-              Authentication
+              {t("settings.authentication")}
             </h3>
             {boot.auth_mode === "local" ? (
               <form
@@ -831,7 +831,7 @@ export function SettingsPage({
                     setCurrent("");
                     setPassword("");
                     await invalidateResources(cache, ["bootstrap", "sessions"]);
-                    notify("Password changed; other sessions revoked");
+                    notify(t("settings.passwordChanged"));
                   } catch (e) {
                     notify((e as Error).message, true);
                   } finally {
@@ -840,10 +840,10 @@ export function SettingsPage({
                 }}
               >
                 <p className="muted">
-                  Changing your password signs out your other sessions.
+                  {t("settings.passwordChangeHelp")}
                 </p>
                 <label>
-                  Current password
+                  {t("settings.currentPassword")}
                   <input
                     type="password"
                     autoComplete="current-password"
@@ -853,7 +853,7 @@ export function SettingsPage({
                   />
                 </label>
                 <label>
-                  New password or PIN
+                  {t("settings.newPasswordOrPin")}
                   <input
                     type="password"
                     autoComplete="new-password"
@@ -865,21 +865,21 @@ export function SettingsPage({
                   />
                 </label>
                 <button className="button primary" disabled={busy}>
-                  {busy && <Busy />}Change password
+                  {busy && <Busy />}{t("settings.changePassword")}
                 </button>
               </form>
             ) : (
               <p className="muted">
                 {boot.auth_mode === "disabled"
-                  ? "Authentication is disabled. Profiles are convenient personal spaces for a trusted network. Enable local or OIDC authentication through your deployment environment."
-                  : "Your identity provider manages sign-in and credentials."}
+                  ? t("settings.authDisabled")
+                  : t("settings.identityManaged")}
               </p>
             )}
           </section>
           <section className="panel settings-card">
             <h3>
               <ShieldCheck size={19} />
-              Your sessions
+              {t("settings.sessionsTitle")}
             </h3>
             {sessions.data?.length ? (
               sessions.data.map((session) => (
@@ -887,14 +887,14 @@ export function SettingsPage({
                   <Laptop size={21} />
                   <div>
                     <strong>
-                      {session.current ? "This browser" : "Browser session"}
+                      {session.current ? t("settings.thisBrowser") : t("settings.browserSession")}
                     </strong>
                     <small>{session.user_agent.slice(0, 90)}</small>
-                    <small>Last active {dateLabel(session.last_seen)}</small>
+                    <small>{t("settings.lastActive", { date: dateLabel(session.last_seen) })}</small>
                   </div>
                   <button
                     className="icon-button"
-                    aria-label="Revoke session"
+                    aria-label={t("settings.revokeSession")}
                     onClick={async () => {
                       try {
                         await api("/auth/sessions/" + session.id, "DELETE");
@@ -904,7 +904,7 @@ export function SettingsPage({
                             "bootstrap",
                             "sessions",
                           ]);
-                        notify("Session revoked");
+                        notify(t("settings.sessionRevoked"));
                       } catch (e) {
                         notify((e as Error).message, true);
                       }
@@ -915,7 +915,7 @@ export function SettingsPage({
                 </div>
               ))
             ) : (
-              <p className="muted">No authenticated sessions.</p>
+              <p className="muted">{t("settings.noSessions")}</p>
             )}
           </section>
         </div>
@@ -923,8 +923,8 @@ export function SettingsPage({
       {newProfile && <CreateProfile onClose={() => setNewProfile(false)} />}{" "}
       {deleting && (
         <Confirm
-          title={"Delete " + deleting.display_name + "?"}
-          message="This permanently removes this profile, preferences, follows, and episode progress. Other profiles keep their data."
+          title={t("admin.deleteTitle", { name: deleting.display_name })}
+          message={t("admin.deleteMessage")}
           onClose={() => setDeleting(null)}
           onConfirm={() => removeProfile(deleting)}
         />
@@ -933,13 +933,13 @@ export function SettingsPage({
         <Confirm
           title={
             adminConfirmation.isAdmin
-              ? "Grant administrator access?"
-              : "Remove administrator access?"
+              ? t("admin.grantTitle")
+              : t("admin.removeTitle")
           }
           message={
             adminConfirmation.isAdmin
-              ? `Make ${adminConfirmation.profile.display_name} an administrator? They will be able to manage shared settings, profiles, and other administrator actions.`
-              : `Remove administrator access from ${adminConfirmation.profile.display_name}? They will lose access to shared administration settings.`
+              ? t("admin.grantMessage", { name: adminConfirmation.profile.display_name })
+              : t("admin.removeMessage", { name: adminConfirmation.profile.display_name })
           }
           onClose={() => setAdminConfirmation(null)}
           onConfirm={async () => {
@@ -960,8 +960,8 @@ export function SettingsPage({
         <AdminReauthDialog
           title={
             sensitiveAction.kind === "demote"
-              ? "Confirm administrator change"
-              : "Confirm profile deletion"
+              ? t("admin.confirmChange")
+              : t("admin.confirmDelete")
           }
           onClose={() => setSensitiveAction(null)}
           onConfirm={async (password) => {
