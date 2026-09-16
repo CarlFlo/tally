@@ -103,7 +103,8 @@ func (w *ArchiveWatcher) watch() {
 			if !ok {
 				return
 			}
-			slog.Warn("backup archive watcher error", "error", err)
+			slog.Warn("backup archive watcher error; reconciling archive list", "error", err)
+			schedule()
 		case <-timerC:
 			timerC = nil
 			if w.onChange != nil {
