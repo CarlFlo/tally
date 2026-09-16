@@ -154,14 +154,26 @@ func (r *Registry) Revision() uint64 { return r.revision.Load() }
 
 func (r *Registry) syncEnglish() error {
 	path := filepath.Join(r.dir, "en.json")
-	current, err := os.ReadFile(path)
-	if err == nil {
-		item, parseErr := parse("en.json", current)
-		if parseErr == nil && item.status.CatalogVersion >= r.english.status.CatalogVersion {
-			return nil
+	info, statErr := os.Lstat(path)
+	if statErr == nil && !info.Mode().IsRegular() {
+		// Never follow symlinks or read special files at the server-owned
+		// English catalog path. Embedded English remains the runtime fallback.
+		slog.Warn("English localization path is not a regular file; using bundled catalog", "file", path, "mode", info.Mode())
+		return nil
+	}
+	if statErr != nil && !errors.Is(statErr, os.ErrNotExist) {
+		slog.Warn("English localization path could not be inspected; attempting bundled catalog restore", "file", path, "error", statErr)
+	}
+	if statErr == nil {
+		current, err := os.ReadFile(path)
+		if err == nil {
+			item, parseErr := parse("en.json", current)
+			if parseErr == nil && item.status.CatalogVersion >= r.english.status.CatalogVersion {
+				return nil
+			}
+		} else {
+			slog.Warn("English localization file could not be read; restoring bundled catalog", "file", path, "error", err)
 		}
-	} else if !errors.Is(err, os.ErrNotExist) {
-		slog.Warn("English localization file could not be read; restoring bundled catalog", "file", path, "error", err)
 	}
 	tmp, err := os.CreateTemp(r.dir, ".en-*.json")
 	if err != nil {
