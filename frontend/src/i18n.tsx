@@ -194,7 +194,7 @@ export function LocalizationProvider({
     (!index.data && index.error) || (!english.data && english.error);
   if (criticalError) {
     const retry = () => {
-      if (index.error) void index.refetch();
+      if (!index.data) void index.refetch();
       else void english.refetch();
     };
     return (
