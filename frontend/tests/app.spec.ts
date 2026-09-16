@@ -132,6 +132,11 @@ test("library, calendar, episode state, profiles, jobs and responsive layout", a
   await page.getByRole("button", { name: "Close dialog" }).click();
   await expect(page.locator(".calendar-episode").first()).toBeVisible();
   await page.locator(".calendar-episode").first().click();
+  await expect(page.getByRole("dialog", { name: "Episode details" })).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/calendar$/);
+  await expect(page.getByRole("dialog", { name: "Episode details" })).toHaveCount(0);
+  await page.locator(".calendar-episode").first().click();
   await page.getByRole("button", { name: "Mark watched", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Watched", exact: true }),
@@ -176,10 +181,6 @@ test("library, calendar, episode state, profiles, jobs and responsive layout", a
   await expect(
     page.getByRole("textbox", { name: "Torrent search query" }),
   ).toHaveValue("Example Show S01E01");
-  await expect(page.locator(".torrent-result")).toHaveCount(0);
-  await page
-    .getByRole("button", { name: "Search torrents", exact: true })
-    .click();
   await expect(page.locator(".torrent-result")).toHaveCount(2);
   await page.getByRole("button", { name: "1080p", exact: true }).click();
   await expect(page.locator(".torrent-result")).toHaveCount(1);
