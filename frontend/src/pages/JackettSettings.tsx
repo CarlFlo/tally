@@ -17,10 +17,62 @@ type JackettConfig = {
 type SavedSearch = { data: JackettConfig; revision: number };
 
 export function JackettSettings() {
+  const { t } = useTranslation();
+  const { notify } = useApp();
+  const cache = useQueryClient();
   const query = useLocal<SavedSearch>("editable-settings", "/settings/search", true);
+  const [toggleBusy, setToggleBusy] = useState(false);
   if (query.error) return <ErrorState error={query.error} retry={() => query.refetch()} />;
   if (!query.data) return <Busy />;
-  return <JackettForm saved={query.data} />;
+  const saved = query.data;
+
+  async function toggle(enabled: boolean) {
+    setToggleBusy(true);
+    try {
+      await api("/settings/search", "PUT", {
+        data: { ...saved.data, enabled },
+        revision: saved.revision,
+      });
+      cache.setQueryData<Boot>(queryKeys.bootstrap(), (current) =>
+        current
+          ? {
+              ...current,
+              jackett_enabled: enabled,
+              torrent_search_enabled: enabled,
+            }
+          : current,
+      );
+      await invalidateResources(cache, [
+        "settings",
+        "editable-settings",
+        "capabilities",
+        "bootstrap",
+      ]);
+      notify(t(enabled ? "searchSettings.enabled" : "searchSettings.disabled"));
+    } catch (error) {
+      notify((error as Error).message, true);
+    } finally {
+      setToggleBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <section className="panel settings-card feature-toggle-setting">
+        <label className="toggle-setting">
+          <input
+            type="checkbox"
+            checked={saved.data.enabled}
+            disabled={toggleBusy}
+            onChange={(event) => void toggle(event.target.checked)}
+          />
+          {t("searchSettings.enable")}
+        </label>
+        <p className="muted small-text">{t("searchSettings.toggleHelp")}</p>
+      </section>
+      <JackettForm saved={saved} />
+    </>
+  );
 }
 
 function JackettForm({ saved }: { saved: SavedSearch }) {
@@ -47,7 +99,7 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
   }
   async function run(action: "test" | "save", event?: FormEvent) {
     event?.preventDefault();
-    if ((action === "test" || data.enabled) && !form.current?.reportValidity()) return;
+    if (!form.current?.reportValidity()) return;
     setBusy(action);
     setFeedback(null);
     const signal = action === "test" ? startTest() : undefined;
@@ -62,7 +114,7 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
           current ? { ...current, jackett_enabled: data.enabled } : current,
         );
         await invalidateResources(cache, ["settings", "editable-settings", "capabilities", "bootstrap"]);
-        notify(t(data.enabled ? "searchSettings.saved" : "searchSettings.disabled"));
+        notify(t("searchSettings.saved"));
       }
     } catch (error) {
       if (signal?.aborted) return;
@@ -77,10 +129,6 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
       <p className="muted">{t("searchSettings.description")}</p>
       <form ref={form} onSubmit={(event) => run("save", event)} autoComplete="off">
         <fieldset disabled={busy !== null} className="client-fields">
-          <label className="toggle-setting">
-            <input type="checkbox" checked={data.enabled} onChange={(event) => change({ enabled: event.target.checked })} />
-            {t("searchSettings.enable")}
-          </label>
           <div>
             <label>
               {t("searchSettings.baseURL")}
@@ -99,7 +147,7 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
             <button type="button" className="button" onClick={() => run("test")}>
               {busy === "test" ? <Busy /> : <Plug size={17} />}{t("connection.test")}
             </button>
-            <button className="button primary" type="submit" formNoValidate={!data.enabled}>
+            <button className="button primary" type="submit">
               {busy === "save" ? <Busy /> : <Save size={17} />}{t("searchSettings.save")}
             </button>
           </div>
