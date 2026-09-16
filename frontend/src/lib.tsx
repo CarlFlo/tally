@@ -1,5 +1,5 @@
 import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
-import { dateTimeFormatter } from "./dateFormatting";
+import { dateTimeFormatter, displayLocale } from "./dateFormatting";
 import { requestPool } from "./requestPool";
 import { queryKeys } from "./queryKeys";
 import { invalidateResources } from "./queryInvalidation";
@@ -430,7 +430,7 @@ export function episodeDay(e: Episode, timezone: string) {
 }
 export function timeLabel(e: Episode, prefs: Prefs) {
   return e.airstamp && Number.isFinite(new Date(e.airstamp).getTime())
-    ? dateTimeFormatter(i18n.resolvedLanguage || "en", {
+    ? dateTimeFormatter(displayLocale(i18n.resolvedLanguage), {
         timeZone: prefs.timezone,
         hour: "numeric",
         minute: "2-digit",
@@ -452,7 +452,7 @@ export function dateLabel(value: number | string | null) {
   return (
     dateOnly(day) +
     " · " +
-    dateTimeFormatter(i18n.resolvedLanguage || "en", {
+    dateTimeFormatter(displayLocale(i18n.resolvedLanguage), {
       timeZone: prefs?.timezone,
       hour: "2-digit",
       minute: "2-digit",
@@ -469,7 +469,7 @@ export function dateOnly(day: string) {
   const [year, month, dateNumber] = day.split("-");
   if (format === "yyyy-MM-dd") return day;
   if (format === "MM/dd/yyyy") return `${month}/${dateNumber}/${year}`;
-  return dateTimeFormatter(i18n.resolvedLanguage || "en", {
+  return dateTimeFormatter(displayLocale(i18n.resolvedLanguage), {
     timeZone: "UTC",
     day: "numeric",
     month: "short",
