@@ -126,8 +126,8 @@ func TestRegistryUpdatesOlderEnglishCatalog(t *testing.T) {
 	if !ok {
 		t.Fatal("English locale was not available")
 	}
-	if catalog.Meta.CatalogVersion != 5 {
-		t.Fatalf("catalog version=%d, want 5", catalog.Meta.CatalogVersion)
+	if catalog.Meta.CatalogVersion != 6 {
+		t.Fatalf("catalog version=%d, want 6", catalog.Meta.CatalogVersion)
 	}
 	common, ok := catalog.Messages["common"].(map[string]any)
 	if !ok || common["save"] != "Save" {
@@ -259,4 +259,56 @@ func TestRegistryRejectsSymlinkLocaleEntries(t *testing.T) {
 	if !statusFound {
 		t.Fatal("symlink locale was not retained as a disabled entry")
 	}
+}
+
+func TestRegistryRejectsMismatchedTranslationPlaceholders(t *testing.T) {
+	dir := t.TempDir()
+	registry, err := New(dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer registry.Close()
+
+	path := filepath.Join(dir, "locales", "sv.json")
+	mismatched := []byte(`{
+		"_meta":{"locale":"sv","name":"Svenska","direction":"ltr","catalogVersion":1},
+		"profile":{"passwordHint":"Använd minst {{minimum}} tecken."}
+	}`)
+	if err = os.WriteFile(path, mismatched, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, func() bool {
+		for _, status := range registry.List() {
+			if status.Locale == "sv" {
+				return !status.Valid && status.ErrorCode == "language.placeholderMismatch"
+			}
+		}
+		return false
+	})
+}
+
+func TestRegistryRejectsMalformedTranslationPlaceholder(t *testing.T) {
+	dir := t.TempDir()
+	registry, err := New(dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer registry.Close()
+
+	path := filepath.Join(dir, "locales", "sv.json")
+	malformed := []byte(`{
+		"_meta":{"locale":"sv","name":"Svenska","direction":"ltr","catalogVersion":1},
+		"common":{"poster":"{{name poster"}
+	}`)
+	if err = os.WriteFile(path, malformed, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, func() bool {
+		for _, status := range registry.List() {
+			if status.Locale == "sv" {
+				return !status.Valid && status.ErrorCode == "language.placeholderMismatch"
+			}
+		}
+		return false
+	})
 }
