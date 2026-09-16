@@ -111,12 +111,12 @@ Branch: `feature/profile-localization`
 - [x] Test the `/settings` Backup archives list updates automatically while the page is open.
 
 ### Post-review hardening
-- [ ] Make localization watcher shutdown safe when fsnotify channels close and wait for its goroutine to exit.
-- [ ] Treat localization filesystem watching as optional at startup: keep serving loaded/embedded locales if fsnotify cannot start; do not add polling.
-- [ ] Reconcile localization state after watcher errors/overflow so missed filesystem events do not leave stale catalogs.
-- [ ] Limit locale JSON file size before reading/parsing to avoid accidental excessive memory use.
-- [ ] Avoid redundant backup archive refreshes on Tally-initiated delete while preserving immediate local UI refresh and watcher-based updates for other clients.
-- [ ] Add focused regression tests for the watcher lifecycle, oversized locale handling, and backup delete refresh behavior.
+- [x] Make localization watcher shutdown safe when fsnotify channels close and wait for its goroutine to exit.
+- [x] Treat localization filesystem watching as optional at startup: keep serving loaded/embedded locales if fsnotify cannot start; do not add polling.
+- [x] Reconcile localization state after watcher errors/overflow so missed filesystem events do not leave stale catalogs.
+- [x] Limit locale JSON file size before reading/parsing to avoid accidental excessive memory use.
+- [x] Avoid redundant backup archive refreshes on Tally-initiated delete while preserving immediate local UI refresh and watcher-based updates for other clients.
+- [x] Add focused regression tests for the watcher lifecycle, oversized locale handling, and backup delete refresh behavior.
 - [ ] Re-run the full validation workflow after these fixes.
 
 ### Documentation
@@ -160,6 +160,7 @@ Branch: `feature/profile-localization`
 - A same/newer custom English catalog is preserved on disk but merged over embedded canonical English in memory, keeping English a complete final fallback.
 
 ## Validation results
+- Post-review hardening implemented on branch head; GitHub Actions run `35121826498` is queued/pending validation.
 - Dependency versions verified: i18next 26.4.2, react-i18next 17.0.14, fsnotify v1.10.1.
 - Repository remnant scan found no remaining `APP_LANGUAGE`, `c.Language`, or legacy frontend `export const en` references.
 - npm install/audit, TypeScript/Vite build, Go vet + race tests, and govulncheck have passed on recent localization branch heads.
