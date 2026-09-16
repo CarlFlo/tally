@@ -10,6 +10,7 @@ import {
   Tv,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   api,
   Empty,
@@ -35,6 +36,7 @@ import { queryKeys } from "../queryKeys";
 import { invalidateResources } from "../queryInvalidation";
 
 export function CalendarPage({ onAdd }: { onAdd: () => void }) {
+  const { t, i18n } = useTranslation();
   const { boot, notify } = useApp();
   const cache = useQueryClient();
   const prefs = boot.preferences;
@@ -147,24 +149,24 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
   }
   const heading =
     view === "week"
-      ? `${start.toLocaleDateString("en", { month: "short", day: "numeric" })} – ${days[6].toLocaleDateString("en", { month: "short", day: "numeric" })}`
-      : date.toLocaleDateString("en", { month: "long", year: "numeric" });
+      ? `${start.toLocaleDateString(i18n.resolvedLanguage || "en", { month: "short", day: "numeric" })} – ${days[6].toLocaleDateString(i18n.resolvedLanguage || "en", { month: "short", day: "numeric" })}`
+      : date.toLocaleDateString(i18n.resolvedLanguage || "en", { month: "long", year: "numeric" });
   return (
     <div className="page calendar-page">
       <div className="page-heading">
         <div>
-          <div className="eyebrow">GOOD SHOWS. GREAT TIMING.</div>
+          <div className="eyebrow">{t("calendar.eyebrow")}</div>
           <h1>
-            Your calendar<span className="accent">.</span>
+            {t("calendar.yourCalendar")}<span className="accent">.</span>
           </h1>
         </div>
         <button className="button primary small" onClick={onAdd}>
           <Plus size={16} />
-          Add show
+          {t("calendar.addShow")}
         </button>
         <div className="heading-note calendar-date-note">
           <CalendarDays size={17} />
-          {today.toLocaleDateString("en", {
+          {today.toLocaleDateString(i18n.resolvedLanguage || "en", {
             weekday: "short",
             month: "short",
             day: "numeric",
@@ -178,26 +180,26 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
               <div className="arrows">
                 <button
                   className="icon-button"
-                  aria-label="Previous period"
+                  aria-label={t("calendar.previous")}
                   onClick={() => move(-1)}
                 >
                   <ChevronLeft size={18} />
                 </button>
                 <button
                   className="icon-button"
-                  aria-label="Next period"
+                  aria-label={t("calendar.next")}
                   onClick={() => move(1)}
                 >
                   <ChevronRight size={18} />
                 </button>
               </div>
               <button className="button small" onClick={() => setDate(today)}>
-                Today
+                {t("calendar.today")}
               </button>
               <h2>{heading}</h2>
             </div>
             <div className="calendar-toolbar-actions">
-              <div className="segmented" aria-label="Calendar view">
+              <div className="segmented" aria-label={t("calendar.view")}>
                 {["month", "week", "agenda"].map((v) => (
                   <button
                     key={v}
@@ -205,7 +207,7 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
                     aria-pressed={view === v}
                     onClick={() => changeView(v)}
                   >
-                    {v[0].toUpperCase() + v.slice(1)}
+                    {t(`calendar.${v}`)}
                   </button>
                 ))}
               </div>
@@ -223,11 +225,18 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
               <div className="weekdays">
                 {Array.from({ length: 7 }, (_, i) => (
                   <span key={i}>
-                    {
-                      ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"][
-                        (i + prefs.week_start) % 7
-                      ]
-                    }
+                    {new Intl.DateTimeFormat(i18n.resolvedLanguage || "en", {
+                      weekday: "short",
+                    })
+                      .format(
+                        new Date(
+                          2026,
+                          8,
+                          13 + ((i + prefs.week_start) % 7),
+                          12,
+                        ),
+                      )
+                      .toLocaleUpperCase(i18n.resolvedLanguage || "en")}
                   </span>
                 ))}
               </div>
@@ -246,7 +255,7 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
                       >
                         <strong>{d.getDate()}</strong>
                         <span>
-                          {d.toLocaleDateString("en", {
+                          {d.toLocaleDateString(i18n.resolvedLanguage || "en", {
                             month: "short",
                             weekday: "short",
                           })}
@@ -267,7 +276,7 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
                                     className="calendar-favorite"
                                     size={11}
                                     fill="currentColor"
-                                    aria-label="Favorite show"
+                                    aria-label={t("calendar.favorite")}
                                   />
                                 )}
                                 {ep.show_name}
@@ -281,10 +290,10 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
                             </span>
                             <span className="agenda-state-icons">
                               {!!ep.downloaded && (
-                                <Download className="mint-text" size={17} aria-label="Downloaded" />
+                                <Download className="mint-text" size={17} aria-label={t("calendar.downloaded")} />
                               )}
                               {!!ep.watched && (
-                                <Check className="mint-text" size={18} aria-label="Watched" />
+                                <Check className="mint-text" size={18} aria-label={t("calendar.watched")} />
                               )}
                             </span>
                           </button>
@@ -295,10 +304,9 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
                 {!filtered.length && (
                   <Empty
                     icon={<CalendarDays size={28} />}
-                    title="A little breathing room"
+                    title={t("calendar.noRangeTitle")}
                   >
-                    No episodes in this date range. Your followed shows will
-                    appear here when they air.
+{t("calendar.noRangeHelp")}
                   </Empty>
                 )}
               </div>
@@ -324,15 +332,15 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
             <div className="legend">
               <span>
                 <i className="legend-dot purple" />
-                Upcoming
+                {t("calendar.upcoming")}
               </span>
               <span>
                 <i className="legend-dot amber" />
-                Favorite
+                {t("calendar.favoriteLabel")}
               </span>
               <span>
                 <i className="legend-dot mint" />
-                Watched / Downloaded
+                {t("calendar.completedLegend")}
               </span>
             </div>
           </div>
@@ -342,12 +350,12 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
                 <Tv size={21} />
               </span>
               <div>
-                <strong>Your next favorite belongs here.</strong>
-                <p>Add a show and its episodes will find their place.</p>
+                <strong>{t("calendar.emptyTitle")}</strong>
+                <p>{t("calendar.emptyHelp")}</p>
               </div>
               <button className="button primary small" onClick={onAdd}>
                 <Plus size={16} />
-                Find a show
+                {t("calendar.findShow")}
               </button>
             </div>
           )}
