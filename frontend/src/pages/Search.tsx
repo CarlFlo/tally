@@ -170,7 +170,7 @@ export function SearchPage() {
           <h1>
             {t("search.title")}<span className="accent">.</span>
           </h1>
-          <p>Find what you're looking for. Choose exactly what happens next.</p>
+          <p>{t("search.description")}</p>
         </div>
       </div>
       <form onSubmit={search} className="torrent-search-form">
