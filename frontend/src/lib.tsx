@@ -1,6 +1,6 @@
 import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
 import { dateTimeFormatter, displayLocale } from "./dateFormatting";
-import { requestPool } from "./requestPool";
+import { requestPool, RequestPoolOverloadError } from "./requestPool";
 import { queryKeys } from "./queryKeys";
 import { invalidateResources } from "./queryInvalidation";
 import { i18n } from "./i18n";
@@ -73,6 +73,14 @@ export async function api<T = any>(
       }
       return data;
     });
+  } catch (error) {
+    if (error instanceof RequestPoolOverloadError)
+      throw new Error(
+        i18n.t("errors.tooManyRequests", {
+          defaultValue: "Too many pending requests. Please try again.",
+        }),
+      );
+    throw error;
   } finally {
     window.clearTimeout(timer);
   }
