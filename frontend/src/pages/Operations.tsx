@@ -330,7 +330,7 @@ export function SettingsPage({
     | "debug";
 }) {
   const { t, i18n } = useTranslation();
-  const { locales, previewLocale } = useLocalization();
+  const { locales } = useLocalization();
   const { boot, notify } = useApp();
   const cache = useQueryClient();
   const personal = tab === "personal" || tab === "security" || tab === "danger";
@@ -367,7 +367,6 @@ export function SettingsPage({
   useEffect(() => {
     setLocale(boot.profile!.locale || "en");
   }, [boot.profile!.locale]);
-  useEffect(() => () => previewLocale(null), [previewLocale]);
   async function prefs(key: string, value: any) {
     try {
       await api("/preferences", "PATCH", { [key]: value });
@@ -390,7 +389,6 @@ export function SettingsPage({
       notify(t("settings.profileUpdated"));
     } catch (e) {
       setLocale(boot.profile!.locale || "en");
-      previewLocale(boot.profile!.locale || "en");
       notify((e as Error).message, true);
     } finally {
       setBusy(false);
@@ -626,11 +624,7 @@ export function SettingsPage({
                 <select
                   aria-label={t("profile.language")}
                   value={locale}
-                  onChange={(event) => {
-                    const next = event.target.value;
-                    setLocale(next);
-                    previewLocale(next);
-                  }}
+                  onChange={(event) => setLocale(event.target.value)}
                 >
                   {!locales.some((item) => item.locale === locale) && (
                     <option value={locale} disabled>
