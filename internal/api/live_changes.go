@@ -47,6 +47,8 @@ func liveChanges(r *http.Request, session auth.Session) []liveUpdate {
 		switch strings.TrimPrefix(path, "/api/settings/") {
 		case "search":
 			return []liveUpdate{update("", "editable-settings", "settings", "capabilities", "bootstrap")}
+		case "torrent":
+			return []liveUpdate{update("", "editable-settings", "settings", "capabilities", "bootstrap", "downloads")}
 		case "notifications":
 			return []liveUpdate{update("", "editable-settings", "settings")}
 		case "backups":
@@ -96,8 +98,13 @@ func liveChanges(r *http.Request, session auth.Session) []liveUpdate {
 		}
 	case strings.HasPrefix(path, "/api/torrents/history/"):
 		return []liveUpdate{update(profile, "torrent-history")}
-	case strings.HasPrefix(path, "/api/torrents/downloads/"):
+	case strings.HasPrefix(path, "/api/torrents/downloads/") && r.Method == http.MethodDelete:
 		return []liveUpdate{update("", "downloads", "statistics")}
+	case strings.HasPrefix(path, "/api/torrents/downloads/"):
+		// The acting tab updates pause/resume state optimistically. qBittorrent can
+		// briefly return the old state immediately after accepting the action, so
+		// let the normal downloads refresh confirm it instead of overwriting the UI.
+		return []liveUpdate{update("", "statistics")}
 	}
 
 	return nil
