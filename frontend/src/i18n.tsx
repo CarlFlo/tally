@@ -10,8 +10,17 @@ import {
   type ReactNode,
 } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "./lib";
 import { queryKeys } from "./queryKeys";
+
+async function localeRequest<T>(path: string, signal?: AbortSignal): Promise<T> {
+  const response = await fetch("/api" + path, {
+    credentials: "same-origin",
+    signal,
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
+  return data as T;
+}
 
 export type LocaleStatus = {
   locale: string;
@@ -77,7 +86,7 @@ export function LocalizationProvider({
   const [preview, setPreview] = useState<string | null>(null);
   const index = useQuery<LocaleIndex>({
     queryKey: queryKeys.locales(),
-    queryFn: ({ signal }) => api("/locales", "GET", undefined, signal),
+    queryFn: ({ signal }) => localeRequest("/locales", signal),
   });
   const statuses = index.data?.locales ?? [];
   const byCode = useMemo(
@@ -90,13 +99,13 @@ export function LocalizationProvider({
 
   const english = useQuery<LocaleCatalog>({
     queryKey: queryKeys.localeCatalog("en"),
-    queryFn: ({ signal }) => api("/locales/en", "GET", undefined, signal),
+    queryFn: ({ signal }) => localeRequest("/locales/en", signal),
     enabled: !!index.data,
   });
   const active = useQuery<LocaleCatalog>({
     queryKey: queryKeys.localeCatalog(activeLocale),
     queryFn: ({ signal }) =>
-      api("/locales/" + encodeURIComponent(activeLocale), "GET", undefined, signal),
+      localeRequest("/locales/" + encodeURIComponent(activeLocale), signal),
     enabled: !!index.data && activeLocale !== "en",
   });
 
