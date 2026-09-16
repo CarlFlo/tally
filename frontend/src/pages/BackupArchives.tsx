@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   Archive,
   Download,
@@ -18,7 +18,6 @@ import {
   useApp,
 } from "../lib";
 import { queryKeys } from "../queryKeys";
-import { invalidateResources } from "../queryInvalidation";
 
 type BackupRecord = {
   id: string;
@@ -37,7 +36,6 @@ type BackupRecord = {
 export function BackupArchives() {
   const { t } = useTranslation();
   const { boot, notify } = useApp();
-  const cache = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<{
     action: "restore" | "delete";
@@ -72,7 +70,6 @@ export function BackupArchives() {
 
   async function remove(record: BackupRecord) {
     await api(`/backups/${record.id}`, "DELETE", {});
-    await invalidateResources(cache, ["backups"], 0);
     notify(t("backups.deleted"));
   }
 
