@@ -114,7 +114,8 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
     };
   }, [localDay(end), cache]);
   const all = episodes.data || [];
-  const overlayEpisodeId = location.state?.calendarEpisodeId as string | undefined;
+  const overlayEpisodeId =
+    new URLSearchParams(location.search).get("episode") || undefined;
   useEffect(() => {
     if (!overlayEpisodeId) {
       setSelected(null);
@@ -125,9 +126,10 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
   }, [all, overlayEpisodeId]);
   function selectEpisode(episode: Episode) {
     setSelected(episode);
-    navigate(location.pathname + location.search, {
+    const params = new URLSearchParams(location.search);
+    params.set("episode", episode.id);
+    navigate(`${location.pathname}?${params.toString()}`, {
       replace: !!overlayEpisodeId,
-      state: { ...(location.state || {}), calendarEpisodeId: episode.id },
     });
   }
   function closeEpisode() {
@@ -345,7 +347,7 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
                 expand={(key) => setExpanded((old) => [...old, key])}
                 select={(entries) =>
                   entries.length === 1
-                    ? setSelected(entries[0])
+                    ? selectEpisode(entries[0])
                     : setGroup(entries.map((ep) => ep.id))
                 }
               />
