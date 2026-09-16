@@ -5,6 +5,7 @@ import { ConnectionInput } from "../ConnectionInput";
 import { useLatestRequest } from "../useLatestRequest";
 import { api, Busy, ErrorState, useApp, useLocal } from "../lib";
 import { invalidateResources } from "../queryInvalidation";
+import { useTranslation } from "react-i18next";
 
 type JackettConfig = {
   base_url: string;
@@ -22,6 +23,7 @@ export function JackettSettings() {
 }
 
 function JackettForm({ saved }: { saved: SavedSearch }) {
+  const { t } = useTranslation();
   const { notify } = useApp();
   const cache = useQueryClient();
   const form = useRef<HTMLFormElement>(null);
@@ -56,7 +58,7 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
         const result = await api<{ revision: number }>("/settings/search", "PUT", { data, revision });
         setRevision(result.revision);
         await invalidateResources(cache, ["settings", "editable-settings", "capabilities"]);
-        notify(data.enabled ? "Jackett settings saved" : "Jackett disabled");
+        notify(t(data.enabled ? "searchSettings.saved" : "searchSettings.disabled"));
       }
     } catch (error) {
       if (signal?.aborted) return;
@@ -67,34 +69,34 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
   }
   return (
     <section className="panel settings-card client-settings">
-      <h3><Plug size={19} />Jackett</h3>
-      <p className="muted">Jackett searches your configured indexers. Tally lets you filter and select a result before sending it to your torrent client.</p>
+      <h3><Plug size={19} />{t("searchSettings.jackett")}</h3>
+      <p className="muted">{t("searchSettings.description")}</p>
       <form ref={form} onSubmit={(event) => run("save", event)} autoComplete="off">
         <fieldset disabled={busy !== null} className="client-fields">
           <label className="toggle-setting">
             <input type="checkbox" checked={data.enabled} onChange={(event) => change({ enabled: event.target.checked })} />
-            Enable Jackett search
+            {t("searchSettings.enable")}
           </label>
           <div>
             <label>
-              Jackett base URL
-              <ConnectionInput label="Jackett base URL" type="url" value={data.base_url} required placeholder="http://jackett:9117" onChange={(event) => change({ base_url: event.target.value })} />
+              {t("searchSettings.baseURL")}
+              <ConnectionInput label={t("searchSettings.baseURL")} type="url" value={data.base_url} required placeholder="http://jackett:9117" onChange={(event) => change({ base_url: event.target.value })} />
             </label>
-            <p className="small-text muted client-field-help">Enter the address of the Jackett instance. Tally uses Jackett's all-indexers Torznab endpoint.</p>
+            <p className="small-text muted client-field-help">{t("searchSettings.baseHelp")}</p>
           </div>
           <div>
             <label>
-              API key
-              <ConnectionInput label="Jackett API key" secret hiddenByDefault value={data.api_key} required maxLength={4096} onChange={(event) => change({ api_key: event.target.value })} />
+              {t("searchSettings.apiKey")}
+              <ConnectionInput label={t("searchSettings.apiKey")} secret hiddenByDefault value={data.api_key} required maxLength={4096} onChange={(event) => change({ api_key: event.target.value })} />
             </label>
-            <p className="small-text muted client-field-help">Find the API key in the Jackett dashboard. It stays server-side.</p>
+            <p className="small-text muted client-field-help">{t("searchSettings.keyHelp")}</p>
           </div>
           <div className="client-actions">
             <button type="button" className="button" onClick={() => run("test")}>
-              {busy === "test" ? <Busy /> : <Plug size={17} />}Test connection
+              {busy === "test" ? <Busy /> : <Plug size={17} />}{t("connection.test")}
             </button>
             <button className="button primary" type="submit" formNoValidate={!data.enabled}>
-              {busy === "save" ? <Busy /> : <Save size={17} />}Save Jackett
+              {busy === "save" ? <Busy /> : <Save size={17} />}{t("searchSettings.save")}
             </button>
           </div>
         </fieldset>
