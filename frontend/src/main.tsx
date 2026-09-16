@@ -1,6 +1,7 @@
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { AlertCircle, CalendarDays, Menu, Search, Tv, X } from "lucide-react";
 import { lazy, Suspense, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { createRoot } from "react-dom/client";
 import {
   BrowserRouter,
@@ -17,7 +18,6 @@ import {
   api,
   AppContext,
   Busy,
-  en,
   ErrorState,
   queryClient,
   type Boot,
@@ -35,6 +35,7 @@ import { ProfilePicker } from "./ProfilePicker";
 import { RegisterProfile } from "./RegisterProfile";
 import { queryKeys } from "./queryKeys";
 import { invalidateResources } from "./queryInvalidation";
+import { LocalizationProvider } from "./i18n";
 
 import "./style.css";
 import "./activity.css";
@@ -61,6 +62,7 @@ function RouteFallback() {
 }
 
 function App() {
+  const { t } = useTranslation();
   const bootstrap = useQuery<Boot>({
     queryKey: queryKeys.bootstrap(),
     queryFn: ({ signal }) => api("/bootstrap", "GET", undefined, signal),
@@ -136,10 +138,16 @@ function App() {
   useEffect(() => {
     document.title =
       "Tally · " +
-      (Object.entries(en.nav).find(([key]) =>
-        location.pathname.startsWith("/" + key),
-      )?.[1] || "Your TV, together");
-  }, [location.pathname]);
+      (["calendar", "shows", "search", "system", "settings"] as const)
+        .find((key) => location.pathname.startsWith("/" + key))
+        ? t(
+            "nav." +
+              (["calendar", "shows", "search", "system", "settings"] as const).find(
+                (key) => location.pathname.startsWith("/" + key),
+              ),
+          )
+        : t("brand.tagline");
+  }, [location.pathname, t]);
   if (bootstrap.isPending)
     return (
       <div className="startup">
@@ -156,6 +164,7 @@ function App() {
     );
   if (!boot) return null;
   return (
+    <LocalizationProvider profileLocale={boot.profile?.locale}>
     <AppContext.Provider value={{ boot, notify }}>
       <LibraryActionsProvider>
         <LiveUpdates enabled={!!boot.profile && !boot.restricted} />
@@ -185,7 +194,7 @@ function App() {
             )}
             <button
               className="icon-button mobile-menu"
-              aria-label={mobile ? "Close navigation" : "Open navigation"}
+              aria-label={mobile ? t("accessibility.closeNavigation") : t("accessibility.openNavigation")}
               aria-expanded={mobile}
               aria-controls="main-navigation"
               onClick={() => setMobile((open) => !open)}
@@ -199,20 +208,20 @@ function App() {
               <NavLink to="/calendar" className="brand-link">
                 <Logo />
               </NavLink>
-              <div className="workspace-label">YOUR LITTLE TV UNIVERSE</div>
-              <nav aria-label="Main navigation">
+              <div className="workspace-label">{t("brand.workspace")}</div>
+              <nav aria-label={t("accessibility.mainNavigation")}>
                 <div className="nav-group">
                   <NavLink to="/calendar">
                     <CalendarDays size={19} />
-                    {en.nav.calendar}
+                    {t("nav.calendar")}
                   </NavLink>
                   <NavLink to="/shows">
                     <Tv size={19} />
-                    {en.nav.shows}
+                    {t("nav.shows")}
                   </NavLink>
                   <NavLink to="/search">
                     <Search size={19} />
-                    {en.nav.search}
+                    {t("nav.search")}
                   </NavLink>
                 </div>
               </nav>
@@ -227,11 +236,17 @@ function App() {
               <header className="topbar">
                 <div className="topbar-left">
                   <span className="topbar-breadcrumb">
-                    Your space <span>/</span>{" "}
+                    {t("nav.yourSpace")} <span>/</span>{" "}
                     <strong>
-                      {Object.entries(en.nav).find(([key]) =>
-                        location.pathname.startsWith("/" + key),
-                      )?.[1] || "Calendar"}
+                      {(["calendar", "shows", "search", "system", "settings"] as const)
+                        .find((key) => location.pathname.startsWith("/" + key))
+                        ? t(
+                            "nav." +
+                              (["calendar", "shows", "search", "system", "settings"] as const).find(
+                                (key) => location.pathname.startsWith("/" + key),
+                              ),
+                          )
+                        : t("nav.calendar")}
                     </strong>
                   </span>
                 </div>
@@ -332,9 +347,9 @@ function App() {
                       path="*"
                       element={
                         <div className="page">
-                          <h1>Page not found</h1>
+                          <h1>{t("errors.pageNotFound")}</h1>
                           <NavLink className="button" to="/calendar">
-                            Back to calendar
+                            {t("errors.backToCalendar")}
                           </NavLink>
                         </div>
                       }
@@ -344,14 +359,14 @@ function App() {
               </main>
               <footer className="footer">
                 <span>
-                  Tally <span className="footer-dot">·</span> Your little TV universe
+                  Tally <span className="footer-dot">·</span> {t("brand.tagline")}
                 </span>
                 <a
                   href="https://www.tvmaze.com"
                   target="_blank"
                   rel="noreferrer"
                 >
-                  TV metadata by TVmaze ↗
+                  {t("footer.metadata")}
                 </a>
               </footer>
             </div>
@@ -361,6 +376,7 @@ function App() {
         {toast && <Notice toast={toast} dismiss={() => setToast(null)} />}
       </LibraryActionsProvider>
     </AppContext.Provider>
+    </LocalizationProvider>
   );
 }
 createRoot(document.getElementById("root")!).render(
