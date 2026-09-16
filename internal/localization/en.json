@@ -238,7 +238,29 @@
     "saved": "Backup settings saved",
     "scheduling": "Scheduling",
     "retentionArchives": "Backup retention and archives",
-    "scheduleHelp": "These controls belong to the Automatic backup schedule above."
+    "scheduleHelp": "These controls belong to the Automatic backup schedule above.",
+    "archives": "Backup archives",
+    "archivesHelp": "Download, restore, or remove backup archives found in Tally's backup folder.",
+    "manualCreate": "Create manual backup",
+    "automatic": "Automatic",
+    "imported": "Imported",
+    "manual": "Manual",
+    "schema": "Schema v{{schema}}",
+    "different": "Different from Tally {{version}}",
+    "incompatible": "Incompatible backup",
+    "download": "Download",
+    "restore": "Restore",
+    "privateWarning": "Archives include saved connection credentials. Keep downloads private. Backup failures appear in Notifications and Logs. Restore validates and migrates an archive before replacing current data.",
+    "restoreTitle": "Restore backup",
+    "deleteTitle": "Delete backup",
+    "oldNoMetadata": "an older version without version metadata",
+    "restoreMessage": "Restore {{filename}}? Current Tally data and saved settings will be replaced only after the backup is fully validated.",
+    "restoreVersionNote": " This backup was created by Tally {{backupVersion}}; the current version is {{currentVersion}}. Compatible database migrations will be applied before restore.",
+    "deleteMessage": "Delete {{filename}}? This backup archive cannot be recovered after deletion.",
+    "retentionHelp": "Older automatic backups are removed after the next successful backup. Manual backups are kept until you remove them.",
+    "automaticKeep": "Automatic backups to keep",
+    "saveSettings": "Save settings",
+    "timezoneHelp": "Cron schedules use the server timezone: {{timezone}}."
   },
   "danger": {
     "deleteAccount": "Delete my account",
@@ -246,7 +268,13 @@
     "removeAdminMessage": "You will immediately lose access to deployment settings and administrator tools.",
     "deleteTitle": "Permanently delete your account?",
     "deleteMessage": "This cannot be undone. Your profile and all personal progress will be removed.",
-    "adminRemoved": "Administrator access removed"
+    "adminRemoved": "Administrator access removed",
+    "adminTitle": "Administrator access",
+    "adminHelp": "Remove your own administrator permission. Another administrator must remain so the deployment cannot be locked out.",
+    "removeOwnAdmin": "Remove my administrator access",
+    "deleteHelp": "Permanently delete your profile, preferences, follows, and episode progress. You will be signed out on every device. Other profiles keep their data.",
+    "promoteBeforeDelete": "Promote another profile to administrator before deleting this account.",
+    "confirmAccountDelete": "Confirm account deletion"
   },
   "discovery": {
     "finding": "Finding shows…",
@@ -256,7 +284,22 @@
     "clear": "Clear search",
     "keepTyping": "Keep typing",
     "previewAddFailed": "Preview: the show could not be added. Your library has not changed.",
-    "previewRetry": "Preview retry complete."
+    "previewRetry": "Preview retry complete.",
+    "browsingHelp": "Highly rated shows airing recently. Find something worth following.",
+    "searchHelp": "Search TVmaze. Your next story is out there.",
+    "recently": "RECENTLY ON AIR · RATED 7+",
+    "results": "SEARCH RESULTS",
+    "queued": "{{count}} queued · keep exploring",
+    "twoChars": "Use at least two characters to search.",
+    "findStory": "Find your next story",
+    "noShows": "No shows found",
+    "startWatchlist": "Search for a title to start your watchlist.",
+    "tryAnother": "Try another title or check the spelling.",
+    "about": "About {{name}}",
+    "footnote": "TVmaze ratings · Recent US broadcast & worldwide streaming · Click Added to undo",
+    "previewFailure": "Preview add failure",
+    "noSummary": "No summary available.",
+    "added": "Added"
   },
   "downloader": {
     "none": "No torrent client"
@@ -439,7 +482,10 @@
   },
   "debug": {
     "previews": "Debug previews",
-    "environment": "Deployment environment"
+    "environment": "Deployment environment",
+    "previewsHelp": "Show preview controls in Jobs and Add Show to check failure and paused states. Previews leave real jobs and library data alone.",
+    "enable": "Enable debug mode",
+    "environmentHelp": "Effective non-sensitive environment values loaded when Tally started. Secrets and credential values are intentionally not shown."
   },
   "admin": {
     "granted": "Administrator access granted",
@@ -461,5 +507,28 @@
     "removeMessage": "Remove administrator access from {{name}}? They will lose access to shared administration settings.",
     "deleteTitle": "Delete {{name}}?",
     "deleteMessage": "This permanently removes this profile, preferences, follows, and episode progress. Other profiles keep their data."
+  },
+  "bell": {
+    "title": "Bell Notifications",
+    "needsAttention": "Needs attention",
+    "needsAttentionHelp": "Problems that may need you to take action.",
+    "scheduled_job_failures": "Scheduled job failures",
+    "scheduled_job_failuresHelp": "Problems with metadata or maintenance jobs.",
+    "backup_failures": "Backup failures",
+    "backup_failuresHelp": "A scheduled or manual backup could not complete.",
+    "provider_api_failures": "Provider and API failures",
+    "provider_api_failuresHelp": "A metadata or search provider cannot be reached.",
+    "torrent_client_failures": "Torrent client failures",
+    "torrent_client_failuresHelp": "Sending a torrent to the configured client failed.",
+    "mediaUpdates": "Media updates",
+    "mediaUpdatesHelp": "New episodes becoming available for followed shows.",
+    "episode_releases": "New episode releases",
+    "episode_releasesHelp": "An episode from a followed show is available.",
+    "successfulActivity": "Successful activity",
+    "successfulActivityHelp": "Optional confirmations for work that completed normally.",
+    "backup_successes": "Successful backups",
+    "backup_successesHelp": "A backup finished successfully.",
+    "routine_background": "Routine background tasks",
+    "routine_backgroundHelp": "Successful maintenance and metadata work."
   }
 }
