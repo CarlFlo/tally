@@ -3,7 +3,6 @@ import {
   Archive,
   Download,
   Plus,
-  RefreshCw,
   RotateCcw,
   Trash2,
 } from "lucide-react";
@@ -99,14 +98,6 @@ export function BackupArchives() {
           </p>
         </div>
         <div className="backup-actions">
-          <button
-            className="button"
-            disabled={busy || archives.isFetching}
-            onClick={() => void archives.refetch()}
-          >
-            {archives.isFetching ? <Busy /> : <RefreshCw size={16} />}
-            {t("common.refresh")}
-          </button>
           <button className="button primary" disabled={busy} onClick={create}>
             {busy ? <Busy /> : <Plus size={16} />}
             {t("backups.manualCreate")}
