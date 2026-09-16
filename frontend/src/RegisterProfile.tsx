@@ -84,6 +84,7 @@ export function RegisterProfile() {
                       id: "",
                       display_name: name || "You",
                       avatar: color,
+                      locale,
                     }}
                   />
                 </button>
@@ -108,6 +109,7 @@ export function RegisterProfile() {
                     id: "",
                     display_name: name || "You",
                     avatar: customColor,
+                    locale,
                   }}
                   large
                 />
