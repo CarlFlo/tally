@@ -1,4 +1,5 @@
 import { episodeCode, type Episode } from "./lib";
+import { i18n } from "./i18n";
 
 export function groupReleases(episodes: Episode[]): Episode[][] {
   const groups = new Map<string, Episode[]>();
@@ -32,7 +33,7 @@ export function releaseLabel(episodes: Episode[]): string {
           (ep) => ep.number > 0 && (!ep.type || ep.type === "regular"),
         )
       ) {
-        return `Season ${season} · Full season`;
+        return i18n.t("library.fullSeason", { season });
       }
       return entries.map(episodeCode).join(", ");
     })
