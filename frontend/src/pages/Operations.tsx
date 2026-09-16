@@ -532,7 +532,10 @@ export function SettingsPage({
       {tab === "personal" && (
         <div className="settings-columns">
           <section className="panel settings-card">
-            <h3>{t("settings.yourProfile")}</h3>
+            <h3>
+              {t("settings.yourProfile")}
+              {boot.profile!.is_admin && <> · {t("settings.adminAccount")}</>}
+            </h3>
             <p className="muted">{t("settings.profileHelp")}</p>
             <form onSubmit={saveProfile}>
               <div className="profile-editor">
@@ -653,11 +656,6 @@ export function SettingsPage({
                   </small>
                 )}
               </label>
-              <p className="small-text muted">
-                {boot.profile!.is_admin
-                  ? t("settings.adminAccount")
-                  : t("settings.personalAccount")}
-              </p>
               <button className="button primary" disabled={busy}>
                 {busy && <Busy />}{t("settings.saveProfile")}
               </button>
