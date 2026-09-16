@@ -86,7 +86,8 @@
     "invalidFile": "Localization file is invalid.",
     "invalidJson": "Localization file contains invalid JSON.",
     "missingMetadata": "Localization metadata is incomplete.",
-    "unsupportedFormat": "Localization file uses an unsupported format."
+    "unsupportedFormat": "Localization file uses an unsupported format.",
+    "missingFile": "Localization file is missing."
   },
   "calendar": {
     "title": "Calendar",
