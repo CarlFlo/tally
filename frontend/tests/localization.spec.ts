@@ -39,13 +39,13 @@ test("profile language previews immediately and persists per profile", async ({
 
   await openProfile(page);
   const language = page.getByLabel("Language", { exact: true });
-  await language.selectOption("sv");
+  await language.selectOption("zz-Test");
 
   // Preview is immediate: no save, reload, or new session is needed.
   await expect(
-    page.getByRole("heading", { name: "Min profil." }),
+    page.getByRole("heading", { name: "Test profile." }),
   ).toBeVisible();
-  await expect(page.locator("html")).toHaveAttribute("lang", "sv");
+  await expect(page.locator("html")).toHaveAttribute("lang", "zz-Test");
   await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
 
   // Untranslated keys in this deliberately partial fixture still fall back to English.
@@ -56,17 +56,17 @@ test("profile language previews immediately and persists per profile", async ({
   await page.getByRole("button", { name: "Save profile", exact: true }).click();
   await page.goto("/calendar");
   await expect(
-    page.getByRole("heading", { name: "Din kalender." }),
+    page.getByRole("heading", { name: "Test calendar." }),
   ).toBeVisible();
 
   await page.reload();
-  await expect(page.locator("html")).toHaveAttribute("lang", "sv");
+  await expect(page.locator("html")).toHaveAttribute("lang", "zz-Test");
   await expect(
-    page.getByRole("heading", { name: "Din kalender." }),
+    page.getByRole("heading", { name: "Test calendar." }),
   ).toBeVisible();
 
   // A new profile defaults to English and previews that default immediately,
-  // even while the administrator's saved profile locale is Swedish.
+  // even while the administrator's saved profile locale is the test locale.
   await page.goto("/settings/profiles");
   await page.getByRole("button", { name: "New profile", exact: true }).click();
   const createDialog = page.getByRole("dialog", {
