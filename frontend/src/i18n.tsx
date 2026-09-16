@@ -213,7 +213,7 @@ export function LocalizationProvider({
   if (
     index.isPending ||
     english.isPending ||
-    (candidateLocale !== "en" && active.isPending)
+    (preview === null && candidateLocale !== "en" && active.isPending)
   ) {
     return <div className="startup">Tally</div>;
   }
