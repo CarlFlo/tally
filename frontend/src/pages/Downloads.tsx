@@ -10,9 +10,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { api, Busy, Empty, ErrorState, bytes, useApp } from "../lib";
+import { api, Busy, Dialog, Empty, ErrorState, bytes, useApp } from "../lib";
 import { queryKeys } from "../queryKeys";
-import { invalidateResources } from "../queryInvalidation";
 
 type DownloadItem = {
   hash: string;
@@ -48,6 +47,7 @@ export function DownloadsPage() {
   const { notify } = useApp();
   const cache = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<DownloadItem | null>(null);
   const downloads = useQuery<DownloadData>({
     queryKey: queryKeys.downloads(),
     queryFn: ({ signal }) =>
@@ -56,24 +56,74 @@ export function DownloadsPage() {
     refetchIntervalInBackground: false,
   });
 
-  async function act(item: DownloadItem, action: "stop" | "start" | "remove") {
+  async function act(item: DownloadItem, action: "stop" | "start") {
     const key = item.hash + ":" + action;
     setBusy(key);
     try {
-      if (action === "remove") {
-        await api("/torrents/downloads/" + item.hash, "DELETE");
-      } else {
-        await api("/torrents/downloads/" + item.hash + "/" + action, "POST");
-      }
-      await invalidateResources(cache, ["downloads"]);
+      await api("/torrents/downloads/" + item.hash + "/" + action, "POST");
+      cache.setQueryData<DownloadData>(queryKeys.downloads(), (current) =>
+        current
+          ? {
+              ...current,
+              torrents: current.torrents.map((torrent) =>
+                torrent.hash === item.hash
+                  ? {
+                      ...torrent,
+                      state: action === "stop" ? "paused" : "downloading",
+                    }
+                  : torrent,
+              ),
+            }
+          : current,
+      );
+      notify(t(action === "stop" ? "downloads.paused" : "downloads.resumed"));
+    } catch (e) {
+      notify((e as Error).message, true);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function remove(item: DownloadItem, deleteFiles: boolean) {
+    const key = item.hash + ":remove:" + String(deleteFiles);
+    setBusy(key);
+    try {
+      await api(
+        "/torrents/downloads/" +
+          item.hash +
+          "?delete_files=" +
+          String(deleteFiles),
+        "DELETE",
+      );
+      cache.setQueryData<DownloadData>(queryKeys.downloads(), (current) =>
+        current
+          ? {
+              torrents: current.torrents.filter(
+                (torrent) => torrent.hash !== item.hash,
+              ),
+              stats: {
+                ...current.stats,
+                total: Math.max(0, current.stats.total - 1),
+                active: Math.max(
+                  0,
+                  current.stats.active -
+                    (item.download_speed > 0 || item.upload_speed > 0 ? 1 : 0),
+                ),
+                download_speed: Math.max(
+                  0,
+                  current.stats.download_speed - item.download_speed,
+                ),
+                upload_speed: Math.max(
+                  0,
+                  current.stats.upload_speed - item.upload_speed,
+                ),
+              },
+            }
+          : current,
+      );
+      setRemoving(null);
       notify(
-        t(
-          action === "remove"
-            ? "downloads.removed"
-            : action === "stop"
-              ? "downloads.paused"
-              : "downloads.resumed",
-        ),
+        t(deleteFiles ? "downloads.removedWithFiles" : "downloads.removed"),
       );
     } catch (e) {
       notify((e as Error).message, true);
@@ -148,7 +198,6 @@ export function DownloadsPage() {
                   const progress = Math.max(0, Math.min(100, item.progress * 100));
                   const toggleAction = isStopped ? "start" : "stop";
                   const toggleKey = item.hash + ":" + toggleAction;
-                  const removeKey = item.hash + ":remove";
                   return (
                     <div className="download-row" key={item.hash}>
                       <div className="download-row-main">
@@ -197,9 +246,9 @@ export function DownloadsPage() {
                           className="button small danger"
                           disabled={busy !== null}
                           title={t("downloads.removeHelp")}
-                          onClick={() => act(item, "remove")}
+                          onClick={() => setRemoving(item)}
                         >
-                          {busy === removeKey ? <Busy /> : <Trash2 size={16} />}
+                          <Trash2 size={16} />
                           {t("downloads.remove")}
                         </button>
                       </div>
@@ -211,6 +260,46 @@ export function DownloadsPage() {
           </section>
           <p className="search-footnote">{t("downloads.pollingNote")}</p>
         </>
+      )}
+      {removing && (
+        <Dialog
+          title={t("downloads.removeTitle")}
+          onClose={() => {
+            if (!busy) setRemoving(null);
+          }}
+        >
+          <p className="muted">
+            {t("downloads.removePrompt", { name: removing.name })}
+          </p>
+          <div className="dialog-actions">
+            <button
+              type="button"
+              className="button"
+              disabled={busy !== null}
+              onClick={() => setRemoving(null)}
+            >
+              {t("common.cancel")}
+            </button>
+            <button
+              type="button"
+              className="button danger"
+              disabled={busy !== null}
+              onClick={() => void remove(removing, false)}
+            >
+              {busy === removing.hash + ":remove:false" && <Busy />}
+              {t("downloads.removeTorrentOnly")}
+            </button>
+            <button
+              type="button"
+              className="button danger"
+              disabled={busy !== null}
+              onClick={() => void remove(removing, true)}
+            >
+              {busy === removing.hash + ":remove:true" && <Busy />}
+              {t("downloads.removeTorrentAndFiles")}
+            </button>
+          </div>
+        </Dialog>
       )}
       {downloads.isPending && !data && <Busy />}
     </div>
