@@ -11,6 +11,13 @@ test("configure, test, save and use a shared torrent client with visible API key
   const clientURL = initial.settings.fields.url;
   await page.goto("/settings/torrent");
   const card = page.locator(".client-settings");
+  const featureToggle = page.locator(".feature-toggle-setting");
+  await expect(
+    featureToggle.getByRole("checkbox", { name: "Enable torrent downloads" }),
+  ).toBeChecked();
+  await expect(
+    card.getByRole("checkbox", { name: "Enable torrent downloads" }),
+  ).toHaveCount(0);
   await expect(
     card.getByRole("combobox", { name: "Torrent client", exact: true }),
   ).toHaveValue("qbittorrent");
