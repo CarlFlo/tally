@@ -1,5 +1,6 @@
 import { Clock3, Star } from "lucide-react";
 import type { CSSProperties } from "react";
+import { useTranslation } from "react-i18next";
 import {
   episodeCode,
   episodeDay,
@@ -23,6 +24,7 @@ export function CalendarHorizon({
   select: (episode: Episode) => void;
   maxHeight?: number;
 }) {
+  const { t, i18n } = useTranslation();
   const now = useNow();
   const days = new Map<string, Episode[]>();
   for (const episode of episodes) {
@@ -41,7 +43,7 @@ export function CalendarHorizon({
     >
       <section className="rail-section horizon-section">
         <div className="section-heading">
-          <h3>On the horizon</h3>
+          <h3>{t("calendar.onHorizon")}</h3>
         </div>
         {episodes.length ? (
           <div className="horizon-scroll">
@@ -52,8 +54,8 @@ export function CalendarHorizon({
               >
                 <h4 className="tiny-label">
                   {day === today
-                    ? "TODAY"
-                    : new Date(day + "T12:00:00").toLocaleDateString("en", {
+                    ? t("calendar.today").toLocaleUpperCase(i18n.resolvedLanguage || "en")
+                    : new Date(day + "T12:00:00").toLocaleDateString(i18n.resolvedLanguage || "en", {
                         weekday: "short",
                         month: "short",
                         day: "numeric",
@@ -76,7 +78,7 @@ export function CalendarHorizon({
                             className="calendar-favorite"
                             size={11}
                             fill="currentColor"
-                            aria-label="Favorite show"
+                            aria-label={t("calendar.favorite")}
                           />
                         )}
                         {episode.show_name}
@@ -84,7 +86,7 @@ export function CalendarHorizon({
                       <small>
                         {episodeCode(episode)} · {timeLabel(episode, prefs)}
                         <span
-                          className={`release-countdown ${countdown(episode, prefs.timezone, now) === "Available" ? "available" : ""}`}
+                          className={`release-countdown ${countdown(episode, prefs.timezone, now) === t("calendar.available") ? "available" : ""}`}
                         >
                           {countdown(episode, prefs.timezone, now)}
                         </span>
@@ -102,8 +104,8 @@ export function CalendarHorizon({
               <span />
               <Clock3 size={25} />
             </div>
-            <h4>Something to look forward to.</h4>
-            <p>Upcoming episodes from your shows will land right here.</p>
+            <h4>{t("calendar.horizonEmptyTitle")}</h4>
+            <p>{t("calendar.horizonEmptyHelp")}</p>
           </div>
         )}
       </section>
