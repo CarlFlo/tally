@@ -7,6 +7,7 @@ import (
 )
 
 func (s *Server) locales(w http.ResponseWriter, r *http.Request, _ auth.Session) error {
+	w.Header().Set("Cache-Control", "no-store")
 	if s.Locales == nil {
 		return apiError{http.StatusServiceUnavailable, "localization is unavailable"}
 	}
@@ -18,13 +19,14 @@ func (s *Server) locales(w http.ResponseWriter, r *http.Request, _ auth.Session)
 }
 
 func (s *Server) localeCatalog(w http.ResponseWriter, r *http.Request, _ auth.Session) error {
+	w.Header().Set("Cache-Control", "no-store")
 	if s.Locales == nil {
 		return apiError{http.StatusServiceUnavailable, "localization is unavailable"}
 	}
 	locale := r.PathValue("locale")
 	catalog, ok := s.Locales.Catalog(locale)
 	if !ok {
-		return apiError{http.StatusConflict, "localization is unavailable"}
+		return codedAPIError{Status: http.StatusConflict, Message: "localization is unavailable", Code: "locale_unavailable"}
 	}
 	jsonResponse(w, http.StatusOK, catalog)
 	return nil
