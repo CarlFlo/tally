@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { displayLocale } from "../dateFormatting";
 import { NavLink } from "react-router-dom";
 import {
   api,
@@ -149,7 +150,7 @@ export function StatisticsPage() {
         ].map((m) => (
           <div className="panel stat-card" key={m.label}>
             <span className={"metric-icon " + m.cls}>{m.icon}</span>
-            <strong>{m.value.toLocaleString(i18n.resolvedLanguage || "en")}</strong>
+            <strong>{m.value.toLocaleString(displayLocale(i18n.resolvedLanguage))}</strong>
             <span>{m.label}</span>
             <small>{t("statistics.last30")}</small>
           </div>
