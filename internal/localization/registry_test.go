@@ -101,3 +101,77 @@ func waitFor(t *testing.T, condition func() bool) {
 	}
 	t.Fatal("condition was not met before timeout")
 }
+
+func TestRegistryUpdatesOlderEnglishCatalog(t *testing.T) {
+	dir := t.TempDir()
+	locales := filepath.Join(dir, "locales")
+	if err := os.MkdirAll(locales, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	old := []byte(`{
+		"_meta":{"locale":"en","name":"English","direction":"ltr","catalogVersion":1},
+		"common":{"save":"Old save"}
+	}`)
+	if err := os.WriteFile(filepath.Join(locales, "en.json"), old, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	registry, err := New(dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer registry.Close()
+
+	catalog, ok := registry.Catalog("en")
+	if !ok {
+		t.Fatal("English locale was not available")
+	}
+	if catalog.Meta.CatalogVersion != 2 {
+		t.Fatalf("catalog version=%d, want 2", catalog.Meta.CatalogVersion)
+	}
+	common, ok := catalog.Messages["common"].(map[string]any)
+	if !ok || common["save"] != "Save" {
+		t.Fatalf("old English catalog was not replaced: %#v", catalog.Messages["common"])
+	}
+}
+
+func TestInvalidLocaleMetadataCannotShadowValidLocale(t *testing.T) {
+	dir := t.TempDir()
+	locales := filepath.Join(dir, "locales")
+	if err := os.MkdirAll(locales, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	valid := []byte(`{
+		"_meta":{"locale":"sv","name":"Svenska","direction":"ltr","catalogVersion":1},
+		"common":{"save":"Spara"}
+	}`)
+	shadow := []byte(`{
+		"_meta":{"locale":"sv","name":"Broken Swedish","direction":"ltr","catalogVersion":1},
+		"common":{"save":"Fel"}
+	}`)
+	if err := os.WriteFile(filepath.Join(locales, "sv.json"), valid, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(locales, "zz.json"), shadow, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	registry, err := New(dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer registry.Close()
+
+	if !registry.Valid("sv") {
+		t.Fatal("valid Swedish locale was shadowed by invalid metadata")
+	}
+	var foundBroken bool
+	for _, status := range registry.List() {
+		if status.Locale == "zz" {
+			foundBroken = !status.Valid
+		}
+	}
+	if !foundBroken {
+		t.Fatal("invalid zz.json was not retained as a disabled locale")
+	}
+}
