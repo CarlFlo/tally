@@ -616,6 +616,7 @@ export function SettingsPage({
               <label>
                 {t("profile.language")}
                 <select
+                  aria-label={t("profile.language")}
                   value={locale}
                   onChange={(event) => {
                     const next = event.target.value;
@@ -1159,7 +1160,7 @@ function AdminReauthDialog({
         </label>
         <div className="dialog-actions">
           <button type="button" className="button" onClick={onClose}>
-            Cancel
+            {t("common.cancel")}
           </button>
           <button className="button danger" disabled={busy}>
             {busy && <Busy />}{t("common.confirm")}
