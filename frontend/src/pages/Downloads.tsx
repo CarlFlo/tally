@@ -264,9 +264,7 @@ export function DownloadsPage() {
       {removing && (
         <Dialog
           title={t("downloads.removeTitle")}
-          onClose={() => {
-            if (!busy) setRemoving(null);
-          }}
+          onClose={() => setRemoving(null)}
         >
           <p className="muted">
             {t("downloads.removePrompt", { name: removing.name })}
