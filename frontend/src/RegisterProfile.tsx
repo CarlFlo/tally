@@ -140,7 +140,7 @@ export function RegisterProfile() {
                 .filter((item) => !item.valid)
                 .map((item) => (
                   <small className="muted" key={item.locale}>
-                    {item.name}: {item.error || t("profile.localeUnavailable")}
+                    {item.name}: {item.error_code ? t(item.error_code, { defaultValue: item.error }) : item.error || t("profile.localeUnavailable")}
                   </small>
                 ))}
             </label>
