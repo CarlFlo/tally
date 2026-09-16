@@ -2320,6 +2320,17 @@ td .table-error {
   padding: 25px;
   margin-bottom: 22px;
 }
+.feature-toggle-setting {
+  padding: 18px 20px;
+}
+.feature-toggle-setting > label {
+  margin-top: 0;
+  font-weight: 650;
+}
+.feature-toggle-setting > .small-text {
+  margin: 8px 0 0;
+  max-width: 650px;
+}
 .client-fields {
   display: grid;
   gap: 18px;
