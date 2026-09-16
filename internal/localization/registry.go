@@ -21,33 +21,7 @@ import (
 //go:embed en.json
 var embeddedEnglish []byte
 
-var localePattern = regexp.MustCompile(`^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*package localization
-
-import (
-	_ "embed"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"log/slog"
-	"os"
-	"path/filepath"
-	"regexp"
-	"sort"
-	"strings"
-	"sync"
-	"sync/atomic"
-	"time"
-
-	"github.com/fsnotify/fsnotify"
-)
-
-//go:embed en.json
-var embeddedEnglish []byte
-
-)
-var interpolationPattern = regexp.MustCompile(`\{\{\s*-?\s*([A-Za-z0-9_.]+)(?:\s*,[^{}]+)?\s*\}\}`)
-
-type Meta struct {
+var localePattern = regexp.MustCompile(`^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$`)\nvar interpolationPattern = regexp.MustCompile(`\\{\\{\\s*-?\\s*([A-Za-z0-9_.]+)(?:\\s*,[^{}]+)?\\s*\\}\\}`)\n\ntype Meta struct {
 	Locale         string `json:"locale"`
 	Name           string `json:"name"`
 	Direction      string `json:"direction"`
