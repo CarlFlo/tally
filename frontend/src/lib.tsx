@@ -577,7 +577,7 @@ export function EpisodeDrawer({
                     episodeCode(ep).replace(` · ${i18n.t("common.special")}`, ""),
                 ) +
                 "&auto=1";
-              onClose();
+              if (!replaceNavigation) onClose();
               navigate(destination, { replace: replaceNavigation });
             }}
           >
@@ -588,7 +588,7 @@ export function EpisodeDrawer({
         <button
           className="button ghost"
           onClick={() => {
-            onClose();
+            if (!replaceNavigation) onClose();
             navigate("/shows/" + ep.show_id, { replace: replaceNavigation });
           }}
         >
