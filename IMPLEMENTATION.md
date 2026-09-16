@@ -33,7 +33,7 @@ Branch: `feature/profile-localization`
 - Existing SSE `/api/events` infrastructure is reused for locale-registry invalidation.
 - Browser language detection is not authoritative and no language-detector dependency is used.
 - No external translation service or custom translation tooling.
-- Only `en` is bundled/supported by Tally initially. Any additional locale used by automated tests must be clearly artificial/test-only and must not ship as a supported translation.
+- English (`en`) is the canonical fallback. Ukrainian (`uk`) is also bundled as a supported translation and is seeded only when missing; user-edited non-English locale files are never overwritten. Any other locale used by automated tests must be clearly artificial/test-only.
 - Filesystem watching is event-driven only. Localization and backup archives use the same fsnotify/debounce pattern while keeping their validation/domain logic separate; no polling fallback is used.
 
 ## Implementation checklist
@@ -49,6 +49,7 @@ Branch: `feature/profile-localization`
 
 ### Backend localization
 - [x] Add embedded canonical English locale.
+- [x] Add bundled Ukrainian (`uk`) localization with native plural forms and safe seed-only installation.
 - [x] Add locale file schema/metadata model.
 - [x] Add localization registry with safe concurrent reads/atomic replacement.
 - [x] Add validation with concise public errors and detailed console diagnostics.
