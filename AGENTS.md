@@ -59,6 +59,7 @@ Tally is a self-hosted TV-show tracking application. Keep changes focused, maint
 * Clean up subscriptions, observers, timers, and asynchronous work when components unmount.
 * Keep navigation and rapidly repeated interactions safe and responsive.
 * Prefer reusable domain components over premature generic abstractions.
+* When adding or changing user-facing text, use the project's localization system instead of hardcoding strings.
 
 ## Verification
 
