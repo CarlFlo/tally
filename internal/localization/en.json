@@ -51,7 +51,8 @@
     "logs": "Logs",
     "profile": "My profile",
     "login": "Sign in",
-    "yourSpace": "Your space"
+    "yourSpace": "Your space",
+    "downloads": "Downloads"
   },
   "profile": {
     "menu": "Profile menu",
@@ -592,7 +593,7 @@
     "emptyStart": "A search starts with you.",
     "noMatches": "No matching torrents",
     "copyMagnet": "Copy magnet",
-    "sent": "Torrent sent",
+    "sent": "Torrent added to qBittorrent",
     "copied": "Magnet copied",
     "clipboardError": "Clipboard access requires HTTPS or localhost.",
     "title": "Torrent search",
@@ -609,7 +610,7 @@
     "exclude": "Exclude keywords",
     "includeExample": "e.g. extended",
     "excludeExample": "e.g. cam",
-    "filtersHelp": "Filters match title keywords and combine. They don't inspect media files.",
+    "filtersHelp": "Options within the same quality group match either choice; selected groups combine together.",
     "resetFilters": "Reset filters",
     "results": "Search results",
     "resultCount_one": "{{count}} result",
@@ -619,11 +620,15 @@
     "seeders": "{{count}} seeders",
     "leechers": "{{count}} leechers",
     "copyMagnetFor": "Copy magnet for {{name}}",
-    "sentShort": "Sent",
-    "send": "Send",
-    "sendingNote": "Sending a torrent never marks an episode as downloaded.",
+    "sentShort": "Added",
+    "send": "Download",
+    "sendingNote": "Adding a torrent to qBittorrent never marks an episode as downloaded.",
     "recentSearches": "Recent searches",
-    "addJackett": "Connect Jackett to get started."
+    "addJackett": "Connect Jackett to get started.",
+    "clearSearches": "Clear searches",
+    "clearSubmissions": "Clear submissions",
+    "searchesCleared": "Recent searches cleared",
+    "submissionsCleared": "Recent submissions cleared"
   },
   "library": {
     "eyebrow": "THE STORIES YOU COME BACK TO",
@@ -747,5 +752,26 @@
     "jsonObject": "Enter a JSON object.",
     "validJSON": "Enter valid JSON.",
     "unsupportedPlaceholder": "{{token}} is not a supported placeholder."
+  },
+  "downloads": {
+    "eyebrow": "QBITTORRENT",
+    "title": "Downloads",
+    "description": "Torrents added from Tally, with current status from qBittorrent.",
+    "total": "Tally torrents",
+    "active": "Active now",
+    "downloadSpeed": "Download speed",
+    "uploadSpeed": "Upload speed",
+    "emptyTitle": "No Tally downloads",
+    "emptyHelp": "Torrents you add from Torrent search appear here.",
+    "progress": "{{percent}}% downloaded",
+    "ratio": "Ratio {{ratio}}",
+    "pause": "Pause",
+    "resume": "Resume",
+    "remove": "Remove",
+    "removeHelp": "Remove the torrent from qBittorrent and keep downloaded files",
+    "removed": "Torrent removed from qBittorrent",
+    "paused": "Torrent paused",
+    "resumed": "Torrent resumed",
+    "pollingNote": "Only torrents in qBittorrent's tally category are shown. Download status refreshes automatically."
   }
 }

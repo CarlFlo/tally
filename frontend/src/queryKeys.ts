@@ -24,6 +24,7 @@ export const queryKeys = {
   inbox: (profileId?: string) =>
     profileId ? (["inbox", profileId] as const) : (["inbox"] as const),
   torrentHistory: () => ["torrent-history"] as const,
+  downloads: () => ["downloads"] as const,
   capabilities: () => ["capabilities"] as const,
   sessions: () => ["sessions"] as const,
   locales: () => ["locales"] as const,

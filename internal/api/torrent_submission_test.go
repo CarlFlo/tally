@@ -22,9 +22,14 @@ func TestTorrentSubmissionIdempotency(t *testing.T) {
 			return
 		}
 		switch r.URL.Path {
+		case "/api/v2/torrents/categories":
+			w.Write([]byte(`{"tally":{"name":"tally","savePath":""}}`))
 		case "/api/v2/torrents/add":
+			if e := r.ParseForm(); e != nil || r.PostForm.Get("category") != torrent.TallyCategory {
+				t.Error("submission was not assigned to the Tally category")
+			}
 			submissions.Add(1)
-			w.Write([]byte("Ok."))
+			w.WriteHeader(http.StatusOK)
 		default:
 			http.NotFound(w, r)
 		}

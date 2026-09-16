@@ -17,6 +17,7 @@ export type Resource =
   | "backups"
   | "inbox"
   | "torrent-history"
+  | "downloads"
   | "capabilities"
   | "sessions"
   | "locales";
@@ -42,6 +43,7 @@ const prefixes: Record<Resource, () => QueryKey> = {
   backups: queryKeys.backups,
   inbox: () => queryKeys.inbox(),
   "torrent-history": queryKeys.torrentHistory,
+  downloads: queryKeys.downloads,
   capabilities: queryKeys.capabilities,
   sessions: queryKeys.sessions,
   locales: queryKeys.locales,

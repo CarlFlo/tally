@@ -46,7 +46,7 @@ func liveChanges(r *http.Request, session auth.Session) []liveUpdate {
 	if strings.HasPrefix(path, "/api/settings/") {
 		switch strings.TrimPrefix(path, "/api/settings/") {
 		case "search":
-			return []liveUpdate{update("", "editable-settings", "settings", "capabilities")}
+			return []liveUpdate{update("", "editable-settings", "settings", "capabilities", "bootstrap")}
 		case "notifications":
 			return []liveUpdate{update("", "editable-settings", "settings")}
 		case "backups":
@@ -86,8 +86,18 @@ func liveChanges(r *http.Request, session auth.Session) []liveUpdate {
 		return []liveUpdate{update(profile, "bootstrap", "sessions")}
 	case path == "/api/profiles" || strings.HasPrefix(path, "/api/profiles/"):
 		return []liveUpdate{update("", "bootstrap")}
-	case path == "/api/torrents/search" || path == "/api/torrents/send":
+	case path == "/api/torrents/search":
 		return profileAndAdmin(profile, []string{"torrent-history"}, "statistics")
+	case path == "/api/torrents/send":
+		return []liveUpdate{
+			update(profile, "torrent-history"),
+			update("", "downloads"),
+			update("", "statistics"),
+		}
+	case strings.HasPrefix(path, "/api/torrents/history/"):
+		return []liveUpdate{update(profile, "torrent-history")}
+	case strings.HasPrefix(path, "/api/torrents/downloads/"):
+		return []liveUpdate{update("", "downloads", "statistics")}
 	}
 
 	return nil

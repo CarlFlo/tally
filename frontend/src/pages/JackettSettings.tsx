@@ -3,8 +3,9 @@ import { CheckCircle2, Plug, Save } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ConnectionInput } from "../ConnectionInput";
 import { useLatestRequest } from "../useLatestRequest";
-import { api, Busy, ErrorState, useApp, useLocal } from "../lib";
+import { api, Busy, ErrorState, useApp, useLocal, type Boot } from "../lib";
 import { invalidateResources } from "../queryInvalidation";
+import { queryKeys } from "../queryKeys";
 import { useTranslation } from "react-i18next";
 
 type JackettConfig = {
@@ -57,7 +58,10 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
       } else {
         const result = await api<{ revision: number }>("/settings/search", "PUT", { data, revision });
         setRevision(result.revision);
-        await invalidateResources(cache, ["settings", "editable-settings", "capabilities"]);
+        cache.setQueryData<Boot>(queryKeys.bootstrap(), (current) =>
+          current ? { ...current, jackett_enabled: data.enabled } : current,
+        );
+        await invalidateResources(cache, ["settings", "editable-settings", "capabilities", "bootstrap"]);
         notify(t(data.enabled ? "searchSettings.saved" : "searchSettings.disabled"));
       }
     } catch (error) {

@@ -121,6 +121,7 @@ export type Boot = {
   max_profiles: number;
   password_min: number;
   password_max: number;
+  jackett_enabled: boolean;
 };
 export function resetSession(destination = "/calendar") {
   queryClient.clear();

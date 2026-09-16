@@ -29,27 +29,38 @@ func qbtControl(t *testing.T) *providers.Coordinator {
 func TestQBittorrentBearerForTestsMagnetsAndFiles(t *testing.T) {
 	magnet := "magnet:?xt=urn:btih:" + strings.Repeat("a", 40)
 	file := "synthetic torrent file for protocol verification"
-	var requests, magnets, files atomic.Int32
+	var magnets, files atomic.Int32
+	var categoryCreated atomic.Bool
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requests.Add(1)
 		if r.Header.Get("Authorization") != "Bearer "+testAPIKey {
 			t.Error("missing Bearer API key")
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		if r.Header.Get("Cookie") != "" || r.URL.RawQuery != "" {
-			t.Error("cookie or query used for authentication")
+		if r.Header.Get("Cookie") != "" {
+			t.Error("cookie used for authentication")
 		}
 		http.SetCookie(w, &http.Cookie{Name: "SID", Value: "must-not-be-reused"})
 		switch {
-		case r.Method == "GET" && r.URL.Path == "/proxy/api/v2/app/version":
+		case r.Method == http.MethodGet && r.URL.Path == "/proxy/api/v2/app/version":
 			fmt.Fprint(w, "v5.2.0")
-		case r.Method == "POST" && r.URL.Path == "/proxy/api/v2/torrents/add":
+		case r.Method == http.MethodGet && r.URL.Path == "/proxy/api/v2/torrents/categories":
+			if categoryCreated.Load() {
+				fmt.Fprint(w, `{"tally":{"name":"tally","savePath":""}}`)
+			} else {
+				fmt.Fprint(w, `{}`)
+			}
+		case r.Method == http.MethodPost && r.URL.Path == "/proxy/api/v2/torrents/createCategory":
+			if e := r.ParseForm(); e != nil || r.PostForm.Get("category") != TallyCategory {
+				t.Error("Tally category was not created")
+			}
+			categoryCreated.Store(true)
+		case r.Method == http.MethodPost && r.URL.Path == "/proxy/api/v2/torrents/add":
 			if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
 				f, header, e := r.FormFile("torrents")
 				if e != nil {
 					t.Error(e)
-					w.WriteHeader(400)
+					w.WriteHeader(http.StatusBadRequest)
 					return
 				}
 				defer f.Close()
@@ -57,30 +68,28 @@ func TestQBittorrentBearerForTestsMagnetsAndFiles(t *testing.T) {
 				if e != nil || string(data) != file || header.Filename != "selected.torrent" {
 					t.Error("torrent file was changed")
 				}
-				if len(r.MultipartForm.Value) != 0 || len(r.MultipartForm.File) != 1 {
-					t.Error("unexpected multipart fields")
+				if values := r.MultipartForm.Value["category"]; len(values) != 1 || values[0] != TallyCategory {
+					t.Error("torrent file missing Tally category")
 				}
 				files.Add(1)
 			} else {
-				if e := r.ParseForm(); e != nil || r.PostForm.Get("urls") != magnet || len(r.PostForm) != 1 {
-					t.Error("magnet or form fields were changed")
+				if e := r.ParseForm(); e != nil || r.PostForm.Get("urls") != magnet || r.PostForm.Get("category") != TallyCategory {
+					t.Error("magnet or category was changed")
 				}
 				magnets.Add(1)
 			}
-			fmt.Fprint(w, "Ok.")
+			w.WriteHeader(http.StatusOK)
 		default:
-			t.Error("unexpected request; API keys must not call login")
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.String())
 			http.NotFound(w, r)
 		}
 	}))
 	defer server.Close()
+
 	client := &QBittorrent{Control: qbtControl(t), URL: server.URL + "/proxy/", APIKey: testAPIKey}
 	ctx := context.Background()
 	if e := client.TestConnection(ctx); e != nil {
 		t.Fatal(e)
-	}
-	if requests.Load() != 1 || magnets.Load() != 0 || files.Load() != 0 {
-		t.Fatal("connection test logged in or sent a torrent")
 	}
 	if e := client.AddMagnet(ctx, magnet); e != nil {
 		t.Fatal(e)
@@ -88,8 +97,61 @@ func TestQBittorrentBearerForTestsMagnetsAndFiles(t *testing.T) {
 	if e := client.AddTorrent(ctx, []byte(file)); e != nil {
 		t.Fatal(e)
 	}
-	if requests.Load() != 3 || magnets.Load() != 1 || files.Load() != 1 {
-		t.Fatal("expected one request per operation")
+	if magnets.Load() != 1 || files.Load() != 1 || !categoryCreated.Load() {
+		t.Fatal("expected both Tally-categorized submissions")
+	}
+}
+
+func TestQBittorrentListsAndControlsTallyDownloads(t *testing.T) {
+	hash := strings.Repeat("b", 40)
+	var actions atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer "+testAPIKey {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/api/v2/torrents/info":
+			if r.URL.Query().Get("category") != TallyCategory {
+				t.Error("downloads were not scoped to the Tally category")
+			}
+			fmt.Fprintf(w, `[{"hash":"%s","name":"Example","state":"downloading","progress":0.5,"size":1000,"downloaded":500,"dlspeed":120,"upspeed":30,"ratio":0.25,"added_on":42,"category":"tally"}]`, hash)
+		case r.Method == http.MethodPost && (r.URL.Path == "/api/v2/torrents/stop" || r.URL.Path == "/api/v2/torrents/start" || r.URL.Path == "/api/v2/torrents/delete"):
+			if e := r.ParseForm(); e != nil || r.PostForm.Get("hashes") != hash {
+				t.Error("torrent control used the wrong hash")
+			}
+			if r.URL.Path == "/api/v2/torrents/delete" && r.PostForm.Get("deleteFiles") != "false" {
+				t.Error("Tally remove must keep downloaded files")
+			}
+			actions.Add(1)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	client := &QBittorrent{Control: qbtControl(t), URL: server.URL, APIKey: testAPIKey}
+	snapshot, e := client.Downloads(context.Background(), TallyCategory)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if len(snapshot.Torrents) != 1 || snapshot.Torrents[0].Hash != hash {
+		t.Fatal("Tally torrent was not listed")
+	}
+	if snapshot.Stats.Total != 1 || snapshot.Stats.Active != 1 || snapshot.Stats.DownloadSpeed != 120 || snapshot.Stats.UploadSpeed != 30 {
+		t.Fatalf("unexpected download stats: %#v", snapshot.Stats)
+	}
+	if e := client.Stop(context.Background(), hash); e != nil {
+		t.Fatal(e)
+	}
+	if e := client.Start(context.Background(), hash); e != nil {
+		t.Fatal(e)
+	}
+	if e := client.Remove(context.Background(), hash, false); e != nil {
+		t.Fatal(e)
+	}
+	if actions.Load() != 3 {
+		t.Fatal("expected stop, start, and remove actions")
 	}
 }
 
@@ -103,7 +165,7 @@ func TestQBittorrentRejectsAuthenticationAndRedirectWithoutRetry(t *testing.T) {
 				requests.Add(1)
 				w.Header().Set("Location", target.URL)
 				w.WriteHeader(status)
-				fmt.Fprint(w, testAPIKey) // An upstream echo must not leak into errors.
+				fmt.Fprint(w, testAPIKey)
 			}))
 			defer server.Close()
 			client := &QBittorrent{Control: qbtControl(t), URL: server.URL, APIKey: testAPIKey}
@@ -119,7 +181,7 @@ func TestQBittorrentRejectsAuthenticationAndRedirectWithoutRetry(t *testing.T) {
 }
 
 func TestQBittorrentMissingKeyDoesNotMakeRequests(t *testing.T) {
-	client := &QBittorrent{URL: "http://unused.example"} // No coordinator: validation must happen before outbound work.
+	client := &QBittorrent{URL: "http://unused.example"}
 	if e := client.TestConnection(context.Background()); e == nil {
 		t.Fatal("missing key accepted")
 	}

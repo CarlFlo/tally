@@ -18,3 +18,20 @@ func (s *Server) torrentHistory(w http.ResponseWriter, r *http.Request, session 
 	jsonResponse(w, 200, map[string]any{"searches": searches, "sends": sends})
 	return nil
 }
+
+func (s *Server) clearTorrentHistory(w http.ResponseWriter, r *http.Request, session auth.Session) error {
+	var table string
+	switch r.PathValue("kind") {
+	case "searches":
+		table = "torrent_search_history"
+	case "submissions":
+		table = "torrent_send_history"
+	default:
+		return apiError{404, "unknown torrent history"}
+	}
+	if _, e := s.DB.ExecContext(r.Context(), "DELETE FROM "+table+" WHERE profile_id=?", session.Profile); e != nil {
+		return e
+	}
+	jsonResponse(w, 200, map[string]bool{"ok": true})
+	return nil
+}

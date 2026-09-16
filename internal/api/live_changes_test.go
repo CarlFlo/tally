@@ -52,11 +52,22 @@ func TestLiveChangesScopesAndTargetsResources(t *testing.T) {
 			},
 		},
 		{
+			"torrent send refreshes history and shared downloads",
+			http.MethodPost,
+			"/api/torrents/send",
+			"profile-member",
+			[]liveUpdate{
+				update("profile-member", "torrent-history"),
+				update("", "downloads"),
+				update("", "statistics"),
+			},
+		},
+		{
 			"shared search settings",
 			http.MethodPut,
 			"/api/settings/search",
 			"profile-admin",
-			[]liveUpdate{update("", "editable-settings", "settings", "capabilities")},
+			[]liveUpdate{update("", "editable-settings", "settings", "capabilities", "bootstrap")},
 		},
 		{
 			"job start",

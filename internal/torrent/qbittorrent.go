@@ -3,6 +3,7 @@ package torrent
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"mime/multipart"
 	"net/http"
@@ -27,11 +28,11 @@ func qBittorrentAdapter() clientAdapter {
 		},
 		validate: func(fields map[string]string) error { return validateQBittorrentKey(fields["api_key"]) },
 	}
-
 }
 
 var qBittorrentVersion = regexp.MustCompile(`^v?[0-9]+\.[0-9]+(?:\.[0-9]+)?(?:[a-zA-Z0-9.+_-]*)$`)
 var qBittorrentKey = regexp.MustCompile(`^qbt_[A-Za-z0-9]+$`)
+var qBittorrentHash = regexp.MustCompile(`^(?:[A-Fa-f0-9]{40}|[A-Fa-f0-9]{64})$`)
 
 func validateQBittorrentKey(key string) error {
 	if key == "" {
@@ -49,6 +50,7 @@ type QBittorrent struct {
 }
 
 func (q *QBittorrent) Name() string { return "qBittorrent" }
+
 func (q *QBittorrent) call(ctx context.Context, path, method string, body []byte, contentType string) (providers.Response, error) {
 	if q.URL == "" {
 		return providers.Response{}, fmt.Errorf("enter the qBittorrent Web UI URL in Settings")
@@ -69,10 +71,20 @@ func (q *QBittorrent) call(ctx context.Context, path, method string, body []byte
 	if strings.Contains(path, "/torrents/") {
 		trigger = "torrent_send"
 	}
-	return q.Control.Do(ctx, providers.Request{Provider: "qbittorrent", URL: strings.TrimRight(q.URL, "/") + path, Method: method, Header: headers, Body: body, Trigger: trigger, NoRetry: true, MaxBytes: 1 << 20})
+	return q.Control.Do(ctx, providers.Request{
+		Provider: "qbittorrent",
+		URL: strings.TrimRight(q.URL, "/") + path,
+		Method: method,
+		Header: headers,
+		Body: body,
+		Trigger: trigger,
+		NoRetry: true,
+		MaxBytes: 1 << 20,
+	})
 }
+
 func (q *QBittorrent) TestConnection(ctx context.Context) error {
-	res, e := q.call(ctx, "/api/v2/app/version", "GET", nil, "")
+	res, e := q.call(ctx, "/api/v2/app/version", http.MethodGet, nil, "")
 	if e != nil {
 		return e
 	}
@@ -81,18 +93,49 @@ func (q *QBittorrent) TestConnection(ctx context.Context) error {
 	}
 	return nil
 }
+
+func (q *QBittorrent) ensureCategory(ctx context.Context, category string) error {
+	res, e := q.call(ctx, "/api/v2/torrents/categories", http.MethodGet, nil, "")
+	if e != nil {
+		return e
+	}
+	var categories map[string]json.RawMessage
+	if e := json.Unmarshal(res.Body, &categories); e != nil {
+		return fmt.Errorf("qBittorrent returned invalid category data")
+	}
+	if _, ok := categories[category]; ok {
+		return nil
+	}
+	values := url.Values{"category": {category}}
+	if _, e = q.call(ctx, "/api/v2/torrents/createCategory", http.MethodPost, []byte(values.Encode()), "application/x-www-form-urlencoded"); e == nil {
+		return nil
+	}
+	// Another request may have created the category between the list and create calls.
+	res, retryErr := q.call(ctx, "/api/v2/torrents/categories", http.MethodGet, nil, "")
+	if retryErr == nil && json.Unmarshal(res.Body, &categories) == nil {
+		if _, ok := categories[category]; ok {
+			return nil
+		}
+	}
+	return e
+}
+
 func (q *QBittorrent) AddMagnet(ctx context.Context, magnet string) error {
 	if !ValidMagnet(magnet) {
 		return fmt.Errorf("invalid magnet link")
 	}
-	v := url.Values{"urls": {magnet}}
-	res, e := q.call(ctx, "/api/v2/torrents/add", "POST", []byte(v.Encode()), "application/x-www-form-urlencoded")
-	if e == nil && strings.TrimSpace(string(res.Body)) != "Ok." {
-		e = fmt.Errorf("qBittorrent did not accept the torrent")
+	if e := q.ensureCategory(ctx, TallyCategory); e != nil {
+		return e
 	}
+	values := url.Values{"urls": {magnet}, "category": {TallyCategory}}
+	_, e := q.call(ctx, "/api/v2/torrents/add", http.MethodPost, []byte(values.Encode()), "application/x-www-form-urlencoded")
 	return e
 }
+
 func (q *QBittorrent) AddTorrent(ctx context.Context, data []byte) error {
+	if e := q.ensureCategory(ctx, TallyCategory); e != nil {
+		return e
+	}
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
 	part, e := writer.CreateFormFile("torrents", "selected.torrent")
@@ -102,12 +145,90 @@ func (q *QBittorrent) AddTorrent(ctx context.Context, data []byte) error {
 	if _, e = part.Write(data); e != nil {
 		return e
 	}
+	if e = writer.WriteField("category", TallyCategory); e != nil {
+		return e
+	}
 	if e = writer.Close(); e != nil {
 		return e
 	}
-	res, e := q.call(ctx, "/api/v2/torrents/add", "POST", body.Bytes(), writer.FormDataContentType())
-	if e == nil && strings.TrimSpace(string(res.Body)) != "Ok." {
-		e = fmt.Errorf("qBittorrent did not accept the torrent")
-	}
+	_, e = q.call(ctx, "/api/v2/torrents/add", http.MethodPost, body.Bytes(), writer.FormDataContentType())
 	return e
+}
+
+type qBittorrentDownload struct {
+	Hash       string  `json:"hash"`
+	Name       string  `json:"name"`
+	State      string  `json:"state"`
+	Progress   float64 `json:"progress"`
+	Size       int64   `json:"size"`
+	Downloaded int64   `json:"downloaded"`
+	DLSpeed    int64   `json:"dlspeed"`
+	UPSpeed    int64   `json:"upspeed"`
+	Ratio      float64 `json:"ratio"`
+	AddedOn    int64   `json:"added_on"`
+	Category   string  `json:"category"`
+}
+
+func (q *QBittorrent) Downloads(ctx context.Context, category string) (DownloadSnapshot, error) {
+	values := url.Values{"category": {category}, "sort": {"added_on"}, "reverse": {"true"}}
+	res, e := q.call(ctx, "/api/v2/torrents/info?"+values.Encode(), http.MethodGet, nil, "")
+	if e != nil {
+		return DownloadSnapshot{}, e
+	}
+	var rows []qBittorrentDownload
+	if e := json.Unmarshal(res.Body, &rows); e != nil {
+		return DownloadSnapshot{}, fmt.Errorf("qBittorrent returned invalid torrent data")
+	}
+	snapshot := DownloadSnapshot{Torrents: make([]Download, 0, len(rows))}
+	for _, row := range rows {
+		item := Download{
+			Hash: row.Hash,
+			Name: row.Name,
+			State: row.State,
+			Progress: row.Progress,
+			Size: row.Size,
+			Downloaded: row.Downloaded,
+			DownloadSpeed: row.DLSpeed,
+			UploadSpeed: row.UPSpeed,
+			Ratio: row.Ratio,
+			AddedOn: row.AddedOn,
+			Category: row.Category,
+		}
+		snapshot.Torrents = append(snapshot.Torrents, item)
+		snapshot.Stats.Total++
+		snapshot.Stats.DownloadSpeed += row.DLSpeed
+		snapshot.Stats.UploadSpeed += row.UPSpeed
+		if row.DLSpeed > 0 || row.UPSpeed > 0 {
+			snapshot.Stats.Active++
+		}
+	}
+	return snapshot, nil
+}
+
+func (q *QBittorrent) torrentAction(ctx context.Context, path, hash string, extra url.Values) error {
+	if !qBittorrentHash.MatchString(hash) {
+		return fmt.Errorf("invalid torrent hash")
+	}
+	values := url.Values{"hashes": {hash}}
+	for key, list := range extra {
+		for _, value := range list {
+			values.Add(key, value)
+		}
+	}
+	_, e := q.call(ctx, path, http.MethodPost, []byte(values.Encode()), "application/x-www-form-urlencoded")
+	return e
+}
+
+func (q *QBittorrent) Stop(ctx context.Context, hash string) error {
+	return q.torrentAction(ctx, "/api/v2/torrents/stop", hash, nil)
+}
+
+func (q *QBittorrent) Start(ctx context.Context, hash string) error {
+	return q.torrentAction(ctx, "/api/v2/torrents/start", hash, nil)
+}
+
+func (q *QBittorrent) Remove(ctx context.Context, hash string, deleteFiles bool) error {
+	return q.torrentAction(ctx, "/api/v2/torrents/delete", hash, url.Values{
+		"deleteFiles": {fmt.Sprintf("%t", deleteFiles)},
+	})
 }

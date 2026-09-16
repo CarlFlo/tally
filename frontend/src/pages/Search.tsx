@@ -10,7 +10,7 @@ import {
   Download,
   ExternalLink,
   Search,
-  Send,
+  Trash2,
   SlidersHorizontal,
 } from "lucide-react";
 import {
@@ -38,6 +38,24 @@ type Result = {
   download_type: string;
   sendable: boolean;
 };
+
+const QUALITY_GROUPS = [
+  ["720p", "1080p", "2160p"],
+  ["WEB-DL", "WEBRip", "BluRay"],
+  ["x264", "x265", "HEVC"],
+  ["HDR", "DV"],
+] as const;
+
+function matchesQuality(name: string, selected: string[]) {
+  const normalized = name.toLowerCase();
+  return QUALITY_GROUPS.every((group) => {
+    const chosen = group.filter((option) => selected.includes(option));
+    return (
+      chosen.length === 0 ||
+      chosen.some((option) => normalized.includes(option.toLowerCase()))
+    );
+  });
+}
 
 function torrentAge(value: string) {
   const published = new Date(value).getTime();
@@ -115,22 +133,20 @@ export function SearchPage() {
       }
     }
   }
+  const includeWords = include.toLowerCase().split(/\s+/).filter(Boolean);
+  const excludeWords = exclude.toLowerCase().split(/\s+/).filter(Boolean);
   const filtered = results
-    .filter(
-      (r) =>
+    .filter((r) => {
+      const name = r.name.toLowerCase();
+      return (
         r.seeders >= seeders &&
         r.size >= Number(minSize) * 1024 ** 3 &&
         (!maxSize || r.size <= Number(maxSize) * 1024 ** 3) &&
-        [
-          ...include.toLowerCase().split(/\s+/).filter(Boolean),
-          ...quality.map((q) => q.toLowerCase()),
-        ].every((word) => r.name.toLowerCase().includes(word)) &&
-        !exclude
-          .toLowerCase()
-          .split(/\s+/)
-          .filter(Boolean)
-          .some((word) => r.name.toLowerCase().includes(word)),
-    )
+        includeWords.every((word) => name.includes(word)) &&
+        matchesQuality(r.name, quality) &&
+        !excludeWords.some((word) => name.includes(word))
+      );
+    })
     .sort((a, b) =>
       sort === "size"
         ? a.size - b.size
@@ -138,6 +154,22 @@ export function SearchPage() {
           ? a.name.localeCompare(b.name)
           : b.seeders - a.seeders,
     );
+  async function clearHistory(kind: "searches" | "submissions") {
+    try {
+      await api("/torrents/history/" + kind, "DELETE");
+      await invalidateResources(cache, ["torrent-history"]);
+      notify(
+        t(
+          kind === "searches"
+            ? "search.searchesCleared"
+            : "search.submissionsCleared",
+        ),
+      );
+    } catch (e) {
+      notify((e as Error).message, true);
+    }
+  }
+
   async function send(result: Result) {
     setSending(result.id);
     try {
@@ -406,7 +438,7 @@ export function SearchPage() {
                         ) : sent.includes(result.id) ? (
                           <Check size={16} />
                         ) : (
-                          <Send size={16} />
+                          <Download size={16} />
                         )}
                         <span>
                           {sent.includes(result.id) ? t("search.sentShort") : t("search.send")}
@@ -424,11 +456,21 @@ export function SearchPage() {
           </div>
           {history.data?.searches?.length > 0 && (
             <section className="recent-searches">
-              <h3>
-                <Clock3 size={17} />
-                {t("search.recentSearches")}
-              </h3>
-              <div>
+              <div className="recent-history-title">
+                <h3>
+                  <Clock3 size={17} />
+                  {t("search.recentSearches")}
+                </h3>
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => clearHistory("searches")}
+                >
+                  <Trash2 size={14} />
+                  {t("search.clearSearches")}
+                </button>
+              </div>
+              <div className="recent-chip-list">
                 {history.data.searches.slice(0, 6).map((h: any, i: number) => (
                   <button
                     key={i}
@@ -444,7 +486,17 @@ export function SearchPage() {
           )}
           {history.data?.sends?.length > 0 && (
             <section className="recent-searches">
-              <h3>{t("search.recent")}</h3>
+              <div className="recent-history-title">
+                <h3>{t("search.recent")}</h3>
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => clearHistory("submissions")}
+                >
+                  <Trash2 size={14} />
+                  {t("search.clearSubmissions")}
+                </button>
+              </div>
               {history.data.sends.slice(0, 5).map((h: any, i: number) => (
                 <div className="history-send" key={i}>
                   <span>{h.name}</span>

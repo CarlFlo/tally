@@ -1,5 +1,5 @@
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
-import { AlertCircle, CalendarDays, Menu, Search, Tv, X } from "lucide-react";
+import { AlertCircle, CalendarDays, Download, Menu, Search, Tv, X } from "lucide-react";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { createRoot } from "react-dom/client";
@@ -29,6 +29,7 @@ import { LiveUpdates } from "./LiveUpdates";
 import { Notice, type Toast } from "./Notice";
 import { CalendarPage } from "./pages/Calendar";
 import { SearchPage } from "./pages/Search";
+import { DownloadsPage } from "./pages/Downloads";
 import { AddShow, ShowPage, ShowsPage } from "./pages/Shows";
 import { PasswordGate } from "./PasswordGate";
 import { ProfilePicker } from "./ProfilePicker";
@@ -105,7 +106,7 @@ function App() {
     );
   }
   const location = useLocation();
-  const pageKey = (["calendar", "shows", "search", "system", "settings"] as const).find(
+  const pageKey = (["calendar", "shows", "search", "downloads", "system", "settings"] as const).find(
     (key) => location.pathname.startsWith("/" + key),
   );
   const pageLabel = pageKey ? t(`nav.${pageKey}`) : t("brand.tagline");
@@ -235,10 +236,18 @@ function App() {
                     <Tv size={19} />
                     {t("nav.shows")}
                   </NavLink>
-                  <NavLink to="/search">
-                    <Search size={19} />
-                    {t("nav.search")}
-                  </NavLink>
+                  {boot.jackett_enabled && (
+                    <>
+                      <NavLink to="/search">
+                        <Search size={19} />
+                        {t("nav.search")}
+                      </NavLink>
+                      <NavLink to="/downloads">
+                        <Download size={19} />
+                        {t("nav.downloads")}
+                      </NavLink>
+                    </>
+                  )}
                 </div>
               </nav>
               <div className="sidebar-bottom">
@@ -282,7 +291,26 @@ function App() {
                       element={<ShowsPage onAdd={() => setAdd(true)} />}
                     />
                     <Route path="/shows/:id" element={<ShowPage />} />
-                    <Route path="/search" element={<SearchPage />} />
+                    <Route
+                      path="/search"
+                      element={
+                        boot.jackett_enabled ? (
+                          <SearchPage />
+                        ) : (
+                          <Navigate to="/calendar" replace />
+                        )
+                      }
+                    />
+                    <Route
+                      path="/downloads"
+                      element={
+                        boot.jackett_enabled ? (
+                          <DownloadsPage />
+                        ) : (
+                          <Navigate to="/calendar" replace />
+                        )
+                      }
+                    />
                     <Route
                       path="/logs"
                       element={

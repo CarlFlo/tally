@@ -4,6 +4,8 @@ import (
 	"context"
 )
 
+const TallyCategory = "tally"
+
 type SearchQuery struct {
 	Query            string
 	MinSeeders       int
@@ -25,6 +27,32 @@ type SearchResult struct {
 	DownloadType string `json:"download_type"`
 }
 
+type Download struct {
+	Hash          string  `json:"hash"`
+	Name          string  `json:"name"`
+	State         string  `json:"state"`
+	Progress      float64 `json:"progress"`
+	Size          int64   `json:"size"`
+	Downloaded    int64   `json:"downloaded"`
+	DownloadSpeed int64   `json:"download_speed"`
+	UploadSpeed   int64   `json:"upload_speed"`
+	Ratio         float64 `json:"ratio"`
+	AddedOn       int64   `json:"added_on"`
+	Category      string  `json:"category"`
+}
+
+type DownloadStats struct {
+	Total         int   `json:"total"`
+	Active        int   `json:"active"`
+	DownloadSpeed int64 `json:"download_speed"`
+	UploadSpeed   int64 `json:"upload_speed"`
+}
+
+type DownloadSnapshot struct {
+	Torrents []Download    `json:"torrents"`
+	Stats    DownloadStats `json:"stats"`
+}
+
 type SearchProvider interface {
 	ID() string
 	Name() string
@@ -36,4 +64,8 @@ type DownloadClient interface {
 	TestConnection(context.Context) error
 	AddMagnet(context.Context, string) error
 	AddTorrent(context.Context, []byte) error
+	Downloads(context.Context, string) (DownloadSnapshot, error)
+	Stop(context.Context, string) error
+	Start(context.Context, string) error
+	Remove(context.Context, string, bool) error
 }

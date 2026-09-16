@@ -3992,3 +3992,119 @@ td .table-error {
   font-size: 8px;
   letter-spacing: 0.7px;
 }
+
+
+/* Torrent search and Tally-managed qBittorrent downloads */
+.torrent-results-list {
+  max-height: min(68vh, 720px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.recent-history-title {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.recent-history-title h3 {
+  margin-bottom: 0;
+}
+.recent-history-title .text-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+}
+.recent-chip-list {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.downloads-stats {
+  margin-bottom: 22px;
+}
+.downloads-panel {
+  padding: 0 20px;
+}
+.downloads-list {
+  max-height: min(66vh, 720px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.download-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+}
+.download-row:last-child {
+  border-bottom: 0;
+}
+.download-row-main {
+  flex: 1;
+  min-width: 0;
+}
+.download-row-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.download-row-heading h3 {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.download-progress-track {
+  height: 6px;
+  overflow: hidden;
+  margin-top: 12px;
+  border-radius: 999px;
+  background: var(--bg);
+}
+.download-progress-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 180ms ease;
+}
+.download-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 11px;
+  margin-top: 9px;
+  color: var(--muted);
+  font-size: 9px;
+}
+.download-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+@media (max-width: 760px) {
+  .torrent-results-list,
+  .downloads-list {
+    max-height: 58vh;
+  }
+  .downloads-panel {
+    padding: 0 13px;
+  }
+  .download-row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .download-actions {
+    justify-content: flex-end;
+  }
+}

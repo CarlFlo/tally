@@ -29,3 +29,11 @@ func (s *Server) searchProvider(id string) *torrent.Jackett {
 func (s *Server) jackettConfigured() bool {
 	return s.searchProvider("jackett") != nil
 }
+
+func (s *Server) jackettEnabled(ctx context.Context) bool {
+	var saved settings.Search
+	if _, err := s.settingsStore().Load(ctx, "search", &saved); err != nil {
+		return false
+	}
+	return saved.Effective().Enabled
+}
