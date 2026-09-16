@@ -435,7 +435,8 @@
     "placeholdersHelp": "Use {{tokens}} in JSON string values.",
     "userTime": "Your time: {{time}} · {{timezone}}",
     "scheduleHelp": "New episodes with an announced release time are sent at the next daily delivery time. System errors and other selected activity arrive immediately. Only shows followed on this server are included.",
-    "previewMessage": "New episode available"
+    "previewMessage": "New episode available",
+    "prefixPlaceholder": "TV update:"
   },
   "statistics": {
     "eyebrow": "LESS GUESSWORK. MORE VISIBILITY.",
