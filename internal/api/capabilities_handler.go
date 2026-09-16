@@ -11,6 +11,6 @@ func (s *Server) capabilities(w http.ResponseWriter, r *http.Request, session au
 	if err != nil {
 		return err
 	}
-	jsonResponse(w, 200, map[string]any{"operator": session.Admin, "downloader": client.Adapter, "downloader_configured": client.Configured(), "jackett_configured": s.jackettConfigured(), "jackett_enabled": s.jackettEnabled(r.Context())})
+	jsonResponse(w, 200, map[string]any{"operator": session.Admin, "downloader": client.Adapter, "downloader_configured": client.Configured(), "jackett_configured": s.jackettConfigured(), "jackett_enabled": s.torrentSearchEnabled(r.Context()), "torrent_search_enabled": s.torrentSearchEnabled(r.Context()), "torrent_downloads_enabled": s.torrentDownloadsEnabled(r.Context())})
 	return nil
 }
