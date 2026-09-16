@@ -156,6 +156,6 @@ export async function revalidateActiveServerData(client: QueryClient) {
           String(query.queryKey[0]),
         ),
     },
-    { cancelRefetch: true },
+    { cancelRefetch: false },
   );
 }
