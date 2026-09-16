@@ -100,9 +100,10 @@ func (w *ArchiveWatcher) watch() {
 				schedule()
 			}
 		case err, ok := <-w.watcher.Errors:
-			if ok {
-				slog.Warn("backup archive watcher error", "error", err)
+			if !ok {
+				return
 			}
+			slog.Warn("backup archive watcher error", "error", err)
 		case <-timerC:
 			timerC = nil
 			if w.onChange != nil {
