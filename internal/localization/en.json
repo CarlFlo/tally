@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 1
+    "catalogVersion": 2
   },
   "common": {
     "save": "Save",
