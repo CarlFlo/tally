@@ -6,7 +6,7 @@ Tally is a modern, self-hosted TV show tracker for keeping up with shows, upcomi
 
 - Calendar for past and upcoming episodes
 - Personal TV show library and watch progress
-- Multiple profiles
+- Multiple profiles with independent interface languages
 - TV show search and metadata from TVmaze
 - Manual torrent search through Torznab providers
 - Send selected torrents to qBittorrent
@@ -49,6 +49,14 @@ docker compose up -d --build
 ```
 
 Then open **http://localhost:8080**. For LAN access, set `APP_BIND` as described above and use the host's LAN address.
+
+## Localization
+
+Tally stores locale catalogs under `/config/locales` (or `<APP_DATA_DIR>/locales`). The bundled English catalog is installed automatically, additional locale JSON files are discovered dynamically, and valid file changes are hot-reloaded without restarting Tally.
+
+Language is saved per profile. Partial translations are supported: missing keys fall back to English.
+
+See [docs/LOCALIZATION.md](docs/LOCALIZATION.md) for the file format, versioning rules, validation behavior, pluralization/interpolation guidance, RTL metadata, and translation workflow.
 
 ## Commands
 
