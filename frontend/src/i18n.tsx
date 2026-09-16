@@ -12,15 +12,30 @@ import {
 } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "./queryKeys";
+import { requestPool, RequestPoolOverloadError } from "./requestPool";
 
 async function localeRequest<T>(path: string, signal?: AbortSignal): Promise<T> {
-  const response = await fetch("/api" + path, {
-    credentials: "same-origin",
-    signal,
-  });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
-  return data as T;
+  const requestSignal = signal ?? new AbortController().signal;
+  try {
+    return await requestPool.run(requestSignal, async () => {
+      const response = await fetch("/api" + path, {
+        credentials: "same-origin",
+        signal: requestSignal,
+      });
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(data.error || `Request failed (${response.status})`);
+      return data as T;
+    });
+  } catch (error) {
+    if (error instanceof RequestPoolOverloadError)
+      throw new Error(
+        i18n.t("errors.tooManyRequests", {
+          defaultValue: "Too many pending requests. Please try again.",
+        }),
+      );
+    throw error;
+  }
 }
 
 export type LocaleStatus = {
