@@ -113,7 +113,7 @@ export function RegisterProfile() {
                 <Avatar
                   profile={{
                     id: "",
-                    display_name: name || "You",
+                    display_name: name || t("profile.you"),
                     avatar: customColor,
                     locale,
                   }}
