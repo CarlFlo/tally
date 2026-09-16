@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 4
+    "catalogVersion": 5
   },
   "common": {
     "save": "Save",
@@ -89,7 +89,8 @@
     "unsupportedFormat": "Localization file uses an unsupported format.",
     "missingFile": "Localization file is missing.",
     "unreadableFile": "Localization file could not be read.",
-    "notRegularFile": "Localization entry must be a regular file."
+    "notRegularFile": "Localization entry must be a regular file.",
+    "loadFailed": "The selected language catalog could not be loaded."
   },
   "calendar": {
     "title": "Calendar",
@@ -175,7 +176,8 @@
     "password_change_required": "Replace the temporary password before continuing.",
     "locale_unavailable": "The selected language is currently unavailable.",
     "requestTimedOut": "Request timed out",
-    "tooManyRequests": "Too many pending requests. Please try again."
+    "tooManyRequests": "Too many pending requests. Please try again.",
+    "localizationLoadFailed": "Localization could not be loaded."
   },
   "footer": {
     "metadata": "TV metadata by TVmaze ↗"
