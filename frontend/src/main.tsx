@@ -83,6 +83,10 @@ function App() {
     );
   }
   const location = useLocation();
+  const pageKey = (["calendar", "shows", "search", "system", "settings"] as const).find(
+    (key) => location.pathname.startsWith("/" + key),
+  );
+  const pageLabel = pageKey ? t(`nav.${pageKey}`) : t("brand.tagline");
   const boot = bootstrap.data;
   const notify = (message: string, error = false, retry?: () => void) =>
     setToast({ message, error, retry });
@@ -136,18 +140,8 @@ function App() {
     }
   }, [boot?.profile?.id, boot?.preferences_initialized, boot?.restricted]);
   useEffect(() => {
-    document.title =
-      "Tally · " +
-      (["calendar", "shows", "search", "system", "settings"] as const)
-        .find((key) => location.pathname.startsWith("/" + key))
-        ? t(
-            "nav." +
-              (["calendar", "shows", "search", "system", "settings"] as const).find(
-                (key) => location.pathname.startsWith("/" + key),
-              ),
-          )
-        : t("brand.tagline");
-  }, [location.pathname, t]);
+    document.title = "Tally · " + pageLabel;
+  }, [pageLabel]);
   if (bootstrap.isPending)
     return (
       <div className="startup">
@@ -238,15 +232,7 @@ function App() {
                   <span className="topbar-breadcrumb">
                     {t("nav.yourSpace")} <span>/</span>{" "}
                     <strong>
-                      {(["calendar", "shows", "search", "system", "settings"] as const)
-                        .find((key) => location.pathname.startsWith("/" + key))
-                        ? t(
-                            "nav." +
-                              (["calendar", "shows", "search", "system", "settings"] as const).find(
-                                (key) => location.pathname.startsWith("/" + key),
-                              ),
-                          )
-                        : t("nav.calendar")}
+                      {pageKey ? pageLabel : t("nav.calendar")}
                     </strong>
                   </span>
                 </div>
