@@ -110,6 +110,15 @@ Branch: `feature/profile-localization`
 - [x] Test manual backup completion appears automatically without page reload or manual refresh.
 - [x] Test the `/settings` Backup archives list updates automatically while the page is open.
 
+### Post-review hardening
+- [ ] Make localization watcher shutdown safe when fsnotify channels close and wait for its goroutine to exit.
+- [ ] Treat localization filesystem watching as optional at startup: keep serving loaded/embedded locales if fsnotify cannot start; do not add polling.
+- [ ] Reconcile localization state after watcher errors/overflow so missed filesystem events do not leave stale catalogs.
+- [ ] Limit locale JSON file size before reading/parsing to avoid accidental excessive memory use.
+- [ ] Avoid redundant backup archive refreshes on Tally-initiated delete while preserving immediate local UI refresh and watcher-based updates for other clients.
+- [ ] Add focused regression tests for the watcher lifecycle, oversized locale handling, and backup delete refresh behavior.
+- [ ] Re-run the full validation workflow after these fixes.
+
 ### Documentation
 - [x] Add `docs/LOCALIZATION.md` with translation-file format and contributor guidance.
 - [x] Document fallback/hot-reload behavior.
