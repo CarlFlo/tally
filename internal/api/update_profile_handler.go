@@ -26,7 +26,7 @@ func (s *Server) updateProfile(w http.ResponseWriter, r *http.Request, session a
 		}
 	}
 	if in.Locale != "" && (s.Locales == nil || !s.Locales.Valid(in.Locale)) {
-		return bad("choose an available language")
+		return badCode("profile_locale_invalid", "choose an available language")
 	}
 	_, err := s.DB.ExecContext(
 		r.Context(),
