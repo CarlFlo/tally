@@ -33,6 +33,8 @@ Branch: `feature/profile-localization`
 - Existing SSE `/api/events` infrastructure is reused for locale-registry invalidation.
 - Browser language detection is not authoritative and no language-detector dependency is used.
 - No external translation service or custom translation tooling.
+- Only `en` is bundled/supported by Tally initially. Any additional locale used by automated tests must be clearly artificial/test-only and must not ship as a supported translation.
+- Filesystem watching should remain event-driven. Prefer a small reusable directory-watch helper/pattern that localization and backup archives can share without coupling their domain logic.
 
 ## Implementation checklist
 
@@ -90,9 +92,37 @@ Branch: `feature/profile-localization`
 - [x] Localize human-visible date/number labels while keeping canonical internal formatting stable.
 - [x] Audit string concatenation and use interpolation/pluralization.
 
+### Backup archive live refresh
+- [ ] Add event-driven filesystem watching for the backup archive directory; do not poll.
+- [ ] Reuse the localization watch pattern/helper where practical, while keeping backup and localization validation/domain logic separate.
+- [ ] Watch the backup directory rather than individual archive files so create/rename/remove workflows are handled reliably.
+- [ ] Filter filesystem events aggressively to relevant completed backup archive files (primarily `.zip`) and ignore temporary/staging files and unrelated directory noise.
+- [ ] Debounce bursts of filesystem events caused by copy/rename/write operations.
+- [ ] Publish the existing global `backups` SSE resource when an external backup archive is created, renamed into the directory, changed, or removed.
+- [ ] Ensure Tally-created manual/scheduled backups continue to publish `backups` after successful completion without duplicate or excessive UI refreshes.
+- [ ] Ensure the frontend invalidates/refetches the active backup archive query when a `backups` live event arrives.
+- [ ] Remove the Backup archives manual Refresh button once event-driven refresh is verified.
+- [ ] Gracefully stop the backup directory watcher during server shutdown.
+- [ ] Test external archive copy/create detection.
+- [ ] Test archive rename/move-into-directory detection.
+- [ ] Test external archive deletion detection.
+- [ ] Test that temporary/non-archive files do not trigger unnecessary backup-list refreshes.
+- [ ] Test manual backup completion appears automatically without page reload or manual refresh.
+- [ ] Test the `/settings` Backup archives list updates automatically while the page is open.
+
 ### Documentation
 - [x] Add `docs/LOCALIZATION.md` with translation-file format and contributor guidance.
 - [x] Document fallback/hot-reload behavior.
+
+### Remaining cleanup before merge
+- [ ] Replace the current Swedish `sv` browser/E2E fixture with an obviously artificial test-only locale (for example `zz-Test`) so the repository does not imply Swedish is bundled or supported.
+- [ ] Fix immediate unsaved locale-preview rerender in the profile settings screen.
+- [ ] Align the low-level request-pool test with the localized API/UI error boundary while preserving the internal typed overload error.
+- [ ] Resolve the current Backup archives Playwright failures by ensuring the `backups` SSE invalidation reliably refreshes the visible archive list.
+- [ ] Re-run the complete Playwright suite after the backup watcher/live-refresh implementation.
+- [ ] Run Docker image build and Trivy after Playwright is green.
+- [ ] Perform one final branch diff/remnant review against `master`.
+- [ ] Update this file with the final green workflow/run results before merge.
 
 ### Tests / validation
 - [x] Backend locale registry validation tests.
@@ -123,4 +153,6 @@ Branch: `feature/profile-localization`
 ## Validation results
 - Dependency versions verified: i18next 26.4.2, react-i18next 17.0.14, fsnotify v1.10.1.
 - Repository remnant scan found no remaining `APP_LANGUAGE`, `c.Language`, or legacy frontend `export const en` references.
-- Latest full GitHub Actions validation is still pending after the final implementation/tracker commits. The workflow covers npm install/audit, TypeScript/Vite build, Go vet + race tests, govulncheck, Playwright, Docker build, and Trivy.
+- npm install/audit, TypeScript/Vite build, Go vet + race tests, and govulncheck have passed on recent localization branch heads.
+- The latest full workflow still has Playwright failures to resolve before Docker build and Trivy can complete.
+- Remaining Playwright work is tracked above; final workflow results must be recorded here before merge.
