@@ -20,7 +20,7 @@ Branch: `feature/torrent-search-downloads`
 - [x] Made saved Jackett state update navigation without a one-frame stale menu state.
 - [x] Added English and Ukrainian localization for new UI.
 - [x] Added backend tests for qBittorrent category/submission/download controls.
-- [x] Added browser regression coverage for navigation gating, Download label, OR quality filtering, and bounded scrolling.
+- [x] Added browser regression coverage for navigation gating, Download label, OR quality filtering, bounded scrolling, and failed-submission live history refresh.
 - [x] Fixed existing Jackett and browser qBittorrent fixtures for the new category request.
 - [x] Updated existing Playwright expectations for Download/Added labels and the Downloads sidebar entry.
 

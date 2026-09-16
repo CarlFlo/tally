@@ -84,6 +84,36 @@ test("torrent search navigation and filters follow the saved Jackett state", asy
       }),
     );
 
+    let failedSubmission = false;
+    await page.route("**/api/torrents/history", (route) => {
+      if (route.request().method() !== "GET") return route.continue();
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          searches: [],
+          sends: failedSubmission
+            ? [
+                {
+                  name: "Example S01 1080p WEB-DL x264",
+                  status: "failed",
+                  error: "Fixture downloader failure",
+                  created_at: 1_789_563_600,
+                },
+              ]
+            : [],
+        }),
+      });
+    });
+    await page.route("**/api/torrents/send", (route) => {
+      failedSubmission = true;
+      return route.fulfill({
+        status: 502,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "Fixture downloader failure" }),
+      });
+    });
+
     await page.goto("/calendar");
     const sidebar = page.locator(".sidebar");
     await expect(
@@ -121,6 +151,18 @@ test("torrent search navigation and filters follow the saved Jackett state", asy
           element.scrollHeight > element.clientHeight,
       ),
     ).toBe(true);
+
+    await page
+      .locator(".torrent-result")
+      .filter({ hasText: "Example S01 1080p WEB-DL x264" })
+      .getByRole("button", { name: "Download", exact: true })
+      .click();
+    await expect(page.getByRole("alert")).toContainText("Fixture downloader failure");
+    const failedRecent = page
+      .locator(".history-send")
+      .filter({ hasText: "Example S01 1080p WEB-DL x264" });
+    await expect(failedRecent).toBeVisible();
+    await expect(failedRecent).toContainText("failed");
 
     const disabledResponse = await page.request.put("/api/settings/search", {
       headers,
