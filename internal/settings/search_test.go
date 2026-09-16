@@ -7,6 +7,11 @@ func TestJackettSettingsValidation(t *testing.T) {
 	if err := ValidateSearch(valid); err != nil || !valid.Configured() {
 		t.Fatalf("valid Jackett settings rejected: %v", err)
 	}
+	disabled := valid
+	disabled.Enabled = false
+	if !disabled.Configured() {
+		t.Fatal("disabling torrent search made the saved Jackett connection unconfigured")
+	}
 	invalid := []Search{
 		{BaseURL: "file:///config", APIKey: "secret", Enabled: true},
 		{BaseURL: "http://user:pass@jackett:9117", APIKey: "secret", Enabled: true},
