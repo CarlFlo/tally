@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
 import {
   api,
@@ -45,6 +46,7 @@ import { DownloaderSettings } from "./DownloaderSettings";
 import { NotificationSettings } from "./NotificationSettings";
 import { invalidateResources } from "../queryInvalidation";
 import { queryKeys } from "../queryKeys";
+import { useLocalization } from "../i18n";
 
 export { JobsPage } from "./Jobs";
 
@@ -320,6 +322,8 @@ export function SettingsPage({
     | "torrent"
     | "debug";
 }) {
+  const { t } = useTranslation();
+  const { locales, previewLocale } = useLocalization();
   const { boot, notify } = useApp();
   const cache = useQueryClient();
   const personal = tab === "personal" || tab === "security" || tab === "danger";
@@ -334,6 +338,7 @@ export function SettingsPage({
     tab === "security",
   );
   const [name, setName] = useState(boot.profile!.display_name);
+  const [locale, setLocale] = useState(boot.profile!.locale || "en");
   const [avatar, setAvatar] = useState(boot.profile!.avatar);
   const [customColor, setCustomColor] = useState(
     /^#[0-9A-Fa-f]{6}$/.test(boot.profile!.avatar) ? boot.profile!.avatar : "",
@@ -352,6 +357,10 @@ export function SettingsPage({
   const [busy, setBusy] = useState(false);
   const [password, setPassword] = useState("");
   const [current, setCurrent] = useState("");
+  useEffect(() => {
+    setLocale(boot.profile!.locale || "en");
+  }, [boot.profile!.locale]);
+  useEffect(() => () => previewLocale(null), [previewLocale]);
   async function prefs(key: string, value: any) {
     try {
       await api("/preferences", "PATCH", { [key]: value });
@@ -368,10 +377,13 @@ export function SettingsPage({
       await api("/profile", "PATCH", {
         name,
         avatar: customColor || (avatar.endsWith(".png") ? "" : avatar),
+        locale,
       });
       await invalidateResources(cache, ["bootstrap"]);
       notify("Profile updated");
     } catch (e) {
+      setLocale(boot.profile!.locale || "en");
+      previewLocale(boot.profile!.locale || "en");
       notify((e as Error).message, true);
     } finally {
       setBusy(false);
@@ -598,6 +610,35 @@ export function SettingsPage({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
+              </label>
+              <label>
+                {t("profile.language")}
+                <select
+                  value={locale}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    setLocale(next);
+                    previewLocale(next);
+                  }}
+                >
+                  {locales.map((item) => (
+                    <option
+                      key={item.locale}
+                      value={item.locale}
+                      disabled={!item.valid}
+                    >
+                      {item.name}{item.valid ? "" : " — unavailable"}
+                    </option>
+                  ))}
+                </select>
+                <small className="muted">{t("profile.languageHelp")}</small>
+                {locales
+                  .filter((item) => !item.valid)
+                  .map((item) => (
+                    <small className="muted" key={item.locale}>
+                      {item.name}: {item.error || t("profile.localeUnavailable")}
+                    </small>
+                  ))}
               </label>
               <p className="small-text muted">
                 {boot.profile!.is_admin
@@ -936,6 +977,8 @@ export function SettingsPage({
   );
 }
 function CreateProfile({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
+  const { locales, previewLocale } = useLocalization();
   const { boot, notify } = useApp();
   const cache = useQueryClient();
   const [name, setName] = useState("");
@@ -946,10 +989,12 @@ function CreateProfile({ onClose }: { onClose: () => void }) {
       ],
   );
   const [customColor, setCustomColor] = useState("");
+  const [locale, setLocale] = useState("en");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  useEffect(() => () => previewLocale(null), [previewLocale]);
   return (
-    <Dialog title="A new personal space" onClose={onClose}>
+    <Dialog title={t("profile.newSpace")} onClose={onClose}>
       <form
         onSubmit={async (e) => {
           e.preventDefault();
@@ -959,6 +1004,7 @@ function CreateProfile({ onClose }: { onClose: () => void }) {
               name,
               avatar: customColor || avatar,
               password,
+              locale,
             });
             await invalidateResources(cache, ["bootstrap"]);
             notify("Profile created");
@@ -991,6 +1037,35 @@ function CreateProfile({ onClose }: { onClose: () => void }) {
             onChange={(e) => setCustomColor(e.target.value)}
           />
           <small className="muted">Optional six-digit HTML color.</small>
+        </label>
+        <label>
+          {t("profile.language")}
+          <select
+            value={locale}
+            onChange={(event) => {
+              const next = event.target.value;
+              setLocale(next);
+              previewLocale(next);
+            }}
+          >
+            {locales.map((item) => (
+              <option
+                key={item.locale}
+                value={item.locale}
+                disabled={!item.valid}
+              >
+                {item.name}{item.valid ? "" : " — unavailable"}
+              </option>
+            ))}
+          </select>
+          <small className="muted">{t("profile.languageHelp")}</small>
+          {locales
+            .filter((item) => !item.valid)
+            .map((item) => (
+              <small className="muted" key={item.locale}>
+                {item.name}: {item.error || t("profile.localeUnavailable")}
+              </small>
+            ))}
         </label>
         {boot.auth_mode === "local" && (
           <label>
