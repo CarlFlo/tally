@@ -236,17 +236,17 @@ function App() {
                     <Tv size={19} />
                     {t("nav.shows")}
                   </NavLink>
-                  {boot.jackett_enabled && (
-                    <>
-                      <NavLink to="/search">
-                        <Search size={19} />
-                        {t("nav.search")}
-                      </NavLink>
-                      <NavLink to="/downloads">
-                        <Download size={19} />
-                        {t("nav.downloads")}
-                      </NavLink>
-                    </>
+                  {boot.torrent_search_enabled && (
+                    <NavLink to="/search">
+                      <Search size={19} />
+                      {t("nav.search")}
+                    </NavLink>
+                  )}
+                  {boot.torrent_downloads_enabled && (
+                    <NavLink to="/downloads">
+                      <Download size={19} />
+                      {t("nav.downloads")}
+                    </NavLink>
                   )}
                 </div>
               </nav>
@@ -294,7 +294,7 @@ function App() {
                     <Route
                       path="/search"
                       element={
-                        boot.jackett_enabled ? (
+                        boot.torrent_search_enabled ? (
                           <SearchPage />
                         ) : (
                           <Navigate to="/calendar" replace />
@@ -304,7 +304,7 @@ function App() {
                     <Route
                       path="/downloads"
                       element={
-                        boot.jackett_enabled ? (
+                        boot.torrent_downloads_enabled ? (
                           <DownloadsPage />
                         ) : (
                           <Navigate to="/calendar" replace />
