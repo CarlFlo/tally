@@ -64,22 +64,22 @@ func TestBrowserServer(t *testing.T) {
 	}
 	s, _, _ := testServer(t, mode)
 	browserLocale := []byte(`{
-		"_meta":{"locale":"sv","name":"Svenska","direction":"ltr","catalogVersion":1},
-		"settings":{"myProfile":"Min profil"},
-		"profile":{"newSpace":"Ett nytt personligt utrymme","create":"Skapa profil"},
-		"calendar":{"yourCalendar":"Din kalender"},
-		"nav":{"calendar":"Kalender"},
-		"common":{"save":"Spara"}
+		"_meta":{"locale":"zz-Test","name":"Test locale","direction":"ltr","catalogVersion":1},
+		"settings":{"myProfile":"Test profile"},
+		"profile":{"newSpace":"Test personal space","create":"Create test profile"},
+		"calendar":{"yourCalendar":"Test calendar"},
+		"nav":{"calendar":"Test calendar"},
+		"common":{"save":"Test save"}
 	}`)
-	if err := os.WriteFile(filepath.Join(s.Config.DataDir, "locales", "sv.json"), browserLocale, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(s.Config.DataDir, "locales", "zz-Test.json"), browserLocale, 0o644); err != nil {
 		t.Fatal(err)
 	}
 	deadline := time.Now().Add(3 * time.Second)
-	for !s.Locales.Valid("sv") && time.Now().Before(deadline) {
+	for !s.Locales.Valid("zz-Test") && time.Now().Before(deadline) {
 		time.Sleep(20 * time.Millisecond)
 	}
-	if !s.Locales.Valid("sv") {
-		t.Fatal("browser fixture Swedish locale did not load")
+	if !s.Locales.Valid("zz-Test") {
+		t.Fatal("browser fixture test locale did not load")
 	}
 	// Browser tests deliberately avoid legacy userN IDs so UI authorization
 	// cannot accidentally pass by coupling administrator access to an ID.
@@ -114,6 +114,11 @@ func TestBrowserServer(t *testing.T) {
 	s.Metadata.Provider = &browserTV{}
 	b := &backup.Service{DB: s.DB, DataDir: s.Config.DataDir, Path: filepath.Join(s.Config.DataDir, "backups"), Keep: 2}
 	s.Backup = b
+	archiveWatcher, e := backup.WatchArchives(b.Path, func() { s.Events.Publish("", "backups") })
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer archiveWatcher.Close()
 	s.Jobs = jobs.New(context.Background(), s.DB, s.Config, s.Metadata, s.Control, b)
 	s.Jobs.OnChange = s.Events.Publish
 	s.Control.Alert = s.Jobs.Alert
