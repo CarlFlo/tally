@@ -39,7 +39,7 @@ export async function api<T = any>(
 ): Promise<T> {
   const deadline = new AbortController();
   const timer = window.setTimeout(
-    () => deadline.abort(new DOMException("Request timed out", "TimeoutError")),
+    () => deadline.abort(new DOMException(i18n.t("errors.requestTimedOut"), "TimeoutError")),
     90_000,
   );
   const combined = signal
