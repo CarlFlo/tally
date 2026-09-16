@@ -261,7 +261,7 @@ export function StatisticsPage() {
           <table>
             <thead>
               <tr>
-                <th>Provider</th>
+                <th>{t("statistics.provider")}</th>
                 <th>{t("statistics.trigger")}</th>
                 <th>{t("statistics.entity")}</th>
                 <th>{t("statistics.outcome")}</th>
