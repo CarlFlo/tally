@@ -660,7 +660,9 @@
     "noEpisodes": "No episodes have been announced yet.",
     "viewTVmaze": "View on TVmaze",
     "favorite": "Favorite {{name}}",
-    "unfavorite": "Unfavorite {{name}}"
+    "unfavorite": "Unfavorite {{name}}",
+    "updateFailed": "Could not update {{name}}.",
+    "fullSeason": "Season {{season}} · Full season"
   },
   "system": {
     "title": "System",
@@ -726,5 +728,15 @@
     "clearSaved": "Clear saved {{label}}",
     "test": "Test connection",
     "reload": "Reload saved settings"
+  },
+  "validation": {
+    "validURL": "Enter a valid HTTP(S) URL.",
+    "max80": "Use 80 characters or fewer.",
+    "max500": "Use 500 characters or fewer.",
+    "validNotificationTime": "Enter a valid notification time.",
+    "json16k": "Use a JSON object of 16 KB or less.",
+    "jsonObject": "Enter a JSON object.",
+    "validJSON": "Enter valid JSON.",
+    "unsupportedPlaceholder": "{{token}} is not a supported placeholder."
   }
 }
