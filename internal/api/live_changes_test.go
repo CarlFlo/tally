@@ -84,11 +84,11 @@ func TestLiveChangesScopesAndTargetsResources(t *testing.T) {
 			[]liveUpdate{update("", "statistics")},
 		},
 		{
-			"torrent removal refreshes downloads",
+			"torrent removal keeps optimistic download state",
 			http.MethodDelete,
 			"/api/torrents/downloads/abc",
 			"profile-member",
-			[]liveUpdate{update("", "downloads", "statistics")},
+			[]liveUpdate{update("", "statistics")},
 		},
 		{
 			"job start",
