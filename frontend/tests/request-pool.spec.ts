@@ -10,7 +10,7 @@ test("queued cancellation never starts stale work and frees queue capacity", asy
   const cancelled = new AbortController();
   let ran = false;
   const stale = pool.run(cancelled.signal, async () => { ran = true; });
-  await expect(pool.run(signal, async () => {})).rejects.toThrow("Too many pending requests");
+  await expect(pool.run(signal, async () => {})).rejects.toMatchObject({ name: "RequestPoolOverloadError" });
   cancelled.abort();
   await expect(stale).rejects.toMatchObject({ name: "AbortError" });
   const next = pool.run(signal, async () => "next");
