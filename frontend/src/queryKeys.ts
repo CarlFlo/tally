@@ -27,7 +27,8 @@ export const queryKeys = {
   capabilities: () => ["capabilities"] as const,
   sessions: () => ["sessions"] as const,
   locales: () => ["locales"] as const,
-  localeCatalog: (locale: string, revision?: number) =>\n    ["locales", "catalog", locale, revision ?? 0] as const,
+  localeCatalog: (locale: string, revision?: number) =>
+    ["locales", "catalog", locale, revision ?? 0] as const,
   showSuggestions: () => ["show-suggestions"] as const,
   showSearch: (query: string) => ["show-search", query] as const,
   schedulePreview: (spec: string) => ["schedule-preview", spec] as const,
