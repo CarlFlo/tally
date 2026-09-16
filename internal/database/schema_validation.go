@@ -103,7 +103,7 @@ func ValidateSchema(ctx context.Context, db Querier) error {
 		}
 	}
 	for _, query := range []string{
-		"SELECT id,display_name,avatar,created_at FROM profiles LIMIT 0",
+		"SELECT id,display_name,avatar,created_at,locale FROM profiles LIMIT 0",
 		"SELECT profile_id,data FROM profile_preferences LIMIT 0",
 		"SELECT issuer,subject,profile_id FROM profile_identities LIMIT 0",
 		"SELECT profile_id,hash,must_change FROM local_credentials LIMIT 0",
