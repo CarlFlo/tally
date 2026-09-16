@@ -30,7 +30,11 @@
     "optional": "Optional",
     "unavailable": "Unavailable",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "closeDialog": "Close dialog",
+    "poster": "{{name}} poster",
+    "special": "Special",
+    "minuteShort": "min"
   },
   "brand": {
     "tagline": "Your little TV universe",
@@ -112,7 +116,13 @@
     "showsInOrbit_other": "{{count}} shows in your orbit",
     "episodesThisView_one": "{{count}} episode this view",
     "episodesThisView_other": "{{count}} episodes this view",
-    "caughtUp": "{{count}} already caught up"
+    "caughtUp": "{{count}} already caught up",
+    "markUnwatched": "Mark unwatched",
+    "markNotDownloaded": "Mark not downloaded",
+    "markedWatched": "Marked watched",
+    "markedUnwatched": "Marked unwatched",
+    "markedDownloaded": "Marked downloaded",
+    "markedNotDownloaded": "Marked not downloaded"
   },
   "shows": {
     "viewShow": "View show",
