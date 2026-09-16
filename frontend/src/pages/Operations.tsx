@@ -362,13 +362,7 @@ export function SettingsPage({
   useEffect(() => {
     setLocale(boot.profile!.locale || "en");
   }, [boot.profile!.locale]);
-  useEffect(() => {
-    previewLocale(locale);
-    return () => previewLocale(null);
-    // The initial new-profile locale is intentionally previewed before save.
-    // Subsequent select changes call previewLocale directly for immediate feedback.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [previewLocale]);
+  useEffect(() => () => previewLocale(null), [previewLocale]);
   async function prefs(key: string, value: any) {
     try {
       await api("/preferences", "PATCH", { [key]: value });
@@ -1010,7 +1004,10 @@ function CreateProfile({ onClose }: { onClose: () => void }) {
   const [locale, setLocale] = useState("en");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  useEffect(() => () => previewLocale(null), [previewLocale]);
+  useEffect(() => {
+    previewLocale("en");
+    return () => previewLocale(null);
+  }, [previewLocale]);
   return (
     <Dialog title={t("profile.newSpace")} onClose={onClose}>
       <form
