@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { openProfile } from "./navigation";
+import { openProfile, selectProfileByName } from "./navigation";
 
 test("profile language previews immediately and persists per profile", async ({
   page,
 }) => {
+  await selectProfileByName(page, "My profile");
   await page.goto("/calendar");
   await expect(
     page.getByRole("heading", { name: "Your calendar." }),
