@@ -82,7 +82,7 @@ export function RegisterProfile() {
                   <Avatar
                     profile={{
                       id: "",
-                      display_name: name || "You",
+                      display_name: name || t("profile.you"),
                       avatar: color,
                       locale,
                     }}
@@ -131,7 +131,7 @@ export function RegisterProfile() {
                     value={item.locale}
                     disabled={!item.valid}
                   >
-                    {item.name}{item.valid ? "" : " — unavailable"}
+                    {item.name}{item.valid ? "" : ` — ${t("common.unavailable")}`}
                   </option>
                 ))}
               </select>
