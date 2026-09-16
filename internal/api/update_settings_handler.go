@@ -55,6 +55,15 @@ func (s *Server) updateSettings(w http.ResponseWriter, r *http.Request, session 
 		}
 		value = in.Data.Effective()
 		revision = in.Revision
+	case "torrent":
+		var in struct {
+			Data     settings.Torrent `json:"data"`
+			Revision int64            `json:"revision"`
+		}
+		if e := decode(r, &in); e != nil {
+			return e
+		}
+		value, revision = in.Data, in.Revision
 	case "scheduling":
 		var in jobs.Schedule
 		if e := decode(r, &in); e != nil {
