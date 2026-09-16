@@ -320,7 +320,11 @@
     "saved": "Torrent client saved",
     "disabled": "Torrent client disabled",
     "noClientHelp": "You can still search and copy magnets. Sending becomes available after you configure a client.",
-    "save": "Save torrent client"
+    "save": "Save torrent client",
+    "enable": "Enable torrent downloads",
+    "enabled": "Torrent downloads enabled",
+    "featureDisabled": "Torrent downloads disabled",
+    "toggleHelp": "Controls whether Tally can send and manage torrent downloads. Your qBittorrent configuration below is kept when downloads are disabled."
   },
   "searchSettings": {
     "jackett": "Jackett",
@@ -329,10 +333,12 @@
     "keyHelp": "Find the API key in the Jackett dashboard. It stays server-side.",
     "baseURL": "Jackett base URL",
     "apiKey": "API key",
-    "enable": "Enable Jackett search",
+    "enable": "Enable torrent search",
     "saved": "Jackett settings saved",
-    "disabled": "Jackett disabled",
-    "save": "Save Jackett"
+    "disabled": "Torrent search disabled",
+    "save": "Save Jackett",
+    "enabled": "Torrent search enabled",
+    "toggleHelp": "Controls whether Tally exposes torrent search. Your Jackett configuration below is kept when search is disabled."
   },
   "jobs": {
     "eyebrow": "QUIETLY KEEPING THINGS CURRENT",
@@ -768,10 +774,15 @@
     "pause": "Pause",
     "resume": "Resume",
     "remove": "Remove",
-    "removeHelp": "Remove the torrent from qBittorrent and keep downloaded files",
+    "removeHelp": "Choose whether to keep or delete downloaded files",
     "removed": "Torrent removed from qBittorrent",
     "paused": "Torrent paused",
     "resumed": "Torrent resumed",
-    "pollingNote": "Only torrents in qBittorrent's tally category are shown. Download status refreshes automatically."
+    "pollingNote": "Download status refreshes automatically.",
+    "removeTitle": "Remove torrent?",
+    "removePrompt": "Remove “{{name}}” from qBittorrent only, or also delete its downloaded files from disk?",
+    "removeTorrentOnly": "Remove torrent only",
+    "removeTorrentAndFiles": "Remove torrent and files",
+    "removedWithFiles": "Torrent and downloaded files removed"
   }
 }
