@@ -108,12 +108,16 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
         const result = await api<{ message: string }>("/settings/search/test", "POST", { data }, signal);
         setFeedback({ message: result.message, error: false });
       } else {
-        const result = await api<{ revision: number }>("/settings/search", "PUT", { data, revision });
+        const result = await api<{ revision: number }>("/settings/search", "PUT", {
+          data: { ...data, enabled: saved.data.enabled },
+          revision,
+        });
         setRevision(result.revision);
-        cache.setQueryData<Boot>(queryKeys.bootstrap(), (current) =>
-          current ? { ...current, jackett_enabled: data.enabled } : current,
-        );
-        await invalidateResources(cache, ["settings", "editable-settings", "capabilities", "bootstrap"]);
+        await invalidateResources(cache, [
+          "settings",
+          "editable-settings",
+          "capabilities",
+        ]);
         notify(t("searchSettings.saved"));
       }
     } catch (error) {
