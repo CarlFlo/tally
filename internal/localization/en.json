@@ -78,7 +78,8 @@
     "passwordOptional": "Password (optional)",
     "localeUnavailable": "This language cannot currently be selected because its localization file is invalid.",
     "localeUnavailableReason": "{{reason}}",
-    "menuLink": "Profile"
+    "menuLink": "Profile",
+    "you": "You"
   },
   "language": {
     "fallbackNotice": "The selected language is unavailable. Tally is temporarily using English.",
