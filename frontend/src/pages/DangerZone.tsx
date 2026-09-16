@@ -127,6 +127,7 @@ function Reauthenticate({
   onClose: () => void;
   onConfirm: (password: string) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const { notify } = useApp();
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -144,10 +145,10 @@ function Reauthenticate({
     <Dialog title={title} onClose={onClose}>
       <form onSubmit={submit}>
         <p className="muted">
-          Re-enter your password to confirm this administrator action.
+{t("admin.reauth")}
         </p>
         <label>
-          Your password
+          {t("admin.yourPassword")}
           <input
             data-autofocus
             required
@@ -159,10 +160,10 @@ function Reauthenticate({
         </label>
         <div className="dialog-actions">
           <button type="button" className="button" onClick={onClose}>
-            Cancel
+            {t("common.cancel")}
           </button>
           <button className="button danger" disabled={busy}>
-            {busy && <Busy />}Confirm
+            {busy && <Busy />}{t("common.confirm")}
           </button>
         </div>
       </form>
