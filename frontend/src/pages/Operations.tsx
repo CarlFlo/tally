@@ -362,7 +362,13 @@ export function SettingsPage({
   useEffect(() => {
     setLocale(boot.profile!.locale || "en");
   }, [boot.profile!.locale]);
-  useEffect(() => () => previewLocale(null), [previewLocale]);
+  useEffect(() => {
+    previewLocale(locale);
+    return () => previewLocale(null);
+    // The initial new-profile locale is intentionally previewed before save.
+    // Subsequent select changes call previewLocale directly for immediate feedback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewLocale]);
   async function prefs(key: string, value: any) {
     try {
       await api("/preferences", "PATCH", { [key]: value });
