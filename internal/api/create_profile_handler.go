@@ -15,7 +15,7 @@ func (s *Server) createProfile(w http.ResponseWriter, r *http.Request, session a
 	if s.Config.AuthMode == "oidc" {
 		return bad("OIDC profiles are created when their identity signs in")
 	}
-	var in struct{ Name, Avatar, Password string }
+	var in struct{ Name, Avatar, Locale, Password string }
 	if err := decode(r, &in); err != nil {
 		return err
 	}
@@ -25,6 +25,12 @@ func (s *Server) createProfile(w http.ResponseWriter, r *http.Request, session a
 	if _, err := profiles.NormalizeAvatar(in.Avatar); err != nil {
 		return bad(err.Error())
 	}
+	if in.Locale == "" {
+		in.Locale = "en"
+	}
+	if s.Locales == nil || !s.Locales.Valid(in.Locale) {
+		return bad("choose an available language")
+	}
 	hash := ""
 	if s.Config.AuthMode == "local" && in.Password != "" {
 		var err error
@@ -33,7 +39,7 @@ func (s *Server) createProfile(w http.ResponseWriter, r *http.Request, session a
 			return bad(err.Error())
 		}
 	}
-	profile, err := (profiles.Repository{DB: s.DB, Limit: s.Config.MaxProfiles}).Create(r.Context(), in.Name, in.Avatar, hash, session.Profile)
+	profile, err := (profiles.Repository{DB: s.DB, Limit: s.Config.MaxProfiles}).Create(r.Context(), in.Name, in.Avatar, in.Locale, hash, session.Profile)
 	if errors.Is(err, profiles.ErrLimit) {
 		return bad(err.Error())
 	}
