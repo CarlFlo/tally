@@ -124,6 +124,7 @@ export function RegisterProfile() {
             <label>
               {t("profile.language")}
               <select
+                aria-label={t("profile.language")}
                 value={locale}
                 onChange={(event) => {
                   const next = event.target.value;
