@@ -3,9 +3,10 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLatestRequest } from "../useLatestRequest";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Plug, Save } from "lucide-react";
-import { api, Busy, ErrorState, useApp, useLocal } from "../lib";
+import { api, Busy, ErrorState, useApp, useLocal, type Boot } from "../lib";
 import { invalidateResources } from "../queryInvalidation";
 import { useTranslation } from "react-i18next";
+import { queryKeys } from "../queryKeys";
 
 type Field = {
   key: string;
@@ -26,39 +27,96 @@ type ClientData = {
   adapters: { id: string; name: string; fields: Field[] }[];
   settings: Connection;
 };
+type TorrentFeature = {
+  data: { enabled: boolean };
+  revision: number;
+};
 
 export function DownloaderSettings() {
   const { t } = useTranslation();
+  const { notify } = useApp();
+  const cache = useQueryClient();
   const query = useLocal<ClientData>(
     "downloader",
     "/downloader?reveal=1",
     true,
   );
+  const feature = useLocal<TorrentFeature>(
+    "editable-settings",
+    "/settings/torrent",
+    true,
+  );
   const [reloadKey, setReloadKey] = useState(0);
+  const [toggleBusy, setToggleBusy] = useState(false);
+
+  async function toggle(enabled: boolean) {
+    if (!feature.data) return;
+    setToggleBusy(true);
+    try {
+      await api("/settings/torrent", "PUT", {
+        data: { enabled },
+        revision: feature.data.revision,
+      });
+      cache.setQueryData<Boot>(queryKeys.bootstrap(), (current) =>
+        current ? { ...current, torrent_downloads_enabled: enabled } : current,
+      );
+      await invalidateResources(cache, [
+        "settings",
+        "editable-settings",
+        "capabilities",
+        "bootstrap",
+        "downloads",
+      ]);
+      notify(t(enabled ? "downloader.enabled" : "downloader.featureDisabled"));
+    } catch (error) {
+      notify((error as Error).message, true);
+    } finally {
+      setToggleBusy(false);
+    }
+  }
+
+  if (feature.error)
+    return <ErrorState error={feature.error} retry={() => feature.refetch()} />;
+  if (!feature.data) return <Busy />;
+
   return (
-    <section className="panel settings-card client-settings">
-      <h3>
-        <Plug size={19} />
-        {t("downloader.title")}
-      </h3>
-      <p className="muted">
-{t("downloader.description")}
-      </p>
-      {query.error && (
-        <ErrorState error={query.error} retry={() => query.refetch()} />
-      )}
-      {query.isPending && <Busy />}
-      {query.data && (
-        <ClientForm
-          key={reloadKey}
-          data={query.data}
-          reload={async () => {
-            await query.refetch();
-            setReloadKey((key) => key + 1);
-          }}
-        />
-      )}
-    </section>
+    <>
+      <section className="panel settings-card feature-toggle-setting">
+        <label className="toggle-setting">
+          <input
+            type="checkbox"
+            checked={feature.data.data.enabled}
+            disabled={toggleBusy}
+            onChange={(event) => void toggle(event.target.checked)}
+          />
+          {t("downloader.enable")}
+        </label>
+        <p className="muted small-text">{t("downloader.toggleHelp")}</p>
+      </section>
+      <section className="panel settings-card client-settings">
+        <h3>
+          <Plug size={19} />
+          {t("downloader.title")}
+        </h3>
+        <p className="muted">
+          {t("downloader.description")}
+        </p>
+        {query.error && (
+          <ErrorState error={query.error} retry={() => query.refetch()} />
+        )}
+        {query.isPending && <Busy />}
+        {query.data && (
+          <ClientForm
+            key={reloadKey}
+            data={query.data}
+            reload={async () => {
+              await query.refetch();
+              setReloadKey((key) => key + 1);
+            }}
+          />
+        )}
+      </section>
+    </>
   );
 }
 
