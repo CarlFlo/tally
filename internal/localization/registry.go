@@ -205,9 +205,8 @@ func (r *Registry) reload(notify bool) error {
 			item = entry{status: Status{Locale: code, Name: code, Valid: false, Error: publicError(parseErr)}}
 			var meta struct{ Meta Meta `json:"_meta"` }
 			if json.Unmarshal(data, &meta) == nil {
-				if meta.Meta.Locale != "" {
-					item.status.Locale = meta.Meta.Locale
-				}
+				// The filename remains authoritative for invalid files. A bad
+				// _meta.locale must never shadow a separate valid locale.
 				if meta.Meta.Name != "" {
 					item.status.Name = meta.Meta.Name
 				}
