@@ -43,6 +43,7 @@ type Status struct {
 	CatalogVersion int    `json:"catalog_version,omitempty"`
 	Valid          bool   `json:"valid"`
 	Error          string `json:"error,omitempty"`
+	ErrorCode      string `json:"error_code,omitempty"`
 }
 
 type entry struct {
@@ -202,7 +203,7 @@ func (r *Registry) reload(notify bool) error {
 		item, parseErr := parse(file.Name(), data)
 		if parseErr != nil {
 			code := strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))
-			item = entry{status: Status{Locale: code, Name: code, Valid: false, Error: publicError(parseErr)}}
+			item = entry{status: Status{Locale: code, Name: code, Valid: false, Error: publicError(parseErr), ErrorCode: publicErrorCode(parseErr)}}
 			var meta struct{ Meta Meta `json:"_meta"` }
 			if json.Unmarshal(data, &meta) == nil {
 				// The filename remains authoritative for invalid files. A bad
@@ -374,6 +375,19 @@ func validateNode(node map[string]any, prefix string) error {
 		}
 	}
 	return nil
+}
+
+
+func publicErrorCode(err error) string {
+	message := err.Error()
+	switch {
+	case strings.Contains(message, "invalid JSON"):
+		return "language.invalidJson"
+	case strings.Contains(message, "_meta"), strings.Contains(message, "locale"), strings.Contains(message, "direction"), strings.Contains(message, "catalogVersion"):
+		return "language.missingMetadata"
+	default:
+		return "language.invalidFile"
+	}
 }
 
 func publicError(err error) string {
