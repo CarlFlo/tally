@@ -29,7 +29,7 @@ func (s *Server) registerProfile(w http.ResponseWriter, r *http.Request, _ auth.
 		in.Locale = "en"
 	}
 	if s.Locales == nil || !s.Locales.Valid(in.Locale) {
-		return bad("choose an available language")
+		return badCode("profile_locale_invalid", "choose an available language")
 	}
 	hash := ""
 	if s.Config.AuthMode == "local" {
