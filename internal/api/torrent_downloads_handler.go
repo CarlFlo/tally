@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/CarlFlo/tally/internal/auth"
@@ -9,6 +10,9 @@ import (
 )
 
 func (s *Server) tallyDownloads(r *http.Request) (torrent.DownloadClient, torrent.DownloadSnapshot, error) {
+	if !s.torrentDownloadsEnabled(r.Context()) {
+		return nil, torrent.DownloadSnapshot{}, bad("torrent downloads are disabled in Settings")
+	}
 	client, e := s.Clients.Current(r.Context())
 	if e != nil {
 		return nil, torrent.DownloadSnapshot{}, bad(e.Error())
@@ -71,7 +75,15 @@ func (s *Server) removeTorrentDownload(w http.ResponseWriter, r *http.Request, _
 	if !tallyTorrentExists(snapshot, hash) {
 		return apiError{404, "Tally torrent not found"}
 	}
-	if e := client.Remove(r.Context(), hash, false); e != nil {
+	deleteFiles := false
+	if raw := r.URL.Query().Get("delete_files"); raw != "" {
+		parsed, parseErr := strconv.ParseBool(raw)
+		if parseErr != nil {
+			return bad("delete_files must be true or false")
+		}
+		deleteFiles = parsed
+	}
+	if e := client.Remove(r.Context(), hash, deleteFiles); e != nil {
 		return remote(e)
 	}
 	jsonResponse(w, 200, map[string]bool{"ok": true})
