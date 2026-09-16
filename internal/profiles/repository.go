@@ -20,6 +20,7 @@ type Profile struct {
 	ID     string `json:"id"`
 	Name   string `json:"display_name"`
 	Avatar string `json:"avatar"`
+	Locale string `json:"locale"`
 	Admin  bool   `json:"is_admin"`
 }
 
@@ -28,7 +29,7 @@ type Repository struct {
 	Limit int
 }
 
-func (r Repository) Create(ctx context.Context, name, avatar, hash, actor string) (Profile, error) {
+func (r Repository) Create(ctx context.Context, name, avatar, locale, hash, actor string) (Profile, error) {
 	name = strings.TrimSpace(name)
 	if err := ValidateName(name); err != nil {
 		return Profile{}, err
@@ -50,8 +51,11 @@ func (r Repository) Create(ctx context.Context, name, avatar, hash, actor string
 	if count >= r.Limit {
 		return Profile{}, ErrLimit
 	}
-	profile := Profile{ID: database.ID(), Name: name, Avatar: avatar}
-	if _, err = tx.ExecContext(ctx, "INSERT INTO profiles(id,display_name,avatar,created_at) VALUES(?,?,?,?)", profile.ID, name, avatar, time.Now().Unix()); err != nil {
+	if locale == "" {
+		locale = "en"
+	}
+	profile := Profile{ID: database.ID(), Name: name, Avatar: avatar, Locale: locale}
+	if _, err = tx.ExecContext(ctx, "INSERT INTO profiles(id,display_name,avatar,created_at,locale) VALUES(?,?,?,?,?)", profile.ID, name, avatar, time.Now().Unix(), locale); err != nil {
 		return Profile{}, err
 	}
 	if hash != "" {
