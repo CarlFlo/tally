@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -23,6 +24,10 @@ var embeddedEnglish []byte
 
 var localePattern = regexp.MustCompile(`^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$`)
 var interpolationPattern = regexp.MustCompile(`\{\{\s*-?\s*([A-Za-z0-9_.]+)(?:\s*,[^{}]+)?\s*\}\}`)
+
+const maxLocaleFileSize int64 = 4 << 20
+
+var newFSWatcher = fsnotify.NewWatcher
 
 type Meta struct {
 	Locale         string `json:"locale"`
@@ -62,6 +67,7 @@ type Registry struct {
 	done      chan struct{}
 	closeOnce sync.Once
 	onChange  func()
+	wg        sync.WaitGroup
 }
 
 func New(dataDir string, onChange func()) (*Registry, error) {
@@ -80,14 +86,18 @@ func New(dataDir string, onChange func()) (*Registry, error) {
 	if err = r.reload(false); err != nil {
 		return nil, err
 	}
-	r.watcher, err = fsnotify.NewWatcher()
-	if err != nil {
-		return nil, fmt.Errorf("create localization watcher: %w", err)
+	watcher, watchErr := newFSWatcher()
+	if watchErr != nil {
+		slog.Warn("Localization watcher unavailable; locale changes require a page reload", "error", watchErr)
+		return r, nil
 	}
-	if err = r.watcher.Add(dir); err != nil {
-		r.watcher.Close()
-		return nil, fmt.Errorf("watch localization directory: %w", err)
+	if watchErr = watcher.Add(dir); watchErr != nil {
+		_ = watcher.Close()
+		slog.Warn("Localization watcher unavailable; locale changes require a page reload", "error", watchErr)
+		return r, nil
 	}
+	r.watcher = watcher
+	r.wg.Add(1)
 	go r.watch()
 	return r, nil
 }
@@ -99,6 +109,7 @@ func (r *Registry) Close() error {
 		if r.watcher != nil {
 			err = r.watcher.Close()
 		}
+		r.wg.Wait()
 	})
 	return err
 }
@@ -166,7 +177,7 @@ func (r *Registry) syncEnglish() error {
 		slog.Warn("English localization path could not be inspected; attempting bundled catalog restore", "file", path, "error", statErr)
 	}
 	if statErr == nil {
-		current, err := os.ReadFile(path)
+		current, err := readLocaleFile(path)
 		if err == nil {
 			item, parseErr := parse("en.json", current)
 			if parseErr == nil {
@@ -228,7 +239,7 @@ func (r *Registry) reload(notify bool) error {
 			}}
 			continue
 		}
-		data, readErr := os.ReadFile(path)
+		data, readErr := readLocaleFile(path)
 		if readErr != nil {
 			code := strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))
 			slog.Warn("localization file unavailable", "file", file.Name(), "error", readErr)
@@ -282,6 +293,7 @@ func (r *Registry) reload(notify bool) error {
 }
 
 func (r *Registry) watch() {
+	defer r.wg.Done()
 	var timer *time.Timer
 	var timerC <-chan time.Time
 	schedule := func() {
@@ -315,8 +327,12 @@ func (r *Registry) watch() {
 				schedule()
 			}
 		case err, ok := <-r.watcher.Errors:
-			if ok {
-				slog.Warn("localization watcher error", "error", err)
+			if !ok {
+				return
+			}
+			slog.Warn("localization watcher error; reconciling locale registry", "error", err)
+			if reloadErr := r.reload(true); reloadErr != nil {
+				slog.Warn("localization reconciliation failed", "error", reloadErr)
 			}
 		case <-timerC:
 			timerC = nil
@@ -327,6 +343,23 @@ func (r *Registry) watch() {
 	}
 }
 
+
+
+func readLocaleFile(path string) ([]byte, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	data, err := io.ReadAll(io.LimitReader(file, maxLocaleFileSize+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) > maxLocaleFileSize {
+		return nil, fmt.Errorf("localization file exceeds %d-byte limit", maxLocaleFileSize)
+	}
+	return data, nil
+}
 
 func mergeMessages(fallback, override map[string]any) map[string]any {
 	out := make(map[string]any, len(fallback)+len(override))
