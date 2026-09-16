@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, Busy, ErrorState, useApp } from "../lib";
 import { invalidateResources } from "../queryInvalidation";
 
 export function BackupRetention({ saved }: { saved: any }) {
+  const { t } = useTranslation();
   const [keep, setKeep] = useState(saved.data.keep);
   const [revision, setRevision] = useState(saved.revision);
   const previousSaved = useRef(saved);
@@ -29,7 +31,7 @@ export function BackupRetention({ saved }: { saved: any }) {
       });
       setRevision(result.revision);
       await invalidateResources(cache, ["editable-settings"]);
-      notify("Backup settings saved");
+      notify(t("backups.saved"));
     } catch (e) {
       setError(e as Error);
     } finally {
@@ -38,14 +40,13 @@ export function BackupRetention({ saved }: { saved: any }) {
   }
   return (
     <form className="panel settings-card compact-retention" onSubmit={save}>
-      <h3>Retention</h3>
+      <h3>{t("backups.retention")}</h3>
       <p className="muted">
-        Older automatic backups are removed <strong>after</strong> the next successful backup.{" "}
-        Manual backups are kept until you remove them.
+{t("backups.retentionHelp")}
       </p>
       <div className="schedule-fields">
         <label>
-          Automatic backups to keep
+          {t("backups.automaticKeep")}
           <input
             type="number"
             min={1}
@@ -56,7 +57,7 @@ export function BackupRetention({ saved }: { saved: any }) {
           />
         </label>
         <button className="button small" disabled={busy}>
-          {busy && <Busy />}Save settings
+          {busy && <Busy />}{t("backups.saveSettings")}
         </button>
       </div>
       {error && <ErrorState error={error} />}
