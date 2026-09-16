@@ -304,7 +304,13 @@
     "added": "Added"
   },
   "downloader": {
-    "none": "No torrent client"
+    "none": "No torrent client",
+    "title": "Torrent client",
+    "description": "Choose where to send the torrents you select. This connection is shared by all profiles.",
+    "saved": "Torrent client saved",
+    "disabled": "Torrent client disabled",
+    "noClientHelp": "You can still search and copy magnets. Sending becomes available after you configure a client.",
+    "save": "Save torrent client"
   },
   "searchSettings": {
     "jackett": "Jackett",
@@ -312,7 +318,11 @@
     "baseHelp": "Enter the address of the Jackett instance. Tally uses Jackett's all-indexers Torznab endpoint.",
     "keyHelp": "Find the API key in the Jackett dashboard. It stays server-side.",
     "baseURL": "Jackett base URL",
-    "apiKey": "Jackett API key"
+    "apiKey": "API key",
+    "enable": "Enable Jackett search",
+    "saved": "Jackett settings saved",
+    "disabled": "Jackett disabled",
+    "save": "Save Jackett"
   },
   "jobs": {
     "eyebrow": "QUIETLY KEEPING THINGS CURRENT",
@@ -399,7 +409,29 @@
     "description": "Choose where Tally sends your alerts.",
     "enableAll": "Enable all notifications",
     "saved": "Notification settings saved",
-    "bellHelp": "Choose what appears in the bell."
+    "bellHelp": "Choose what appears in the bell.",
+    "services": "Notification Services",
+    "saveBeforeEnable": "Save valid notification service settings before enabling alerts.",
+    "enabledNotice": "Notifications enabled",
+    "disabledNotice": "All notifications disabled",
+    "alertsOn": "Alerts on",
+    "alertsOff": "Alerts off",
+    "saveSettings": "Save settings",
+    "testNotification": "Test Notification",
+    "service": "Service",
+    "immediately": "Immediately",
+    "selectedTime": "At your selected time",
+    "systemErrors": "System errors",
+    "failedJobs": "Failed jobs",
+    "showsAdded": "Shows added",
+    "showsRemoved": "Shows removed",
+    "historyCleared": "Watch history cleared",
+    "profileAccess": "Profile access changes",
+    "episodeReleased": "New episode releases",
+    "placeholdersHelp": "Use {{tokens}} in JSON string values.",
+    "userTime": "Your time: {{time}} · {{timezone}}",
+    "scheduleHelp": "New episodes with an announced release time are sent at the next daily delivery time. System errors and other selected activity arrive immediately. Only shows followed on this server are included.",
+    "previewMessage": "New episode available"
   },
   "statistics": {
     "eyebrow": "LESS GUESSWORK. MORE VISIBILITY.",
@@ -686,5 +718,13 @@
     "backup_successesHelp": "A backup finished successfully.",
     "routine_background": "Routine background tasks",
     "routine_backgroundHelp": "Successful maintenance and metadata work."
+  },
+  "connection": {
+    "show": "Show {{label}}",
+    "hide": "Hide {{label}}",
+    "savedPlaceholder": "Saved — leave blank to keep it",
+    "clearSaved": "Clear saved {{label}}",
+    "test": "Test connection",
+    "reload": "Reload saved settings"
   }
 }
