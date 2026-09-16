@@ -22,23 +22,30 @@ export function JackettSettings() {
   const cache = useQueryClient();
   const query = useLocal<SavedSearch>("editable-settings", "/settings/search", true);
   const [toggleBusy, setToggleBusy] = useState(false);
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (query.data && !toggleBusy) setEnabled(query.data.data.enabled);
+  }, [query.data, toggleBusy]);
   if (query.error) return <ErrorState error={query.error} retry={() => query.refetch()} />;
   if (!query.data) return <Busy />;
   const saved = query.data;
+  const featureEnabled = enabled ?? saved.data.enabled;
 
-  async function toggle(enabled: boolean) {
+  async function toggle(next: boolean) {
+    const previous = featureEnabled;
+    setEnabled(next);
     setToggleBusy(true);
     try {
       await api("/settings/search", "PUT", {
-        data: { ...saved.data, enabled },
+        data: { ...saved.data, enabled: next },
         revision: saved.revision,
       });
       cache.setQueryData<Boot>(queryKeys.bootstrap(), (current) =>
         current
           ? {
               ...current,
-              jackett_enabled: enabled,
-              torrent_search_enabled: enabled,
+              jackett_enabled: next,
+              torrent_search_enabled: next,
             }
           : current,
       );
@@ -48,8 +55,9 @@ export function JackettSettings() {
         "capabilities",
         "bootstrap",
       ]);
-      notify(t(enabled ? "searchSettings.enabled" : "searchSettings.disabled"));
+      notify(t(next ? "searchSettings.enabled" : "searchSettings.disabled"));
     } catch (error) {
+      setEnabled(previous);
       notify((error as Error).message, true);
     } finally {
       setToggleBusy(false);
@@ -62,7 +70,7 @@ export function JackettSettings() {
         <label className="toggle-setting">
           <input
             type="checkbox"
-            checked={saved.data.enabled}
+            checked={featureEnabled}
             disabled={toggleBusy}
             onChange={(event) => void toggle(event.target.checked)}
           />
