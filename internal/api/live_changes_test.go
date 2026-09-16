@@ -70,6 +70,27 @@ func TestLiveChangesScopesAndTargetsResources(t *testing.T) {
 			[]liveUpdate{update("", "editable-settings", "settings", "capabilities", "bootstrap")},
 		},
 		{
+			"shared torrent settings",
+			http.MethodPut,
+			"/api/settings/torrent",
+			"profile-admin",
+			[]liveUpdate{update("", "editable-settings", "settings", "capabilities", "bootstrap", "downloads")},
+		},
+		{
+			"torrent pause keeps optimistic download state",
+			http.MethodPost,
+			"/api/torrents/downloads/abc/stop",
+			"profile-member",
+			[]liveUpdate{update("", "statistics")},
+		},
+		{
+			"torrent removal refreshes downloads",
+			http.MethodDelete,
+			"/api/torrents/downloads/abc",
+			"profile-member",
+			[]liveUpdate{update("", "downloads", "statistics")},
+		},
+		{
 			"job start",
 			http.MethodPost,
 			"/api/jobs/metadata",
