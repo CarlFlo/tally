@@ -70,6 +70,7 @@ export function BackupArchives() {
 
   async function remove(record: BackupRecord) {
     await api(`/backups/${record.id}`, "DELETE", {});
+    await archives.refetch();
     notify(t("backups.deleted"));
   }
 
