@@ -622,6 +622,11 @@ export function SettingsPage({
                     previewLocale(next);
                   }}
                 >
+                  {!locales.some((item) => item.locale === locale) && (
+                    <option value={locale} disabled>
+                      {locale} — {t("common.unavailable")}
+                    </option>
+                  )}
                   {locales.map((item) => (
                     <option
                       key={item.locale}
@@ -640,6 +645,11 @@ export function SettingsPage({
                       {item.name}: {item.error || t("profile.localeUnavailable")}
                     </small>
                   ))}
+                {!locales.some((item) => item.locale === locale) && (
+                  <small className="muted">
+                    {locale}: {t("language.missingFile")}
+                  </small>
+                )}
               </label>
               <p className="small-text muted">
                 {boot.profile!.is_admin
