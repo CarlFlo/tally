@@ -7,6 +7,7 @@ import (
 	"github.com/CarlFlo/tally/internal/activity"
 	"github.com/CarlFlo/tally/internal/auth"
 	"github.com/CarlFlo/tally/internal/backup"
+	"github.com/CarlFlo/tally/internal/settings"
 )
 
 func (s *Server) restoreBackup(w http.ResponseWriter, r *http.Request, session auth.Session) error {
@@ -24,6 +25,12 @@ func (s *Server) restoreBackup(w http.ResponseWriter, r *http.Request, session a
 			s.Events.Publish("", "logs", "inbox")
 		}
 		return apiError{409, "backup restore failed: " + err.Error()}
+	}
+	// A backup created before a newly introduced application setting can be
+	// schema-compatible but not contain that setting row. Seed any missing
+	// defaults immediately so live restore does not require a restart.
+	if err = (settings.Store{DB: s.DB}).Ensure(r.Context()); err != nil {
+		return err
 	}
 	if s.Events != nil {
 		s.Events.Publish("", "bootstrap", "calendar", "shows", "show-actions", "jobs", "schedules", "statistics", "logs", "settings", "editable-settings", "downloader", "backups", "inbox", "torrent-history", "capabilities", "sessions")
