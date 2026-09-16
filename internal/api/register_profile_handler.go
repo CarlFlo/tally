@@ -15,7 +15,7 @@ func (s *Server) registerProfile(w http.ResponseWriter, r *http.Request, _ auth.
 	if session, _ := s.Auth.Resolve(r); session.Profile != "" {
 		return apiError{409, "sign out before creating a profile here"}
 	}
-	var in struct{ Name, Avatar, Password string }
+	var in struct{ Name, Avatar, Locale, Password string }
 	if err := decode(r, &in); err != nil {
 		return err
 	}
@@ -25,6 +25,12 @@ func (s *Server) registerProfile(w http.ResponseWriter, r *http.Request, _ auth.
 	if _, err := profiles.NormalizeAvatar(in.Avatar); err != nil {
 		return bad(err.Error())
 	}
+	if in.Locale == "" {
+		in.Locale = "en"
+	}
+	if s.Locales == nil || !s.Locales.Valid(in.Locale) {
+		return bad("choose an available language")
+	}
 	hash := ""
 	if s.Config.AuthMode == "local" {
 		var err error
@@ -33,7 +39,7 @@ func (s *Server) registerProfile(w http.ResponseWriter, r *http.Request, _ auth.
 			return bad(err.Error())
 		}
 	}
-	profile, err := (profiles.Repository{DB: s.DB, Limit: s.Config.MaxProfiles}).Create(r.Context(), in.Name, in.Avatar, hash, "")
+	profile, err := (profiles.Repository{DB: s.DB, Limit: s.Config.MaxProfiles}).Create(r.Context(), in.Name, in.Avatar, in.Locale, hash, "")
 	if errors.Is(err, profiles.ErrLimit) {
 		return bad(err.Error())
 	}
