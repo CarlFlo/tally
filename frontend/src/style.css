@@ -1096,39 +1096,6 @@ code {
   padding-left: 24px;
   padding-top: 4px;
 }
-.calendar-overview {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-bottom: 17px;
-  padding: 10px 0 11px;
-  border-bottom: 1px solid var(--border);
-}
-.calendar-overview > div {
-  min-width: 0;
-  padding: 0 8px;
-  text-align: center;
-  border-right: 1px solid var(--border);
-}
-.calendar-overview > div:first-child { padding-left: 0; }
-.calendar-overview > div:last-child {
-  padding-right: 0;
-  border-right: 0;
-}
-.calendar-overview strong,
-.calendar-overview small {
-  display: block;
-}
-.calendar-overview strong {
-  color: var(--text);
-  font-size: 17px;
-  line-height: 1;
-}
-.calendar-overview small {
-  margin-top: 5px;
-  color: var(--muted);
-  font-size: 7px;
-  line-height: 1.25;
-}
 .rail-section {
   margin-bottom: 26px;
 }
@@ -2862,13 +2829,8 @@ td .table-error {
     border-top: 1px solid var(--border);
     padding: 24px 0 0;
   }
-  .calendar-overview,
   .calendar-rail > .rail-section {
     grid-column: 1 / -1;
-  }
-  .calendar-overview {
-    margin-bottom: 0;
-    padding-top: 0;
   }
   .calendar-rail .quiet-card {
     display: none;
