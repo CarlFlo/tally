@@ -40,7 +40,11 @@ func (s Search) Effective() Search {
 
 func (s Search) Configured() bool {
 	effective := s.Effective()
-	return effective.Enabled && ValidateSearch(effective) == nil
+	if strings.TrimSpace(effective.BaseURL) == "" || effective.APIKey == "" {
+		return false
+	}
+	effective.Enabled = true
+	return ValidateSearch(effective) == nil
 }
 
 func ValidateSearch(s Search) error {
