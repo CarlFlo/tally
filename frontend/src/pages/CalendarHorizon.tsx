@@ -1,6 +1,7 @@
 import { Clock3, Star } from "lucide-react";
 import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
+import { displayLocale } from "../dateFormatting";
 import {
   episodeCode,
   episodeDay,
@@ -54,8 +55,8 @@ export function CalendarHorizon({
               >
                 <h4 className="tiny-label">
                   {day === today
-                    ? t("calendar.today").toLocaleUpperCase(i18n.resolvedLanguage || "en")
-                    : new Date(day + "T12:00:00").toLocaleDateString(i18n.resolvedLanguage || "en", {
+                    ? t("calendar.today").toLocaleUpperCase(displayLocale(i18n.resolvedLanguage))
+                    : new Date(day + "T12:00:00").toLocaleDateString(displayLocale(i18n.resolvedLanguage), {
                         weekday: "short",
                         month: "short",
                         day: "numeric",
