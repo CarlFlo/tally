@@ -63,7 +63,7 @@ function LocaleFallbackNotice() {
       <AlertCircle size={19} />
       <span>
         {t("language.fallbackNotice")}
-        {status?.error ? ` ${status.error}` : ""}
+        {` ${status?.error || t("language.missingFile")}`}
       </span>
     </div>
   );
