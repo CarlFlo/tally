@@ -288,12 +288,13 @@ test("settings categories persist connections, schedules, debug previews and sta
     .getByLabel("API key", { exact: true })
     .fill("plain-fixture-key");
   await page
-    .getByRole("checkbox", { name: "Enable Jackett search" })
-    .uncheck();
-  await page
     .getByRole("button", { name: "Save Jackett", exact: true })
     .click();
-  await expect(page.getByRole("status")).toContainText("Jackett disabled");
+  await expect(page.getByRole("status")).toContainText("Jackett settings saved");
+  await page
+    .getByRole("checkbox", { name: "Enable torrent search" })
+    .uncheck();
+  await expect(page.getByRole("status")).toContainText("Torrent search disabled");
   await page.reload();
   const key = page.getByLabel("API key", { exact: true });
   await expect(key).toHaveValue("plain-fixture-key");
