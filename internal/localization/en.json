@@ -147,7 +147,9 @@
     "more_other": "+ {{count}} more",
     "available": "Available",
     "countdownDays": "in {{days}}d {{hours}}h {{minutes}}m",
-    "countdownTime": "in {{hours}}{{minutes}}m {{seconds}}s"
+    "countdownTime": "in {{hours}}{{minutes}}m {{seconds}}s",
+    "runtimeTBA": "Runtime TBA",
+    "detailsFor": "Episode details: {{name}}"
   },
   "shows": {
     "viewShow": "View show",
@@ -333,7 +335,11 @@
     "filterResult": "Filter history by result",
     "cancel": "Cancel job",
     "empty": "No matching runs",
-    "cancelRequested": "Cancellation requested"
+    "cancelRequested": "Cancellation requested",
+    "automaticBackup": "Automatic backup",
+    "metadataDescription": "Checks due shows for new episodes and updated details.",
+    "backupDescription": "Creates a verified copy of your database and saved settings.",
+    "maintenanceDescription": "Removes expired cache entries, old sessions, and retained history."
   },
   "logs": {
     "personalDescription": "Library changes and important activity for your profile.",
@@ -450,7 +456,18 @@
     "save": "Save schedule",
     "paused": "Paused after {{count}} consecutive failures. Resume from System → Jobs when ready.",
     "checking": "Checking schedule…",
-    "enter": "Enter a cron schedule."
+    "enter": "Enter a cron schedule.",
+    "every15": "Every 15 minutes",
+    "everyHour": "Every hour",
+    "every6": "Every 6 hours",
+    "daily0300": "Once a day at 03:00",
+    "daily0330": "Every day at 03:30",
+    "monday0330": "Every Monday at 03:30",
+    "firstMonth0330": "First day of each month at 03:30",
+    "sunday0300": "Every Sunday at 03:00",
+    "every2Weeks": "Every 2 weeks",
+    "firstMonth0300": "First day of each month at 03:00",
+    "commonFor": "{{name}} common schedule"
   },
   "search": {
     "eyebrow": "YOU'RE IN THE DRIVER'S SEAT",
@@ -543,7 +560,9 @@
     "clearDownloadedSeason": "Clear downloaded season",
     "markDownloadedSeason": "Mark season downloaded",
     "noEpisodes": "No episodes have been announced yet.",
-    "viewTVmaze": "View on TVmaze"
+    "viewTVmaze": "View on TVmaze",
+    "favorite": "Favorite {{name}}",
+    "unfavorite": "Unfavorite {{name}}"
   },
   "system": {
     "title": "System",
