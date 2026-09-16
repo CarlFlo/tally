@@ -51,6 +51,7 @@ import { useLocalization } from "../i18n";
 export { JobsPage } from "./Jobs";
 
 export function StatisticsPage() {
+  const { t, i18n } = useTranslation();
   const { boot, notify } = useApp();
   const cache = useQueryClient();
   const requestLimit = boot.preferences.request_limit || 20,
@@ -67,7 +68,7 @@ export function StatisticsPage() {
   ) {
     return (
       <label className="row-limit">
-        Show{" "}
+        {t("statistics.show")}{" "}
         <select
           aria-label={label}
           value={value}
@@ -112,9 +113,9 @@ export function StatisticsPage() {
     <div className="page">
       <div className="page-heading">
         <div>
-          <span className="eyebrow">LESS GUESSWORK. MORE VISIBILITY.</span>
+          <span className="eyebrow">{t("statistics.eyebrow")}</span>
           <h1>
-            Statistics<span className="accent">.</span>
+            {t("statistics.title")}<span className="accent">.</span>
           </h1>
         </div>
       </div>
@@ -122,25 +123,25 @@ export function StatisticsPage() {
       <div className="stats-grid">
         {[
           {
-            label: "Provider requests",
+            label: t("statistics.providerRequests"),
             value: sum("requests"),
             icon: <Globe size={21} />,
             cls: "purple",
           },
           {
-            label: "Calls avoided",
+            label: t("statistics.callsAvoided"),
             value: sum("avoided"),
             icon: <ShieldCheck size={21} />,
             cls: "mint",
           },
           {
-            label: "Cache hits",
+            label: t("statistics.cacheHits"),
             value: sum("cache_hits") + sum("conditional_hits"),
             icon: <Database size={21} />,
             cls: "amber",
           },
           {
-            label: "Failed requests",
+            label: t("statistics.failedRequests"),
             value: sum("failures"),
             icon: <Activity size={21} />,
             cls: "rose",
@@ -148,35 +149,35 @@ export function StatisticsPage() {
         ].map((m) => (
           <div className="panel stat-card" key={m.label}>
             <span className={"metric-icon " + m.cls}>{m.icon}</span>
-            <strong>{m.value.toLocaleString()}</strong>
+            <strong>{m.value.toLocaleString(i18n.resolvedLanguage || "en")}</strong>
             <span>{m.label}</span>
-            <small>Last 30 days</small>
+            <small>{t("statistics.last30")}</small>
           </div>
         ))}
       </div>
       <section className="panel chart-panel">
         <div className="section-heading">
-          <h3>Request activity</h3>
+          <h3>{t("statistics.requestActivity")}</h3>
           <div className="legend">
             <span>
               <i className="legend-dot purple" />
-              Requests
+              {t("statistics.requests")}
             </span>
             <span>
               <i className="legend-dot mint" />
-              Avoided
+              {t("statistics.avoided")}
             </span>
           </div>
         </div>
         <div
           className="bar-chart"
           role="img"
-          aria-label={`Last 30 days: ${sum("requests")} requests and ${sum("avoided")} calls avoided`}
+          aria-label={t("statistics.chartSummary", { requests: sum("requests"), avoided: sum("avoided") })}
         >
           {days.map((d) => (
             <div
               key={d.day}
-              title={`${d.day}: ${d.requests} requests, ${d.avoided} avoided`}
+              title={t("statistics.chartPoint", { day: d.day, requests: d.requests, avoided: d.avoided })}
             >
               <i
                 className="chart-avoided"
@@ -191,25 +192,25 @@ export function StatisticsPage() {
         </div>
         <div className="chart-axis">
           <span>{days[0].day}</span>
-          <span>Today</span>
+          <span>{t("statistics.today")}</span>
         </div>
       </section>
       <div className="section-heading run-heading">
-        <h2>Providers</h2>
-        <span className="muted small-text">Shared across all profiles</span>
+        <h2>{t("statistics.providers")}</h2>
+        <span className="muted small-text">{t("statistics.shared")}</span>
       </div>
       <div className="panel table-scroll">
         {data?.summary.length ? (
           <table>
             <thead>
               <tr>
-                <th>Provider</th>
-                <th>Status</th>
-                <th>Success / failed</th>
-                <th>Retries / 429s</th>
-                <th>304s</th>
-                <th>Avg. latency</th>
-                <th>Backoff until</th>
+                <th>{t("statistics.provider")}</th>
+                <th>{t("common.status")}</th>
+                <th>{t("statistics.successFailed")}</th>
+                <th>{t("statistics.retries429")}</th>
+                <th>{t("statistics.notModified")}</th>
+                <th>{t("statistics.avgLatency")}</th>
+                <th>{t("statistics.backoff")}</th>
               </tr>
             </thead>
             <tbody>
@@ -224,7 +225,7 @@ export function StatisticsPage() {
                     </td>
                     <td>
                       <span className={"badge " + (state?.state || "healthy")}>
-                        {state?.state || "healthy"}
+                        {state?.state || t("statistics.healthy")}
                       </span>
                     </td>
                     <td>
@@ -246,14 +247,14 @@ export function StatisticsPage() {
             </tbody>
           </table>
         ) : (
-          <Empty title="A quiet start.">
-            Provider statistics appear after your first search or sync.
+          <Empty title={t("statistics.quietTitle")}>
+            {t("statistics.quietHelp")}
           </Empty>
         )}
       </div>
       <div className="section-heading run-heading">
-        <h2>Recent requests</h2>
-        {limitControl("request_limit", "Recent requests rows", requestLimit)}
+        <h2>{t("statistics.recent")}</h2>
+        {limitControl("request_limit", t("statistics.recentRows"), requestLimit)}
       </div>
       <div className="panel table-scroll">
         {data?.requests.length ? (
@@ -261,12 +262,12 @@ export function StatisticsPage() {
             <thead>
               <tr>
                 <th>Provider</th>
-                <th>Trigger</th>
-                <th>Entity</th>
-                <th>Outcome</th>
-                <th>HTTP</th>
-                <th>Latency</th>
-                <th>Time</th>
+                <th>{t("statistics.trigger")}</th>
+                <th>{t("statistics.entity")}</th>
+                <th>{t("statistics.outcome")}</th>
+                <th>{t("statistics.http")}</th>
+                <th>{t("statistics.latency")}</th>
+                <th>{t("common.time")}</th>
               </tr>
             </thead>
             <tbody>
@@ -284,16 +285,16 @@ export function StatisticsPage() {
             </tbody>
           </table>
         ) : (
-          <Empty title="Nothing to report yet.">
-            Local calendar browsing doesn't make provider requests.
+          <Empty title={t("statistics.emptyRequests")}>
+            {t("statistics.emptyRequestsHelp")}
           </Empty>
         )}
       </div>
       {data && (
         <section className="panel next-scans">
           <div className="section-heading">
-            <h3>Next metadata checks</h3>
-            {limitControl("scan_limit", "Next metadata checks rows", scanLimit)}
+            <h3>{t("statistics.nextChecks")}</h3>
+            {limitControl("scan_limit", t("statistics.nextRows"), scanLimit)}
           </div>
           {data.next_scans.map((s: any) => (
             <div className="setting-row" key={s.id}>
