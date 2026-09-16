@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 5
+    "catalogVersion": 6
   },
   "common": {
     "save": "Save",
@@ -90,7 +90,8 @@
     "missingFile": "Localization file is missing.",
     "unreadableFile": "Localization file could not be read.",
     "notRegularFile": "Localization entry must be a regular file.",
-    "loadFailed": "The selected language catalog could not be loaded."
+    "loadFailed": "The selected language catalog could not be loaded.",
+    "placeholderMismatch": "Translation placeholders do not match the English catalog."
   },
   "calendar": {
     "title": "Calendar",
