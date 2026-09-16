@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, Busy, ErrorState, useApp } from "../lib";
 import { invalidateResources } from "../queryInvalidation";
@@ -42,7 +42,10 @@ export function BackupRetention({ saved }: { saved: any }) {
     <form className="panel settings-card compact-retention" onSubmit={save}>
       <h3>{t("backups.retention")}</h3>
       <p className="muted">
-{t("backups.retentionHelp")}
+        <Trans
+          i18nKey="backups.retentionHelp"
+          components={{ strong: <strong /> }}
+        />
       </p>
       <div className="schedule-fields">
         <label>
