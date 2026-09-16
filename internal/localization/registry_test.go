@@ -1,11 +1,14 @@
 package localization
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/fsnotify/fsnotify"
 )
 
 func TestRegistrySeedsEnglishAndFallsBack(t *testing.T) {
@@ -355,4 +358,66 @@ func TestRegistryDoesNotFollowEnglishSymlinkOnStartup(t *testing.T) {
 	if info.Mode()&os.ModeSymlink == 0 {
 		t.Fatal("server unexpectedly rewrote the non-regular English path")
 	}
+}
+
+
+func TestRegistryContinuesWhenWatcherCannotStart(t *testing.T) {
+	original := newFSWatcher
+	newFSWatcher = func() (*fsnotify.Watcher, error) {
+		return nil, errors.New("watcher unavailable")
+	}
+	t.Cleanup(func() { newFSWatcher = original })
+
+	registry, err := New(t.TempDir(), nil)
+	if err != nil {
+		t.Fatalf("New returned an error when only the watcher failed: %v", err)
+	}
+	if !registry.Valid("en") {
+		t.Fatal("English locale was unavailable without filesystem watching")
+	}
+	if registry.watcher != nil {
+		t.Fatal("registry unexpectedly retained a watcher after startup failure")
+	}
+	if err = registry.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRegistryRejectsOversizedLocaleFile(t *testing.T) {
+	dir := t.TempDir()
+	locales := filepath.Join(dir, "locales")
+	if err := os.MkdirAll(locales, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(locales, "zz.json")
+	file, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = file.Truncate(maxLocaleFileSize + 1); err != nil {
+		_ = file.Close()
+		t.Fatal(err)
+	}
+	if err = file.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	registry, err := New(dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer registry.Close()
+
+	for _, status := range registry.List() {
+		if status.Locale == "zz" {
+			if status.Valid {
+				t.Fatal("oversized locale file was accepted")
+			}
+			if status.ErrorCode != "language.unreadableFile" {
+				t.Fatalf("unexpected oversized locale error code: %q", status.ErrorCode)
+			}
+			return
+		}
+	}
+	t.Fatal("oversized locale file was not retained as a disabled entry")
 }
