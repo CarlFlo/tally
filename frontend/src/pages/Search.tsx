@@ -187,10 +187,10 @@ export function SearchPage() {
       });
       setSent([...sent, result.id]);
       notify(t("search.sent"));
-      await invalidateResources(cache, ["torrent-history"]);
     } catch (e) {
       notify((e as Error).message, true);
     } finally {
+      await invalidateResources(cache, ["torrent-history"]);
       setSending(null);
     }
   }

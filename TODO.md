@@ -7,7 +7,7 @@ Branch: `feature/torrent-search-downloads`
 - [x] Renamed torrent action from **Send** to **Download** and changed the icon.
 - [x] Fixed qBittorrent submission validation so HTTP success is authoritative instead of requiring an exact `Ok.` body.
 - [x] Added/ensured qBittorrent category `tally` and assign Tally submissions to it.
-- [x] Updated recent submission refresh to use the app's live invalidation flow.
+- [x] Updated recent submission refresh to use the app's live invalidation flow, including failed qBittorrent attempts.
 - [x] Changed quality filtering so selections within one category are OR matches while different categories combine.
 - [x] Added clear buttons and API endpoints for recent searches and recent submissions.
 - [x] Bounded the torrent result list height and made the list scroll independently.
@@ -26,6 +26,9 @@ Branch: `feature/torrent-search-downloads`
 ## In progress
 - [ ] Complete the full GitHub Checks workflow on the latest code.
 - [ ] Investigate and fix any remaining CI/test failures.
+
+## Review findings resolved
+- [x] Failed downloader attempts now invalidate torrent history even though failed HTTP mutations do not emit live-update events.
 
 ## Final validation
 - [ ] Re-review the final diff for missed requirements, stale code, or unsafe edge cases.
