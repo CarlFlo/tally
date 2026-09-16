@@ -33,6 +33,8 @@ func (s *Server) editableSettings(w http.ResponseWriter, r *http.Request, sessio
 		out = &settings.Webhook{}
 	case "search":
 		out = &settings.Search{}
+	case "torrent":
+		out = &settings.Torrent{}
 	default:
 		return apiError{404, "unknown settings section"}
 	}
