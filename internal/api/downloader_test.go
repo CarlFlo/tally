@@ -88,7 +88,7 @@ func TestClientSetupTestSaveAndSecretRedaction(t *testing.T) {
 func TestClientManagementRequiresOperator(t *testing.T) {
 	s, h, _ := testServer(t, "local")
 	recorder := httptest.NewRecorder()
-	if _, e := s.DB.Exec("INSERT INTO profiles VALUES('profile-member','Alex','mint',1)"); e != nil {
+	if _, e := s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-member','Alex','mint',1)"); e != nil {
 		t.Fatal(e)
 	}
 	if e := s.Auth.NewSession(context.Background(), recorder, httptest.NewRequest("GET", "/", nil), "profile-member", false); e != nil {

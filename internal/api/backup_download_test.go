@@ -28,7 +28,7 @@ func TestBackupDownloadRequiresOwnerAndConfinesArchivePaths(t *testing.T) {
 	if result.Body.String() != string(data) || !strings.Contains(result.Header().Get("Content-Disposition"), "attachment;") || result.Header().Get("Content-Type") != "application/zip" {
 		t.Fatal("archive response is incorrect")
 	}
-	if _, err = s.DB.Exec("INSERT INTO profiles VALUES('profile-member','Alex','mint',1)"); err != nil {
+	if _, err = s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-member','Alex','mint',1)"); err != nil {
 		t.Fatal(err)
 	}
 	owner := &http.Cookie{Name: "tally_profile", Value: "profile-admin"}

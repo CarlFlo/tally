@@ -19,7 +19,7 @@ func TestConsistentBackupRetentionAndRestore(t *testing.T) {
 		t.Fatal(e)
 	}
 	defer db.Close()
-	_, e = db.Exec("INSERT INTO profiles VALUES('profile-saved','Saved','profile-saved-test.png',?)", time.Now().Unix())
+	_, e = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-saved','Saved','profile-saved-test.png',?)", time.Now().Unix())
 	if e != nil {
 		t.Fatal(e)
 	}

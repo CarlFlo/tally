@@ -23,7 +23,7 @@ func TestClearWatchHistoryPreservesDownloadsAndOtherProfiles(t *testing.T) {
 	expect(t, added, 201)
 	id := value(t, added, "id")
 	expect(t, request(t, h, "POST", "/api/shows/"+id+"/bulk", map[string]any{"watched": true, "downloaded": true}), 200)
-	if _, err := s.DB.Exec(`INSERT INTO profiles VALUES('profile-member','Alex','mint',1); INSERT INTO profile_episode_state SELECT 'profile-member',id,1,0,1 FROM episodes`); err != nil {
+	if _, err := s.DB.Exec(`INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-member','Alex','mint',1); INSERT INTO profile_episode_state SELECT 'profile-member',id,1,0,1 FROM episodes`); err != nil {
 		t.Fatal(err)
 	}
 	expect(t, request(t, h, "DELETE", "/api/shows/"+id+"/watch-history", nil, &http.Cookie{Name: "tally_profile", Value: "profile-member"}), 404)
