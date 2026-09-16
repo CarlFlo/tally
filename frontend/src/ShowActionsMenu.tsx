@@ -4,6 +4,7 @@ import { useLocation } from "react-router-dom";
 import { MoreVertical, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
 import { api, Confirm, useApp, type Show } from "./lib";
 import { invalidateResources } from "./queryInvalidation";
+import { useTranslation } from "react-i18next";
 
 type Action = "remove" | "clear";
 export function ShowActionsMenu({
@@ -15,6 +16,7 @@ export function ShowActionsMenu({
   detail?: boolean;
   onRemoved?: () => void;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState<Action | null>(null);
   const [busy, setBusy] = useState(false);
@@ -61,8 +63,8 @@ export function ShowActionsMenu({
       ]);
       notify(
         action === "clear"
-          ? `Watch history cleared for ${show.name}`
-          : `${show.name} removed`,
+          ? t("actions.historyCleared", { name: show.name })
+          : t("actions.showRemoved", { name: show.name }),
       );
     } finally {
       setBusy(false);
@@ -77,7 +79,7 @@ export function ShowActionsMenu({
       <button
         ref={trigger}
         className="icon-button"
-        aria-label={`Show actions: ${show.name}`}
+        aria-label={t("actions.showActions", { name: show.name })}
         aria-haspopup="menu"
         aria-expanded={open}
         disabled={busy}
@@ -88,7 +90,7 @@ export function ShowActionsMenu({
       {open && (
         <div
           role="menu"
-          aria-label={`Actions for ${show.name}`}
+          aria-label={t("actions.actionsFor", { name: show.name })}
           className="action-popover"
           onKeyDown={(e) => {
             const items = Array.from(
@@ -127,7 +129,7 @@ export function ShowActionsMenu({
             }}
           >
             <RotateCcw size={16} />
-            Clear watch history
+            {t("actions.clearHistory")}
           </button>
           {detail && (
             <button
@@ -137,7 +139,7 @@ export function ShowActionsMenu({
                 setBusy(true);
                 try {
                   await api(`/shows/${show.id}/refresh`, "POST", {});
-                  notify("Metadata refresh queued");
+                  notify(t("actions.refreshQueued"));
                 } catch (e) {
                   notify((e as Error).message, true);
                 } finally {
@@ -146,13 +148,13 @@ export function ShowActionsMenu({
               }}
             >
               <RefreshCw size={16} />
-              Refresh metadata
+              {t("actions.refreshMetadata")}
             </button>
           )}
           <button
             role="menuitem"
             className="danger-text"
-            title="Hold Shift to remove without confirmation"
+            title={t("actions.removeShiftHint")}
             onClick={(e) => {
               close();
               if (e.shiftKey)
@@ -163,7 +165,7 @@ export function ShowActionsMenu({
             }}
           >
             <Trash2 size={16} />
-            Remove show
+            {t("actions.removeShow")}
           </button>
         </div>
       )}
@@ -171,13 +173,13 @@ export function ShowActionsMenu({
         <Confirm
           title={
             confirm === "clear"
-              ? `Clear watch history for ${show.name}?`
-              : `Remove ${show.name}?`
+              ? t("actions.clearTitle", { name: show.name })
+              : t("actions.removeTitle", { name: show.name })
           }
           message={
             confirm === "clear"
-              ? "All episodes of this show will become unwatched for your profile. Downloaded markers are kept."
-              : "This show will leave your library and calendar. Your progress is kept if you follow it again. Hold Shift when removing to skip this prompt."
+              ? t("actions.clearMessage")
+              : t("actions.removeMessage")
           }
           onClose={() => {
             setConfirm(null);
