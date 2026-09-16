@@ -37,6 +37,17 @@ test("torrent search navigation and filters follow the saved Jackett state", asy
   let revision = (await enabledResponse.json()).revision;
 
   try {
+    await page.goto("/settings/search");
+    const featureToggle = page.locator(".feature-toggle-setting");
+    await expect(
+      featureToggle.getByRole("checkbox", { name: "Enable torrent search" }),
+    ).toBeChecked();
+    await expect(
+      page
+        .locator(".client-settings")
+        .getByRole("checkbox", { name: "Enable torrent search" }),
+    ).toHaveCount(0);
+
     const results = [
       {
         id: "result-1080",
