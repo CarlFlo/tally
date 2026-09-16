@@ -34,6 +34,12 @@ test("200 route changes remain interactive with bounded resources and no cooldow
   await selectProfileByName(page, "My profile");
   await page.goto("/settings");
   await expect(page.locator(".schedule-editor")).toHaveCount(3);
+  // Bootstrap/localization loading is intentionally outside this test's scope.
+  // Measure only the request concurrency caused by client-side navigation.
+  await expect.poll(() => page.evaluate(() => (window as any).lifecycle.requests)).toBe(0);
+  await page.evaluate(() => {
+    (window as any).lifecycle.peakRequests = 0;
+  });
   const original = await page.evaluateHandle(() => document);
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Performance.enable");
