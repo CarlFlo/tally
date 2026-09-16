@@ -175,3 +175,47 @@ func TestInvalidLocaleMetadataCannotShadowValidLocale(t *testing.T) {
 		t.Fatal("invalid zz.json was not retained as a disabled locale")
 	}
 }
+
+func TestNewerPartialEnglishKeepsEmbeddedFallbackKeys(t *testing.T) {
+	dir := t.TempDir()
+	locales := filepath.Join(dir, "locales")
+	if err := os.MkdirAll(locales, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	custom := []byte(`{
+		"_meta":{"locale":"en","name":"English","direction":"ltr","catalogVersion":99},
+		"common":{"save":"Custom save"}
+	}`)
+	path := filepath.Join(locales, "en.json")
+	if err := os.WriteFile(path, custom, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	registry, err := New(dir, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer registry.Close()
+
+	catalog, ok := registry.Catalog("en")
+	if !ok {
+		t.Fatal("English locale was not available")
+	}
+	if catalog.Meta.CatalogVersion != 99 {
+		t.Fatalf("catalog version=%d, want preserved version 99", catalog.Meta.CatalogVersion)
+	}
+	common := catalog.Messages["common"].(map[string]any)
+	if common["save"] != "Custom save" {
+		t.Fatalf("config English override was lost: %#v", common["save"])
+	}
+	if catalog.Messages["calendar"] == nil {
+		t.Fatal("embedded English fallback keys were not merged")
+	}
+	onDisk, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(onDisk) != string(custom) {
+		t.Fatal("newer English config file was unexpectedly rewritten")
+	}
+}
