@@ -3,6 +3,10 @@ package jobs
 import (
 	"context"
 	"testing"
+	"time"
+
+	"github.com/CarlFlo/tally/internal/config"
+	"github.com/CarlFlo/tally/internal/database"
 )
 
 type recordingBackup struct {
@@ -34,5 +38,51 @@ func TestBackupKindFollowsInvocationSource(t *testing.T) {
 				t.Fatalf("backup kind = %v, want %q", recorder.kinds, test.want)
 			}
 		})
+	}
+}
+
+func TestSuccessfulBackupPublishesBackupChange(t *testing.T) {
+	ctx := context.Background()
+	db, err := database.Open(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	service := New(
+		ctx,
+		db,
+		config.Config{JobConcurrency: 1, JobRuntime: time.Second},
+		nil,
+		nil,
+		&recordingBackup{},
+	)
+	defer service.Stop(context.Background())
+
+	changes := make(chan []string, 8)
+	service.OnChange = func(_ string, resources ...string) {
+		copied := append([]string(nil), resources...)
+		select {
+		case changes <- copied:
+		default:
+		}
+	}
+
+	if _, err = service.Trigger("backup", "manual_backup", ""); err != nil {
+		t.Fatal(err)
+	}
+
+	deadline := time.After(2 * time.Second)
+	for {
+		select {
+		case resources := <-changes:
+			for _, resource := range resources {
+				if resource == "backups" {
+					return
+				}
+			}
+		case <-deadline:
+			t.Fatal("successful backup did not publish a backups change")
+		}
 	}
 }
