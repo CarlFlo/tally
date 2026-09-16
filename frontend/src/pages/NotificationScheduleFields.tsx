@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api, useApp } from "../lib";
-import { dateTimeFormatter } from "../dateFormatting";
+import { dateTimeFormatter, displayLocale } from "../dateFormatting";
 import type { NotificationErrors } from "./notificationValidation";
 import { parseNotificationTime } from "./notificationValidation";
 import { useTranslation } from "react-i18next";
@@ -37,7 +37,7 @@ export function NotificationScheduleFields({
   });
   const userTime =
     preview.data?.next_delivery && userTimezone !== serverTimezone
-      ? dateTimeFormatter(i18n.resolvedLanguage || "en", {
+      ? dateTimeFormatter(displayLocale(i18n.resolvedLanguage), {
           timeZone: userTimezone,
           hour: "2-digit",
           minute: "2-digit",
