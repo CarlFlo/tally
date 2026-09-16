@@ -130,12 +130,12 @@ export function LocalizationProvider({
   const candidateLocale = requested?.valid ? requestedLocale : "en";
 
   const english = useQuery<LocaleCatalog>({
-    queryKey: queryKeys.localeCatalog("en"),
+    queryKey: queryKeys.localeCatalog("en", index.data?.revision),
     queryFn: ({ signal }) => localeRequest("/locales/en", signal),
     enabled: !!index.data,
   });
   const active = useQuery<LocaleCatalog>({
-    queryKey: queryKeys.localeCatalog(candidateLocale),
+    queryKey: queryKeys.localeCatalog(candidateLocale, index.data?.revision),
     queryFn: ({ signal }) =>
       localeRequest("/locales/" + encodeURIComponent(candidateLocale), signal),
     enabled: !!index.data && candidateLocale !== "en",
