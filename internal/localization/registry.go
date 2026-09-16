@@ -21,7 +21,31 @@ import (
 //go:embed en.json
 var embeddedEnglish []byte
 
-var localePattern = regexp.MustCompile(`^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$`)
+var localePattern = regexp.MustCompile(`^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*package localization
+
+import (
+	_ "embed"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"github.com/fsnotify/fsnotify"
+)
+
+//go:embed en.json
+var embeddedEnglish []byte
+
+)
+var interpolationPattern = regexp.MustCompile(`\{\{\s*-?\s*([A-Za-z0-9_.]+)(?:\s*,[^{}]+)?\s*\}\}`)
 
 type Meta struct {
 	Locale         string `json:"locale"`
@@ -168,6 +192,9 @@ func (r *Registry) syncEnglish() error {
 		current, err := os.ReadFile(path)
 		if err == nil {
 			item, parseErr := parse("en.json", current)
+			if parseErr == nil {
+				parseErr = validatePlaceholders(item.messages, r.english.messages, "")
+			}
 			if parseErr == nil && item.status.CatalogVersion >= r.english.status.CatalogVersion {
 				return nil
 			}
@@ -238,6 +265,9 @@ func (r *Registry) reload(notify bool) error {
 			continue
 		}
 		item, parseErr := parse(file.Name(), data)
+		if parseErr == nil {
+			parseErr = validatePlaceholders(item.messages, r.english.messages, "")
+		}
 		if parseErr != nil {
 			code := strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))
 			item = entry{status: Status{Locale: code, Name: code, Valid: false, Error: publicError(parseErr), ErrorCode: publicErrorCode(parseErr)}}
@@ -415,9 +445,75 @@ func validateNode(node map[string]any, prefix string) error {
 }
 
 
+func validatePlaceholders(messages, english map[string]any, prefix string) error {
+	for key, value := range messages {
+		path := key
+		if prefix != "" {
+			path = prefix + "." + key
+		}
+		englishValue, hasEnglish := english[key]
+		switch translated := value.(type) {
+		case string:
+			translatedSet, err := interpolationVariables(translated)
+			if err != nil {
+				return fmt.Errorf("%s: %w", path, err)
+			}
+			englishString, englishIsString := englishValue.(string)
+			if !hasEnglish || !englishIsString {
+				continue
+			}
+			englishSet, err := interpolationVariables(englishString)
+			if err != nil {
+				return fmt.Errorf("embedded English %s: %w", path, err)
+			}
+			if !sameVariables(translatedSet, englishSet) {
+				return fmt.Errorf("interpolation placeholders for %s do not match English", path)
+			}
+		case map[string]any:
+			englishMap, _ := englishValue.(map[string]any)
+			if englishMap == nil {
+				englishMap = map[string]any{}
+			}
+			if err := validatePlaceholders(translated, englishMap, path); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func interpolationVariables(value string) (map[string]struct{}, error) {
+	variables := make(map[string]struct{})
+	cleaned := interpolationPattern.ReplaceAllStringFunc(value, func(match string) string {
+		parts := interpolationPattern.FindStringSubmatch(match)
+		if len(parts) > 1 {
+			variables[parts[1]] = struct{}{}
+		}
+		return ""
+	})
+	if strings.Contains(cleaned, "{{") || strings.Contains(cleaned, "}}") {
+		return nil, errors.New("malformed interpolation placeholder")
+	}
+	return variables, nil
+}
+
+func sameVariables(a, b map[string]struct{}) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for key := range a {
+		if _, ok := b[key]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
 func publicErrorCode(err error) string {
 	message := err.Error()
 	switch {
+	case strings.Contains(message, "interpolation placeholder"):
+		return "language.placeholderMismatch"
 	case strings.Contains(message, "invalid JSON"):
 		return "language.invalidJson"
 	case strings.Contains(message, "_meta"), strings.Contains(message, "locale"), strings.Contains(message, "direction"), strings.Contains(message, "catalogVersion"):
@@ -430,6 +526,8 @@ func publicErrorCode(err error) string {
 func publicError(err error) string {
 	message := err.Error()
 	switch {
+	case strings.Contains(message, "interpolation placeholder"):
+		return "Translation placeholders do not match the English catalog."
 	case strings.Contains(message, "invalid JSON"):
 		return "Localization file contains invalid JSON."
 	case strings.Contains(message, "_meta"), strings.Contains(message, "locale"), strings.Contains(message, "direction"), strings.Contains(message, "catalogVersion"):
