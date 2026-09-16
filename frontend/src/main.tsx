@@ -177,7 +177,7 @@ function App() {
     <LocalizationProvider profileLocale={boot.profile?.locale}>
     <AppContext.Provider value={{ boot, notify }}>
       <LibraryActionsProvider>
-        <LiveUpdates enabled={!!boot.profile && !boot.restricted} />
+        <LiveUpdates enabled={!boot.restricted} />
         {!boot.profile ? (
           <>
             {" "}

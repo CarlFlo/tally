@@ -57,7 +57,7 @@ export function ProfilePicker({
             ? selected.has_password
               ? t("login.welcomeBack", { name: selected.display_name })
               : t("login.setupPassword", { name: selected.display_name })
-            : "Who's keeping up?"}
+            : t("login.who")}
         </h1>
         <p className="muted">
           {t("login.subtitle")}

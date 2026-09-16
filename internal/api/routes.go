@@ -19,7 +19,7 @@ func (s *Server) Handler() http.Handler {
 		public  bool
 	}{
 		{"GET /api/settings/{section}", s.editableSettings, false},
-		{"GET /api/events", s.events, false},
+		{"GET /api/events", s.events, true},
 		{"GET /api/locales", s.locales, true},
 		{"GET /api/locales/{locale}", s.localeCatalog, true},
 		{"PUT /api/settings/{section}", s.updateSettings, false},
