@@ -8,6 +8,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   api,
   Busy,
@@ -35,6 +36,7 @@ type BackupRecord = {
 };
 
 export function BackupArchives() {
+  const { t } = useTranslation();
   const { boot, notify } = useApp();
   const cache = useQueryClient();
   const [busy, setBusy] = useState(false);
@@ -55,7 +57,7 @@ export function BackupArchives() {
     setBusy(true);
     try {
       await api<{ id: string }>("/backups", "POST", {});
-      notify("Backup started. The archive list will update when it completes.");
+      notify(t("backups.started"));
     } catch (error) {
       notify((error as Error).message, true);
     } finally {
@@ -65,23 +67,23 @@ export function BackupArchives() {
 
   async function restore(record: BackupRecord) {
     await api(`/backups/${record.id}/restore`, "POST", {});
-    notify("Backup restored. Reloading Tally.");
+    notify(t("backups.restored"));
     window.location.reload();
   }
 
   async function remove(record: BackupRecord) {
     await api(`/backups/${record.id}`, "DELETE", {});
     await invalidateResources(cache, ["backups"], 0);
-    notify("Backup deleted");
+    notify(t("backups.deleted"));
   }
 
   function restoreMessage(record: BackupRecord) {
     const version =
-      record.app_version || "an older version without version metadata";
+      record.app_version || t("backups.oldNoMetadata");
     const versionNote = record.different_version
-      ? ` This backup was created by Tally ${version}; the current version is ${boot.version}. Compatible database migrations will be applied before restore.`
+      ? t("backups.restoreVersionNote", { backupVersion: version, currentVersion: boot.version })
       : "";
-    return `Restore ${record.filename}? Current Tally data and saved settings will be replaced only after the backup is fully validated.${versionNote}`;
+    return t("backups.restoreMessage", { filename: record.filename }) + versionNote;
   }
 
   return (
@@ -90,11 +92,10 @@ export function BackupArchives() {
         <div>
           <h3>
             <Archive size={19} />
-            Backup archives
+            {t("backups.archives")}
           </h3>
           <p className="muted">
-            Download, restore, or remove backup archives found in Tally&apos;s
-            backup folder.
+{t("backups.archivesHelp")}
           </p>
         </div>
         <div className="backup-actions">
@@ -104,11 +105,11 @@ export function BackupArchives() {
             onClick={() => void archives.refetch()}
           >
             {archives.isFetching ? <Busy /> : <RefreshCw size={16} />}
-            Refresh
+            {t("common.refresh")}
           </button>
           <button className="button primary" disabled={busy} onClick={create}>
             {busy ? <Busy /> : <Plus size={16} />}
-            Create manual backup
+            {t("backups.manualCreate")}
           </button>
         </div>
       </div>
@@ -119,10 +120,10 @@ export function BackupArchives() {
       {rows.map((record) => {
         const kind =
           record.kind === "auto"
-            ? "Automatic"
+            ? t("backups.automatic")
             : record.kind === "imported"
-              ? "Imported"
-              : "Manual";
+              ? t("backups.imported")
+              : t("backups.manual");
         return (
           <div className="backup-row" key={record.id}>
             <Archive size={18} />
@@ -135,16 +136,16 @@ export function BackupArchives() {
                   {kind}
                 </span>
                 {record.app_version && <span>Tally {record.app_version}</span>}
-                {record.legacy_version && <span>Version unavailable</span>}
-                {record.schema && <span>Schema v{record.schema}</span>}
+                {record.legacy_version && <span>{t("backups.versionUnavailable")}</span>}
+                {record.schema && <span>{t("backups.schema", { schema: record.schema })}</span>}
                 {record.different_version && (
                   <span className="backup-version-note">
-                    Different from Tally {boot.version}
+                    {t("backups.different", { version: boot.version })}
                   </span>
                 )}
                 {record.compatible === false && (
                   <span className="backup-version-note">
-                    Incompatible backup
+                    {t("backups.incompatible")}
                   </span>
                 )}
                 {record.archive_error && (
@@ -161,7 +162,7 @@ export function BackupArchives() {
                 download
               >
                 <Download size={16} />
-                Download
+                {t("backups.download")}
               </a>
               <button
                 className="button small"
@@ -169,36 +170,34 @@ export function BackupArchives() {
                 onClick={() => setConfirm({ action: "restore", record })}
               >
                 <RotateCcw size={16} />
-                Restore
+                {t("backups.restore")}
               </button>
               <button
                 className="button small danger"
                 onClick={() => setConfirm({ action: "delete", record })}
               >
                 <Trash2 size={16} />
-                Delete
+                {t("common.delete")}
               </button>
             </div>
           </div>
         );
       })}
       {archives.data && !rows.length && (
-        <p className="muted">No backups yet.</p>
+        <p className="muted">{t("backups.empty")}</p>
       )}
       <p className="small-text muted">
-        Archives include saved connection credentials. Keep downloads private.
-        Backup failures appear in Notifications and Logs. Restore validates and
-        migrates an archive before replacing current data.
+{t("backups.privateWarning")}
       </p>
       {confirm && (
         <Confirm
           title={
-            confirm.action === "restore" ? "Restore backup" : "Delete backup"
+            confirm.action === "restore" ? t("backups.restoreTitle") : t("backups.deleteTitle")
           }
           message={
             confirm.action === "restore"
               ? restoreMessage(confirm.record)
-              : `Delete ${confirm.record.filename}? This backup archive cannot be recovered after deletion.`
+              : t("backups.deleteMessage", { filename: confirm.record.filename })
           }
           onClose={() => setConfirm(null)}
           onConfirm={() =>
