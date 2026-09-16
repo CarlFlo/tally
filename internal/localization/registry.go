@@ -22,6 +22,13 @@ import (
 //go:embed en.json
 var embeddedEnglish []byte
 
+//go:embed uk.json
+var embeddedUkrainian []byte
+
+var bundledLocales = map[string][]byte{
+	"uk.json": embeddedUkrainian,
+}
+
 var localePattern = regexp.MustCompile(`^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$`)
 var interpolationPattern = regexp.MustCompile(`\{\{\s*-?\s*([A-Za-z0-9_.]+)(?:\s*,[^{}]+)?\s*\}\}`)
 
@@ -82,6 +89,18 @@ func New(dataDir string, onChange func()) (*Registry, error) {
 	r := &Registry{dir: dir, entries: map[string]entry{}, english: english, done: make(chan struct{}), onChange: onChange}
 	if err = r.syncEnglish(); err != nil {
 		return nil, err
+	}
+	for filename, data := range bundledLocales {
+		item, parseErr := parse(filename, data)
+		if parseErr == nil {
+			parseErr = validatePlaceholders(item.messages, english.messages, "")
+		}
+		if parseErr != nil {
+			return nil, fmt.Errorf("embedded %s localization is invalid: %w", filename, parseErr)
+		}
+		if err = r.seedBundledLocale(filename, data); err != nil {
+			return nil, err
+		}
 	}
 	if err = r.reload(false); err != nil {
 		return nil, err
@@ -207,6 +226,28 @@ func (r *Registry) syncEnglish() error {
 	}
 	if err = os.Rename(name, path); err != nil {
 		return fmt.Errorf("install English localization: %w", err)
+	}
+	return nil
+}
+
+func (r *Registry) seedBundledLocale(filename string, data []byte) error {
+	path := filepath.Join(r.dir, filename)
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if errors.Is(err, os.ErrExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("install bundled localization %s: %w", filename, err)
+	}
+	_, writeErr := file.Write(data)
+	closeErr := file.Close()
+	if writeErr != nil {
+		_ = os.Remove(path)
+		return fmt.Errorf("write bundled localization %s: %w", filename, writeErr)
+	}
+	if closeErr != nil {
+		_ = os.Remove(path)
+		return fmt.Errorf("close bundled localization %s: %w", filename, closeErr)
 	}
 	return nil
 }
