@@ -66,6 +66,7 @@ func TestBrowserServer(t *testing.T) {
 	browserLocale := []byte(`{
 		"_meta":{"locale":"sv","name":"Svenska","direction":"ltr","catalogVersion":1},
 		"settings":{"myProfile":"Min profil"},
+		"profile":{"newSpace":"Ett nytt personligt utrymme","create":"Skapa profil"},
 		"calendar":{"yourCalendar":"Din kalender"},
 		"nav":{"calendar":"Kalender"},
 		"common":{"save":"Spara"}
