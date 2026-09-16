@@ -112,7 +112,7 @@ function DiscordFields({ data, change, errors }: any) {
         <input
           value={data.prefix}
           maxLength={500}
-          placeholder="TV update:"
+          placeholder={t("notifications.prefixPlaceholder")}
           aria-invalid={!!errors.prefix}
           onChange={(e) => change("prefix", e.target.value)}
         />
