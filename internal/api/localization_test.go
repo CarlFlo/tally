@@ -92,6 +92,18 @@ func TestProfileLocalePersistsAcrossInvalidationAndRecovery(t *testing.T) {
 	}
 	waitForLocale(t, s, "sv", false)
 
+	preserved := request(t, h, "PATCH", "/api/profile", map[string]any{
+		"name": "Renamed during fallback", "locale": "sv",
+	}, admin)
+	expect(t, preserved, http.StatusOK)
+	var storedName, storedLocale string
+	if err := s.DB.QueryRow("SELECT display_name,locale FROM profiles WHERE id='profile-admin'").Scan(&storedName, &storedLocale); err != nil {
+		t.Fatal(err)
+	}
+	if storedName != "Renamed during fallback" || storedLocale != "sv" {
+		t.Fatalf("profile update changed unavailable locale preference: name=%q locale=%q", storedName, storedLocale)
+	}
+
 	boot := request(t, h, "GET", "/api/bootstrap", nil, admin)
 	expect(t, boot, http.StatusOK)
 	var bootstrap struct {

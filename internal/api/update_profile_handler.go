@@ -25,8 +25,14 @@ func (s *Server) updateProfile(w http.ResponseWriter, r *http.Request, session a
 			return bad(err.Error())
 		}
 	}
-	if in.Locale != "" && (s.Locales == nil || !s.Locales.Valid(in.Locale)) {
-		return badCode("profile_locale_invalid", "choose an available language")
+	if in.Locale != "" {
+		var currentLocale string
+		if err := s.DB.QueryRowContext(r.Context(), "SELECT locale FROM profiles WHERE id=?", session.Profile).Scan(&currentLocale); err != nil {
+			return err
+		}
+		if in.Locale != currentLocale && (s.Locales == nil || !s.Locales.Valid(in.Locale)) {
+			return badCode("profile_locale_invalid", "choose an available language")
+		}
 	}
 	_, err := s.DB.ExecContext(
 		r.Context(),
