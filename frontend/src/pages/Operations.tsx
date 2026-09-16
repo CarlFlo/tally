@@ -1008,7 +1008,7 @@ function CreateProfile({ onClose }: { onClose: () => void }) {
               locale,
             });
             await invalidateResources(cache, ["bootstrap"]);
-            notify("Profile created");
+            notify(t("profile.created"));
             onClose();
           } catch (e) {
             notify((e as Error).message, true);
@@ -1018,7 +1018,7 @@ function CreateProfile({ onClose }: { onClose: () => void }) {
         }}
       >
         <label>
-          Display name
+          {t("profile.displayName")}
           <input
             autoFocus
             required
@@ -1028,7 +1028,7 @@ function CreateProfile({ onClose }: { onClose: () => void }) {
           />
         </label>
         <label>
-          Custom avatar color
+          {t("profile.customAvatarColor")}
           <input
             value={customColor}
             pattern="#[0-9A-Fa-f]{6}"
@@ -1037,7 +1037,7 @@ function CreateProfile({ onClose }: { onClose: () => void }) {
             spellCheck={false}
             onChange={(e) => setCustomColor(e.target.value)}
           />
-          <small className="muted">Optional six-digit HTML color.</small>
+          <small className="muted">{t("profile.customAvatarHelp")}</small>
         </label>
         <label>
           {t("profile.language")}
@@ -1055,7 +1055,7 @@ function CreateProfile({ onClose }: { onClose: () => void }) {
                 value={item.locale}
                 disabled={!item.valid}
               >
-                {item.name}{item.valid ? "" : " — unavailable"}
+                {item.name}{item.valid ? "" : ` — ${t("common.unavailable")}`}
               </option>
             ))}
           </select>
@@ -1070,7 +1070,7 @@ function CreateProfile({ onClose }: { onClose: () => void }) {
         </label>
         {boot.auth_mode === "local" && (
           <label>
-            Password (optional)
+            {t("profile.passwordOptional")}
             <input
               type="password"
               autoComplete="new-password"
@@ -1083,10 +1083,10 @@ function CreateProfile({ onClose }: { onClose: () => void }) {
         )}
         <div className="dialog-actions">
           <button type="button" className="button" onClick={onClose}>
-            Cancel
+            {t("common.cancel")}
           </button>
           <button className="button primary" disabled={busy}>
-            {busy && <Busy />}Create profile
+            {busy && <Busy />}{t("profile.create")}
           </button>
         </div>
       </form>
@@ -1103,6 +1103,7 @@ function AdminReauthDialog({
   onClose: () => void;
   onConfirm: (password: string) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const { notify } = useApp();
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1121,10 +1122,10 @@ function AdminReauthDialog({
         }}
       >
         <p className="muted">
-          Re-enter your password to confirm this administrator action.
+          {t("admin.reauth")}
         </p>
         <label>
-          Your password
+          {t("admin.yourPassword")}
           <input
             data-autofocus
             required
@@ -1139,7 +1140,7 @@ function AdminReauthDialog({
             Cancel
           </button>
           <button className="button danger" disabled={busy}>
-            {busy && <Busy />}Confirm
+            {busy && <Busy />}{t("common.confirm")}
           </button>
         </div>
       </form>
