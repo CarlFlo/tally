@@ -105,6 +105,7 @@ func TestQBittorrentBearerForTestsMagnetsAndFiles(t *testing.T) {
 func TestQBittorrentListsAndControlsTallyDownloads(t *testing.T) {
 	hash := strings.Repeat("b", 40)
 	var actions atomic.Int32
+	var deletedFiles atomic.Bool
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer "+testAPIKey {
 			w.WriteHeader(http.StatusUnauthorized)
@@ -120,8 +121,14 @@ func TestQBittorrentListsAndControlsTallyDownloads(t *testing.T) {
 			if e := r.ParseForm(); e != nil || r.PostForm.Get("hashes") != hash {
 				t.Error("torrent control used the wrong hash")
 			}
-			if r.URL.Path == "/api/v2/torrents/delete" && r.PostForm.Get("deleteFiles") != "false" {
-				t.Error("Tally remove must keep downloaded files")
+			if r.URL.Path == "/api/v2/torrents/delete" {
+				switch r.PostForm.Get("deleteFiles") {
+				case "false":
+				case "true":
+					deletedFiles.Store(true)
+				default:
+					t.Error("torrent delete did not specify file handling")
+				}
 			}
 			actions.Add(1)
 		default:
@@ -150,8 +157,11 @@ func TestQBittorrentListsAndControlsTallyDownloads(t *testing.T) {
 	if e := client.Remove(context.Background(), hash, false); e != nil {
 		t.Fatal(e)
 	}
-	if actions.Load() != 3 {
-		t.Fatal("expected stop, start, and remove actions")
+	if e := client.Remove(context.Background(), hash, true); e != nil {
+		t.Fatal(e)
+	}
+	if actions.Load() != 4 || !deletedFiles.Load() {
+		t.Fatal("expected stop, start, and both remove modes")
 	}
 }
 
