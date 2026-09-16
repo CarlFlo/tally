@@ -92,11 +92,7 @@ func (s *Service) Trigger(kind, trigger, show string) (string, error) {
 			}
 		}
 		slog.Info("job finished", "job_id", id, "job_key", key, "status", status, "processed", result.Processed)
-		resources := []string{"jobs", "statistics", "logs"}
-		if kind == "backup" {
-			resources = append(resources, "backups")
-		}
-		s.changed(resources...)
+		s.changed("jobs", "statistics", "logs")
 		if status == "success" && (kind == "backup" || trigger == "manual" || trigger == "manual_refresh") {
 			s.changedProfile("", "inbox")
 		}
