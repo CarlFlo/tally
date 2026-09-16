@@ -3,9 +3,13 @@
 ## Requested changes
 
 - [ ] Calendar show overlay: browser Back closes the overlay before leaving /calendar.
-- [ ] Add an operator toggle on /settings/torrent for enabling torrent downloads.
-- [ ] Hide Torrent search navigation when Jackett search is disabled.
+- [ ] Add a standalone **Toggle torrent downloads** control above/outside the qBittorrent configuration section on `/settings/torrent`.
+- [ ] Make **Toggle torrent search** a standalone control above/outside the Jackett configuration section on `/settings/search`, so the feature toggle is conceptually separate from Jackett itself.
+- [ ] Keep Jackett/qBittorrent connection configuration intact when their corresponding feature toggle is off; the toggle only enables/disables the Tally feature.
+- [ ] Hide Torrent search navigation when torrent search is disabled.
 - [ ] Hide Downloads navigation when torrent downloads are disabled.
+- [ ] When torrent search is disabled, hide/disable the related search page functionality as specified while preserving saved Jackett configuration.
+- [ ] When torrent downloads are disabled, hide/disable the related download page/actions as specified while preserving saved qBittorrent configuration.
 - [ ] Hide torrent-search Download actions when torrent downloads are disabled; keep magnet copy available.
 - [ ] Downloads pause/resume updates immediately after a successful command without requiring refresh.
 - [ ] Downloads removal prompts for torrent-only vs torrent + files on disk.
