@@ -122,6 +122,8 @@ export type Boot = {
   password_min: number;
   password_max: number;
   jackett_enabled: boolean;
+  torrent_search_enabled: boolean;
+  torrent_downloads_enabled: boolean;
 };
 export function resetSession(destination = "/calendar") {
   queryClient.clear();
@@ -493,9 +495,11 @@ export function bytes(value: number) {
 export function EpisodeDrawer({
   episode,
   onClose,
+  replaceNavigation = false,
 }: {
   episode: Episode;
   onClose: () => void;
+  replaceNavigation?: boolean;
 }) {
   const { boot, notify } = useApp();
   const cache = useQueryClient();
@@ -561,28 +565,31 @@ export function EpisodeDrawer({
           <Download size={18} />
           {ep.downloaded ? i18n.t("calendar.downloaded") : i18n.t("calendar.markDownloaded")}
         </button>
-        <button
-          className="button primary"
-          onClick={() => {
-            onClose();
-            navigate(
-              "/search?q=" +
+        {boot.torrent_search_enabled && (
+          <button
+            className="button primary"
+            onClick={() => {
+              const destination =
+                "/search?q=" +
                 encodeURIComponent(
                   ep.show_name +
                     " " +
                     episodeCode(ep).replace(` · ${i18n.t("common.special")}`, ""),
-                ),
-            );
-          }}
-        >
-          <Search size={18} />
-          {i18n.t("shows.searchTorrents")}
-        </button>
+                ) +
+                "&auto=1";
+              onClose();
+              navigate(destination, { replace: replaceNavigation });
+            }}
+          >
+            <Search size={18} />
+            {i18n.t("shows.searchTorrents")}
+          </button>
+        )}
         <button
           className="button ghost"
           onClick={() => {
             onClose();
-            navigate("/shows/" + ep.show_id);
+            navigate("/shows/" + ep.show_id, { replace: replaceNavigation });
           }}
         >
           {i18n.t("shows.viewShow")}
