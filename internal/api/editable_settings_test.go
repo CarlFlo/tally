@@ -74,7 +74,7 @@ func TestConnectionSecretsVisibleOnlyInExplicitOperatorView(t *testing.T) {
 	s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-member','Other','mint',1)")
 	ordinary := httptest.NewRecorder()
 	s.Auth.NewSession(ctx, ordinary, httptest.NewRequest("GET", "/", nil), "profile-member", false)
-	for _, path := range []string{"/api/downloader?reveal=1", "/api/settings/search", "/api/settings/notifications", "/api/settings/scheduling"} {
+	for _, path := range []string{"/api/downloader?reveal=1", "/api/settings/search", "/api/settings/torrent", "/api/settings/notifications", "/api/settings/scheduling"} {
 		expect(t, request(t, h, "GET", path, nil, ordinary.Result().Cookies()...), 403)
 	}
 }
