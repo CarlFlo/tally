@@ -324,7 +324,7 @@ export function SettingsPage({
     | "torrent"
     | "debug";
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { locales, previewLocale } = useLocalization();
   const { boot, notify } = useApp();
   const cache = useQueryClient();
@@ -738,7 +738,14 @@ export function SettingsPage({
                 value={boot.preferences.date_format}
                 onChange={(e) => prefs("date_format", e.target.value)}
               >
-                <option value="d MMM yyyy">11 Sep 2026</option>
+                <option value="d MMM yyyy">
+                  {new Intl.DateTimeFormat(displayLocale(i18n.resolvedLanguage), {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                    timeZone: "UTC",
+                  }).format(new Date("2026-09-11T12:00:00Z"))}
+                </option>
                 <option value="yyyy-MM-dd">2026-09-11</option>
                 <option value="MM/dd/yyyy">09/11/2026</option>
               </select>
