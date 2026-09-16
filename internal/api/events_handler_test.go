@@ -84,9 +84,12 @@ func TestAnonymousEventsOnlyExposeLocaleInvalidations(t *testing.T) {
 		t.Fatal("anonymous SSE handler did not connect")
 	}
 
-	hub.Publish("", "jobs")
-	hub.Publish("", "locales", "settings")
-	time.Sleep(20 * time.Millisecond)
+	deadline := time.Now().Add(time.Second)
+	for !strings.Contains(response.String(), "\"locales\"") && time.Now().Before(deadline) {
+		hub.Publish("", "jobs")
+		hub.Publish("", "locales", "settings")
+		time.Sleep(5 * time.Millisecond)
+	}
 	cancel()
 
 	select {
