@@ -252,3 +252,141 @@ test("torrent search navigation and filters follow the saved Jackett state", asy
     expect(restoreTorrent.ok()).toBe(true);
   }
 });
+
+
+test("downloads update controls immediately and confirm file deletion", async ({
+  page,
+}) => {
+  await selectProfileByName(page, "My profile");
+
+  const savedResponse = await page.request.get("/api/settings/torrent");
+  expect(savedResponse.ok()).toBe(true);
+  const saved = await savedResponse.json();
+  let revision = saved.revision;
+  if (!saved.data.enabled) {
+    const enabled = await page.request.put("/api/settings/torrent", {
+      headers,
+      data: { data: { enabled: true }, revision },
+    });
+    expect(enabled.ok()).toBe(true);
+    revision = (await enabled.json()).revision;
+    await page.reload();
+  }
+
+  const hash = "b".repeat(40);
+  let state = "downloading";
+  let removed = false;
+  let deleteFiles: string | null = null;
+
+  await page.route("**/api/torrents/downloads", (route) => {
+    if (route.request().method() !== "GET") return route.continue();
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        torrents: removed
+          ? []
+          : [
+              {
+                hash,
+                name: "Example download",
+                state,
+                progress: 0.5,
+                size: 1_000,
+                downloaded: 500,
+                download_speed: state === "downloading" ? 100 : 0,
+                upload_speed: 0,
+                ratio: 0.2,
+                added_on: 1,
+                category: "tally",
+              },
+            ],
+        stats: {
+          total: removed ? 0 : 1,
+          active: !removed && state === "downloading" ? 1 : 0,
+          download_speed: !removed && state === "downloading" ? 100 : 0,
+          upload_speed: 0,
+        },
+      }),
+    });
+  });
+  await page.route("**/api/torrents/downloads/**", (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() === "POST" && url.pathname.endsWith("/stop")) {
+      state = "paused";
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true }),
+      });
+    }
+    if (request.method() === "POST" && url.pathname.endsWith("/start")) {
+      state = "downloading";
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true }),
+      });
+    }
+    if (request.method() === "DELETE") {
+      deleteFiles = url.searchParams.get("delete_files");
+      removed = true;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: true }),
+      });
+    }
+    return route.continue();
+  });
+
+  try {
+    await page.goto("/downloads");
+    const row = page.locator(".download-row").filter({ hasText: "Example download" });
+    await expect(row).toBeVisible();
+
+    await row.getByRole("button", { name: "Pause", exact: true }).click();
+    await expect(
+      row.getByRole("button", { name: "Resume", exact: true }),
+    ).toBeVisible();
+
+    await row.getByRole("button", { name: "Resume", exact: true }).click();
+    await expect(
+      row.getByRole("button", { name: "Pause", exact: true }),
+    ).toBeVisible();
+
+    await row.getByRole("button", { name: "Remove", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Remove torrent?" });
+    await expect(dialog).toBeVisible();
+    await expect(
+      dialog.getByRole("button", { name: "Remove torrent only", exact: true }),
+    ).toBeVisible();
+    await expect(
+      dialog.getByRole("button", {
+        name: "Remove torrent and files",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+
+    await row.getByRole("button", { name: "Remove", exact: true }).click();
+    await page
+      .getByRole("dialog", { name: "Remove torrent?" })
+      .getByRole("button", {
+        name: "Remove torrent and files",
+        exact: true,
+      })
+      .click();
+    await expect(page.locator(".download-row")).toHaveCount(0);
+    expect(deleteFiles).toBe("true");
+  } finally {
+    if (saved.data.enabled !== true) {
+      const restore = await page.request.put("/api/settings/torrent", {
+        headers,
+        data: { data: saved.data, revision },
+      });
+      expect(restore.ok()).toBe(true);
+    }
+  }
+});
