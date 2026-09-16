@@ -29,12 +29,12 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request, session auth.Ses
 	// deadline for this request while retaining heartbeats and request-context
 	// cancellation.
 	_ = http.NewResponseController(w).SetWriteDeadline(time.Time{})
+	updates := s.Events.Subscribe(r.Context(), subscriptionProfile)
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Accel-Buffering", "no")
 	fmt.Fprint(w, ": connected\n\n")
 	flusher.Flush()
-	updates := s.Events.Subscribe(r.Context(), subscriptionProfile)
 	heartbeat := time.NewTicker(25 * time.Second)
 	defer heartbeat.Stop()
 	for {
