@@ -47,13 +47,15 @@ func serve(ctx context.Context, c config.Config, db *database.Store, b *backup.S
 	m := &metadata.Service{DB: db, Provider: &metadata.TVMaze{Control: p}}
 	a := auth.New(db, c)
 	hub := live.New()
-	archiveWatcher, err := backup.WatchArchives(b.Path, func() { hub.Publish("", "backups") })
-	if err != nil {
-		return err
+	archiveWatcher, watchErr := backup.WatchArchives(b.Path, func() { hub.Publish("", "backups") })
+	if watchErr != nil {
+		slog.Warn("Backup archive watcher unavailable; archive changes require a page reload", "error", watchErr)
 	}
 	defer func() {
-		if closeErr := archiveWatcher.Close(); closeErr != nil && started {
-			slog.Warn("Shutdown: backup archive watcher close failed", "error", closeErr)
+		if archiveWatcher != nil {
+			if closeErr := archiveWatcher.Close(); closeErr != nil && started {
+				slog.Warn("Shutdown: backup archive watcher close failed", "error", closeErr)
+			}
 		}
 	}()
 	locales, err := localization.New(c.DataDir, func() { hub.Publish("", "locales") })
@@ -95,9 +97,11 @@ func serve(ctx context.Context, c config.Config, db *database.Store, b *backup.S
 	j.Stop(jobsCtx)
 	stopJobs()
 
-	slog.Info("Shutdown: stopping backup archive watcher")
-	if closeErr := archiveWatcher.Close(); closeErr != nil {
-		slog.Warn("Shutdown: backup archive watcher close failed", "error", closeErr)
+	if archiveWatcher != nil {
+		slog.Info("Shutdown: stopping backup archive watcher")
+		if closeErr := archiveWatcher.Close(); closeErr != nil {
+			slog.Warn("Shutdown: backup archive watcher close failed", "error", closeErr)
+		}
 	}
 
 	slog.Info("Shutdown: stopping localization watcher")
