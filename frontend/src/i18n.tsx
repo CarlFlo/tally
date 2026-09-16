@@ -141,7 +141,9 @@ export function LocalizationProvider({
     enabled: !!index.data && candidateLocale !== "en",
   });
   const activeLocale =
-    candidateLocale !== "en" && active.isError ? "en" : candidateLocale;
+    candidateLocale !== "en" && active.isError && !active.data
+      ? "en"
+      : candidateLocale;
 
   useLayoutEffect(() => {
     if (!english.data) return;
@@ -188,7 +190,8 @@ export function LocalizationProvider({
 
   // English must be available before user-facing copy is rendered. This also
   // guarantees a safe UI if another locale becomes unavailable.
-  const criticalError = index.error || english.error;
+  const criticalError =
+    (!index.data && index.error) || (!english.data && english.error);
   if (criticalError) {
     const retry = () => {
       if (index.error) void index.refetch();
