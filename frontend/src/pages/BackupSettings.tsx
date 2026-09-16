@@ -1,4 +1,5 @@
 import { ErrorState, useLocal } from "../lib";
+import { useTranslation } from "react-i18next";
 import { BackupArchives } from "./BackupArchives";
 import { BackupRetention } from "./BackupRetention";
 import { ScheduleEditor, type Schedule } from "./ScheduleEditor";
@@ -6,6 +7,7 @@ import { ScheduleEditor, type Schedule } from "./ScheduleEditor";
 const scheduleOrder = ["metadata", "maintenance", "backup"];
 
 export function SchedulingBackupsSettings() {
+  const { t } = useTranslation();
   const settings = useLocal<any>("editable-settings", "/settings/backups");
   const deployment = useLocal<any>("settings", "/settings");
   const schedules = useLocal<Schedule[]>("schedules", "/settings/scheduling");
@@ -17,10 +19,11 @@ export function SchedulingBackupsSettings() {
       <section className="settings-group" aria-labelledby="schedule-group-title">
         <div className="section-heading settings-group-heading">
           <div>
-            <h2 id="schedule-group-title">Scheduling</h2>
+            <h2 id="schedule-group-title">{t("backups.scheduling")}</h2>
             <p className="muted">
-              Cron schedules use the server timezone:{" "}
-              <strong>{deployment.data?.timezone || "UTC"}</strong>.
+{t("backups.timezoneHelp", {
+                timezone: deployment.data?.timezone || "UTC",
+              })}
             </p>
           </div>
         </div>
@@ -32,8 +35,8 @@ export function SchedulingBackupsSettings() {
       <section className="settings-group backup-settings-group" aria-labelledby="backup-group-title">
         <div className="section-heading settings-group-heading">
           <div>
-            <h2 id="backup-group-title">Backup retention and archives</h2>
-            <p className="muted">These controls belong to the Automatic backup schedule above.</p>
+            <h2 id="backup-group-title">{t("backups.retentionArchives")}</h2>
+            <p className="muted">{t("backups.scheduleHelp")}</p>
           </div>
         </div>
         {settings.error && <ErrorState error={settings.error} retry={() => settings.refetch()} />}
