@@ -37,6 +37,10 @@ test("200 route changes remain interactive with bounded resources and no cooldow
   // Bootstrap/localization loading is intentionally outside this test's scope.
   // Measure only the request concurrency caused by client-side navigation.
   await expect.poll(() => page.evaluate(() => (window as any).lifecycle.requests)).toBe(0);
+  const startupPeakRequests = await page.evaluate(
+    () => (window as any).lifecycle.peakRequests,
+  );
+  expect(startupPeakRequests).toBeLessThanOrEqual(6);
   await page.evaluate(() => {
     (window as any).lifecycle.peakRequests = 0;
   });
