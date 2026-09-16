@@ -24,6 +24,9 @@ func (s *Server) torrentSearch(w http.ResponseWriter, r *http.Request, session a
 		return e
 	}
 	in.Query = strings.Join(strings.Fields(in.Query), " ")
+	if !s.torrentSearchEnabled(r.Context()) {
+		return bad("torrent search is disabled in Settings")
+	}
 	if len(in.Query) < 2 || len(in.Query) > 200 {
 		return bad("search with 2–200 characters")
 	}
