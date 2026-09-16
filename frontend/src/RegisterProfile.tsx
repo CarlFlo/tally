@@ -18,7 +18,13 @@ export function RegisterProfile() {
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const selectedAvatar = htmlColor.test(customColor) ? customColor : avatar;
-  useEffect(() => () => previewLocale(null), [previewLocale]);
+  useEffect(() => {
+    previewLocale(locale);
+    return () => previewLocale(null);
+    // The initial new-profile locale is intentionally previewed before save.
+    // Subsequent select changes call previewLocale directly for immediate feedback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewLocale]);
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (password !== confirm) {
