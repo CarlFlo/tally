@@ -32,7 +32,8 @@
     "settings": "Settings",
     "logs": "Logs",
     "profile": "My profile",
-    "login": "Sign in"
+    "login": "Sign in",
+    "yourSpace": "Your space"
   },
   "profile": {
     "menu": "Profile menu",
@@ -96,6 +97,10 @@
     "backToCalendar": "Back to calendar",
     "requestFailed": "Request failed ({{status}})",
     "profile_name_required": "Profile name is required.",
-    "profile_locale_invalid": "Choose an available language."
+    "profile_locale_invalid": "Choose an available language.",
+    "password_change_required": "Replace the temporary password before continuing."
+  },
+  "footer": {
+    "metadata": "TV metadata by TVmaze ↗"
   }
 }
