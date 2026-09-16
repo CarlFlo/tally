@@ -220,6 +220,11 @@ func (r *Registry) reload(notify bool) error {
 	if item, ok := next["en"]; !ok || !item.status.Valid {
 		// Embedded English is always available even if the config copy was damaged at runtime.
 		next["en"] = r.english
+	} else {
+		// A valid same/newer config English file is preserved, but embedded
+		// canonical English still supplies any missing keys in memory.
+		item.messages = mergeMessages(r.english.messages, item.messages)
+		next["en"] = item
 	}
 	r.mu.Lock()
 	r.entries = next
@@ -275,6 +280,32 @@ func (r *Registry) watch() {
 			}
 		}
 	}
+}
+
+
+func mergeMessages(fallback, override map[string]any) map[string]any {
+	out := make(map[string]any, len(fallback)+len(override))
+	for key, value := range fallback {
+		if nested, ok := value.(map[string]any); ok {
+			out[key] = mergeMessages(nested, nil)
+		} else {
+			out[key] = value
+		}
+	}
+	for key, value := range override {
+		nestedOverride, overrideOK := value.(map[string]any)
+		nestedFallback, fallbackOK := out[key].(map[string]any)
+		if overrideOK && fallbackOK {
+			out[key] = mergeMessages(nestedFallback, nestedOverride)
+			continue
+		}
+		if overrideOK {
+			out[key] = mergeMessages(nil, nestedOverride)
+			continue
+		}
+		out[key] = value
+	}
+	return out
 }
 
 func parse(filename string, data []byte) (entry, error) {
