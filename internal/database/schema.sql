@@ -1,4 +1,4 @@
-CREATE TABLE profiles (id TEXT PRIMARY KEY, display_name TEXT NOT NULL, avatar TEXT NOT NULL DEFAULT 'violet', created_at INTEGER NOT NULL, locale TEXT NOT NULL DEFAULT 'en');
+CREATE TABLE profiles (id TEXT PRIMARY KEY, display_name TEXT NOT NULL, avatar TEXT NOT NULL DEFAULT 'violet', created_at INTEGER NOT NULL);
 CREATE TABLE counters (key TEXT PRIMARY KEY, value INTEGER NOT NULL);
 INSERT INTO counters VALUES ('profile',0);
 CREATE TABLE profile_preferences (profile_id TEXT PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE, data TEXT NOT NULL DEFAULT '{}');
