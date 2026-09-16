@@ -29,6 +29,7 @@ export type LocaleStatus = {
   catalog_version?: number;
   valid: boolean;
   error?: string;
+  error_code?: string;
 };
 
 type LocaleIndex = {
