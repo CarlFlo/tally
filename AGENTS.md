@@ -9,6 +9,7 @@ Tally is a self-hosted TV-show tracking application. Keep changes focused, maint
 * Use `docs/ARCHITECTURE.md` to understand ownership, boundaries, and where code belongs.
 * Read other relevant files in `docs/` when working in an area they cover.
 * Update `docs/TODO.md` when work changes the state, scope, or completion of planned tasks.
+* For larger, multi-step branch changes with several requirements or acceptance criteria, create a temporary `BRANCH-TODO.md` in the project root. Use it throughout the work to track planned, completed, and newly discovered tasks, and remove it before the branch is finalized. Do not create one for small or straightforward changes, even when working in a branch.
 
 ## Architecture
 
