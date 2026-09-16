@@ -21,7 +21,10 @@ import (
 //go:embed en.json
 var embeddedEnglish []byte
 
-var localePattern = regexp.MustCompile(`^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$`)\nvar interpolationPattern = regexp.MustCompile(`\\{\\{\\s*-?\\s*([A-Za-z0-9_.]+)(?:\\s*,[^{}]+)?\\s*\\}\\}`)\n\ntype Meta struct {
+var localePattern = regexp.MustCompile(`^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$`)
+var interpolationPattern = regexp.MustCompile(`\{\{\s*-?\s*([A-Za-z0-9_.]+)(?:\s*,[^{}]+)?\s*\}\}`)
+
+type Meta struct {
 	Locale         string `json:"locale"`
 	Name           string `json:"name"`
 	Direction      string `json:"direction"`
