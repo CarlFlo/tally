@@ -9,7 +9,7 @@ import (
 )
 
 func (s *Server) updateProfile(w http.ResponseWriter, r *http.Request, session auth.Session) error {
-	var in struct{ Name, Avatar string }
+	var in struct{ Name, Avatar, Locale string }
 	if err := decode(r, &in); err != nil {
 		return err
 	}
@@ -25,12 +25,14 @@ func (s *Server) updateProfile(w http.ResponseWriter, r *http.Request, session a
 			return bad(err.Error())
 		}
 	}
-	var err error
-	if avatar == "" {
-		_, err = s.DB.ExecContext(r.Context(), "UPDATE profiles SET display_name=? WHERE id=?", name, session.Profile)
-	} else {
-		_, err = s.DB.ExecContext(r.Context(), "UPDATE profiles SET display_name=?,avatar=? WHERE id=?", name, avatar, session.Profile)
+	if in.Locale != "" && (s.Locales == nil || !s.Locales.Valid(in.Locale)) {
+		return bad("choose an available language")
 	}
+	_, err := s.DB.ExecContext(
+		r.Context(),
+		"UPDATE profiles SET display_name=?,avatar=COALESCE(NULLIF(?,''),avatar),locale=COALESCE(NULLIF(?,''),locale) WHERE id=?",
+		name, avatar, in.Locale, session.Profile,
+	)
 	if err != nil {
 		return err
 	}
