@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
@@ -89,6 +89,7 @@ export function SearchPage() {
   const [quality, setQuality] = useState<string[]>([]);
   const [sort, setSort] = useState("seeders");
   const activeSearch = useRef<AbortController | null>(null);
+  const autoSearchStarted = useRef(false);
   useEffect(
     () => () => {
       const controller = activeSearch.current;
@@ -97,8 +98,7 @@ export function SearchPage() {
     },
     [],
   );
-  async function search(e: FormEvent) {
-    e.preventDefault();
+  async function search() {
     activeSearch.current?.abort();
     const controller = new AbortController();
     activeSearch.current = controller;
@@ -133,6 +133,17 @@ export function SearchPage() {
       }
     }
   }
+  useEffect(() => {
+    if (
+      autoSearchStarted.current ||
+      params.get("auto") !== "1" ||
+      query.trim().length < 2
+    )
+      return;
+    autoSearchStarted.current = true;
+    void search();
+  }, [params, query]);
+
   const includeWords = include.toLowerCase().split(/\s+/).filter(Boolean);
   const excludeWords = exclude.toLowerCase().split(/\s+/).filter(Boolean);
   const filtered = results
@@ -205,7 +216,13 @@ export function SearchPage() {
           <p>{t("search.description")}</p>
         </div>
       </div>
-      <form onSubmit={search} className="torrent-search-form">
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          void search();
+        }}
+        className="torrent-search-form"
+      >
         <div className="search-input large-search">
           <Search size={22} />
           <input
@@ -420,40 +437,44 @@ export function SearchPage() {
                       >
                         <Copy size={17} />
                       </button>
-                      <button
-                        className={
-                          "button small " +
-                          (sent.includes(result.id) ? "active" : "")
-                        }
-                        disabled={
-                          !settings.data?.downloader_configured ||
-                          !result.sendable ||
-                          sending !== null ||
-                          sent.includes(result.id)
-                        }
-                        onClick={() => send(result)}
-                      >
-                        {sending === result.id ? (
-                          <Busy />
-                        ) : sent.includes(result.id) ? (
-                          <Check size={16} />
-                        ) : (
-                          <Download size={16} />
-                        )}
-                        <span>
-                          {sent.includes(result.id) ? t("search.sentShort") : t("search.send")}
-                        </span>
-                      </button>
+                      {settings.data?.torrent_downloads_enabled && (
+                        <button
+                          className={
+                            "button small " +
+                            (sent.includes(result.id) ? "active" : "")
+                          }
+                          disabled={
+                            !settings.data?.downloader_configured ||
+                            !result.sendable ||
+                            sending !== null ||
+                            sent.includes(result.id)
+                          }
+                          onClick={() => send(result)}
+                        >
+                          {sending === result.id ? (
+                            <Busy />
+                          ) : sent.includes(result.id) ? (
+                            <Check size={16} />
+                          ) : (
+                            <Download size={16} />
+                          )}
+                          <span>
+                            {sent.includes(result.id) ? t("search.sentShort") : t("search.send")}
+                          </span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
-          <div className="search-footnote">
-            <Check size={14} />
-            {t("search.sendingNote")}
-          </div>
+          {settings.data?.torrent_downloads_enabled && (
+            <div className="search-footnote">
+              <Check size={14} />
+              {t("search.sendingNote")}
+            </div>
+          )}
           {history.data?.searches?.length > 0 && (
             <section className="recent-searches">
               <div className="recent-history-title">
