@@ -195,6 +195,23 @@ func (r *Registry) reload(notify bool) error {
 			continue
 		}
 		path := filepath.Join(r.dir, file.Name())
+		info, infoErr := file.Info()
+		if infoErr != nil || !info.Mode().IsRegular() {
+			code := strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))
+			err := infoErr
+			if err == nil {
+				err = fmt.Errorf("not a regular file")
+			}
+			slog.Warn("localization entry is not a regular file", "file", file.Name(), "error", err)
+			next[code] = entry{status: Status{
+				Locale: code,
+				Name: code,
+				Valid: false,
+				Error: "Localization entry must be a regular file.",
+				ErrorCode: "language.notRegularFile",
+			}}
+			continue
+		}
 		data, readErr := os.ReadFile(path)
 		if readErr != nil {
 			code := strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))
