@@ -77,11 +77,9 @@ For frontend changes:
 
 For changes spanning both, run both sets of checks.
 
-Treat tests as part of the implementation. Whenever code or behavior changes, update or add relevant automated tests in the same change whenever possible, including tests exercised by GitHub Actions and browser/end-to-end coverage.
+Treat tests as part of the implementation. When behavior changes, review affected tests, update outdated assertions/fixtures, and add regression coverage where needed. Before a branch is considered ready to merge, perform a final test review and run the relevant checks, including GitHub Actions and browser/end-to-end coverage where applicable.
 
-If an intentional change invalidates existing assertions, fixtures, snapshots, or workflow expectations, update them alongside the code. Run the same checks used by the GitHub workflow when feasible and resolve workflow failures caused by the change before finishing.
-
-Fix failures caused by the change. Do not silently bypass, disable, or weaken existing tests.
+Resolve failures caused by the change before finishing. Do not silently bypass, disable, or weaken tests to make a change pass.
 
 ## Finishing work
 
