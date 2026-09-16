@@ -4,7 +4,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
@@ -59,7 +58,7 @@ func (w *ArchiveWatcher) Close() error {
 }
 
 func archiveWatchEvent(event fsnotify.Event) bool {
-	if !strings.EqualFold(filepath.Ext(event.Name), ".zip") {
+	if !validArchiveName(filepath.Base(event.Name)) {
 		return false
 	}
 	return event.Op&(fsnotify.Create|fsnotify.Write|fsnotify.Rename|fsnotify.Remove) != 0
