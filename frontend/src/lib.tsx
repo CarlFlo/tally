@@ -65,7 +65,7 @@ export async function api<T = any>(
       if (!response.ok) {
         if (response.status === 401 || data.code === "password_change_required")
           void invalidateResources(queryClient, ["bootstrap"]);
-        const fallback = data.error || `Request failed (${response.status})`;
+        const fallback = data.error || i18n.t("errors.requestFailed", { status: response.status });
         const message = data.code
           ? i18n.t("errors." + data.code, { defaultValue: fallback })
           : fallback;
@@ -561,7 +561,7 @@ export function EpisodeDrawer({
                 encodeURIComponent(
                   ep.show_name +
                     " " +
-                    episodeCode(ep).replace(" · Special", ""),
+                    episodeCode(ep).replace(` · ${i18n.t("common.special")}`, ""),
                 ),
             );
           }}
