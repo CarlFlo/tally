@@ -1,5 +1,6 @@
 import { useApp } from "../lib";
 import { scheduleRunLabel } from "../schedules";
+import { useTranslation } from "react-i18next";
 
 export type Preview = {
   description: string;
@@ -18,10 +19,11 @@ export function SchedulePreview({
   error?: Error;
   timeFormat: string;
 }) {
+  const { t } = useTranslation();
   const { boot } = useApp();
   const description = loading
-    ? "Checking schedule…"
-    : error?.message || preview?.description || "Enter a cron schedule.";
+    ? t("schedule.checking")
+    : error?.message || preview?.description || t("schedule.enter");
   return (
     <div
       className={`schedule-preview ${error ? "is-invalid" : ""}`}
@@ -29,11 +31,11 @@ export function SchedulePreview({
       aria-busy={loading}
     >
       <div className="schedule-preview-section">
-        <span className="schedule-preview-label">Description</span>
+        <span className="schedule-preview-label">{t("common.description")}</span>
         <p className="schedule-preview-description">{description}</p>
       </div>
       <div className="schedule-preview-section schedule-preview-runs">
-        <strong>Next 3 runs</strong>
+        <strong>{t("schedule.nextRuns")}</strong>
         <ol>
           {[0, 1, 2].map((index) => (
             <li key={index}>
