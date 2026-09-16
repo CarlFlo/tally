@@ -58,12 +58,18 @@ function LocaleFallbackNotice() {
   const { requestedLocale, activeLocale, localeStatus } = useLocalization();
   if (requestedLocale === activeLocale) return null;
   const status = localeStatus(requestedLocale);
+  const reason = !status
+    ? t("language.missingFile")
+    : status.valid
+      ? t("language.loadFailed")
+      : status.error_code
+        ? t(status.error_code, { defaultValue: status.error })
+        : status.error || t("profile.localeUnavailable");
   return (
     <div className="public-warning" role="status">
       <AlertCircle size={19} />
       <span>
-        {t("language.fallbackNotice")}
-        {` ${status?.error_code ? t(status.error_code, { defaultValue: status.error }) : status?.error || t("language.missingFile")}`}
+        {t("language.fallbackNotice")} {reason}
       </span>
     </div>
   );
