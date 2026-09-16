@@ -2,6 +2,7 @@ import { ShowActionsMenu } from "../ShowActionsMenu";
 import { released } from "../releaseTime";
 import { EpisodeRow, FavoriteButton } from "../EpisodeControls";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
@@ -39,6 +40,7 @@ import { invalidateResources } from "../queryInvalidation";
 
 export { AddShow } from "./Discovery";
 export function ShowsPage({ onAdd }: { onAdd: () => void }) {
+  const { t } = useTranslation();
   const shows = useLocal<Show[]>("shows", "/shows");
   const [filter, setFilter] = useState("");
   const [status, setStatus] = useState("all");
@@ -51,15 +53,15 @@ export function ShowsPage({ onAdd }: { onAdd: () => void }) {
     <div className="page">
       <div className="page-heading">
         <div>
-          <span className="eyebrow">THE STORIES YOU COME BACK TO</span>
+          <span className="eyebrow">{t("library.eyebrow")}</span>
           <h1>
-            My shows<span className="accent">.</span>
+            {t("library.title")}<span className="accent">.</span>
           </h1>
-          <p>A home for your favorites, old and new.</p>
+          <p>{t("library.description")}</p>
         </div>
         <button className="button primary" onClick={onAdd}>
           <Plus size={18} />
-          Add show
+          {t("library.addShow")}
         </button>
       </div>
       <div className="library-toolbar">
@@ -68,21 +70,21 @@ export function ShowsPage({ onAdd }: { onAdd: () => void }) {
           <input
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            aria-label="Filter your shows"
-            placeholder="Find in your library…"
+            aria-label={t("library.filter")}
+            placeholder={t("library.filterPlaceholder")}
           />
         </div>
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          aria-label="Show status"
+          aria-label={t("library.status")}
         >
-          <option value="all">All shows</option>
-          <option value="Running">Running</option>
-          <option value="Ended">Ended</option>
-          <option value="To Be Determined">To be determined</option>
+          <option value="all">{t("library.all")}</option>
+          <option value="Running">{t("library.running")}</option>
+          <option value="Ended">{t("library.ended")}</option>
+          <option value="To Be Determined">{t("library.tbd")}</option>
         </select>
-        <span className="muted small-text">{list.length} shows</span>
+        <span className="muted small-text">{t("library.showCount", { count: list.length })}</span>
       </div>
       {shows.error && <ErrorState error={shows.error} />}{" "}
       {shows.isPending ? (
@@ -93,32 +95,32 @@ export function ShowsPage({ onAdd }: { onAdd: () => void }) {
             icon={<Tv size={32} />}
             title={
               filter || status !== "all"
-                ? "No matching shows"
-                : "Your next obsession starts here."
+                ? t("library.noMatches")
+                : t("library.emptyTitle")
             }
             action={
               <button className="button primary" onClick={onAdd}>
                 <Plus size={17} />
-                Explore shows
+                {t("library.explore")}
               </button>
             }
           >
             {filter
-              ? "Try a different filter."
-              : "Follow a show to bring every episode, special, and upcoming premiere into your space."}
+              ? t("library.tryFilter")
+              : t("library.emptyHelp")}
           </Empty>
         </div>
       ) : (
         <div className="library-sections">
           {[
-            { title: "Favorites", items: list.filter((s) => s.favorite) },
-            { title: "All shows", items: list.filter((s) => !s.favorite) },
+            { title: t("library.favorites"), favorite: true, items: list.filter((s) => s.favorite) },
+            { title: t("library.all"), favorite: false, items: list.filter((s) => !s.favorite) },
           ]
             .filter((group) => group.items.length)
             .map((group) => (
               <section key={group.title} aria-label={group.title}>
                 <h2 className="library-section-title">
-                  {group.title === "Favorites" && <Star size={19} fill="currentColor" />}{" "}
+                  {group.favorite && <Star size={19} fill="currentColor" />}{" "}
                   {group.title}
                 </h2>
                 <div className="show-grid">
@@ -152,19 +154,19 @@ export function ShowsPage({ onAdd }: { onAdd: () => void }) {
                         </div>
                         <div className="show-progress">
                           <span>
-                            {show.watched_count} of {show.episode_count} watched
+                            {t("library.watchedProgress", { watched: show.watched_count, total: show.episode_count })}
                           </span>
                           {show.episode_count > 0 &&
                           show.watched_count === show.episode_count ? (
                             <span className="completion-badge">
                               <Check size={16} />
-                              Completed
+                              {t("library.completed")}
                             </span>
                           ) : show.aired_count > 0 &&
                             show.aired_unwatched === 0 ? (
                             <span className="completion-badge">
                               <Check size={16} />
-                              All caught up
+                              {t("library.caughtUp")}
                             </span>
                           ) : null}
                         </div>
@@ -180,6 +182,7 @@ export function ShowsPage({ onAdd }: { onAdd: () => void }) {
   );
 }
 export function ShowPage() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const query = useLocal<{
     show: Show;
@@ -198,7 +201,7 @@ export function ShowPage() {
       <div className="page">
         <ErrorState error={query.error} />
         <Link to="/shows" className="button">
-          Back to shows
+          {t("library.back")}
         </Link>
       </div>
     );
@@ -222,7 +225,7 @@ export function ShowPage() {
     setBusy(true);
     try {
       await api("/shows/" + id + "/bulk", "POST", body);
-      notify("Episode states updated");
+      notify(t("library.statesUpdated"));
       await invalidateResources(cache, ["show", "shows", "calendar"]);
     } catch (e) {
       notify((e as Error).message, true);
@@ -234,12 +237,12 @@ export function ShowPage() {
     <div className="page">
       <Link className="back-link" to="/shows">
         <ArrowLeft size={16} />
-        My shows
+        {t("library.title")}
       </Link>
       <div className="show-detail-hero">
         <Poster image={show.image} name={show.name} />
         <div>
-          <span className="eyebrow">{show.network || "YOUR LIBRARY"}</span>
+          <span className="eyebrow">{show.network || t("library.libraryEyebrow")}</span>
           <h1>
             {show.name}
             <span className="accent">.</span>
@@ -253,10 +256,10 @@ export function ShowPage() {
                 {show.rating}
               </span>
             )}
-            {show.runtime > 0 && <span>{show.runtime} min</span>}
+            {show.runtime > 0 && <span>{show.runtime} {t("common.minuteShort")}</span>}
           </div>
           <p className="description">
-            {show.summary || "No show summary available."}
+            {show.summary || t("library.noSummary")}
           </p>
           <div className="genre-list">
             {(JSON.parse(show.genres) || []).map((g: string) => (
@@ -271,7 +274,7 @@ export function ShowPage() {
               onClick={() => bulk({ aired_only: true, watched: true })}
             >
               <Check size={17} />
-              Mark all aired watched
+              {t("library.markAired")}
             </button>
             <ShowActionsMenu
               show={show}
@@ -289,11 +292,11 @@ export function ShowPage() {
           <strong>
             {watched} <span className="muted">/ {episodes.length}</span>
           </strong>
-          <span className="muted">episodes watched</span>
+          <span className="muted">{t("library.episodesWatched")}</span>
           {(complete || caughtUp) && (
             <span className="completion-badge">
               <Check size={17} />
-              {complete ? "Completed" : "All caught up"}
+              {complete ? t("library.completed") : t("library.caughtUp")}
             </span>
           )}
         </div>
@@ -305,26 +308,26 @@ export function ShowPage() {
           />
         </div>
         <span className="muted small-text">
-          Last synced {dateLabel(show.last_checked_at)}
+          {t("library.lastSynced", { date: dateLabel(show.last_checked_at) })}
         </span>
       </div>
       <div className="episode-toolbar">
-        <h2>Episodes</h2>
+        <h2>{t("library.episodes")}</h2>
         <span className="episode-legend">
           <i className="watched" />
-          Watched <i className="available" />
-          Available <i />
-          Upcoming
+          {t("library.watched")} <i className="available" />
+          {t("library.available")} <i />
+          {t("library.upcoming")}
         </span>
         <label className="season-select">
           <select
             value={active ?? ""}
             onChange={(e) => setSeason(Number(e.target.value))}
-            aria-label="Select season"
+            aria-label={t("library.season")}
           >
             {seasons.map((n) => (
               <option key={n} value={n}>
-                {n === 0 ? "Specials" : `Season ${n}`}
+                {n === 0 ? t("library.specials") : t("library.season", { number: n })}
               </option>
             ))}
           </select>
@@ -343,8 +346,8 @@ export function ShowPage() {
           >
             <Check size={16} />
             {filtered.every((e) => e.watched)
-              ? "Unwatch season"
-              : "Watch season"}
+              ? t("library.unwatchSeason")
+              : t("library.watchSeason")}
           </button>
           <button
             className="button small"
@@ -358,8 +361,8 @@ export function ShowPage() {
           >
             <Download size={16} />
             {filtered.every((e) => e.downloaded)
-              ? "Clear downloaded season"
-              : "Mark season downloaded"}
+              ? t("library.clearDownloadedSeason")
+              : t("library.markDownloadedSeason")}
           </button>
         </div>
       </div>
@@ -373,8 +376,8 @@ export function ShowPage() {
             />
           ))
         ) : (
-          <Empty title="The story is still taking shape.">
-            No episodes have been announced yet.
+          <Empty title={t("library.shaping")}>
+            {t("library.noEpisodes")}
           </Empty>
         )}
       </div>
@@ -388,7 +391,7 @@ export function ShowPage() {
               target="_blank"
               rel="noreferrer"
             >
-              View on TVmaze
+              {t("library.viewTVmaze")}
               <ArrowUpRight size={14} />
             </a>
           ))}
