@@ -38,6 +38,20 @@ test("profile language previews immediately and persists per profile", async ({
     page.getByRole("heading", { name: "Din kalender." }),
   ).toBeVisible();
 
+  // A new profile defaults to English and previews that default immediately,
+  // even while the administrator's saved profile locale is Swedish.
+  await page.goto("/settings/profiles");
+  await page.getByRole("button", { name: "New profile", exact: true }).click();
+  const createDialog = page.getByRole("dialog", {
+    name: "A new personal space",
+    exact: true,
+  });
+  await expect(createDialog).toBeVisible();
+  await expect(createDialog.getByLabel("Language", { exact: true })).toHaveValue(
+    "en",
+  );
+  await createDialog.getByRole("button", { name: "Close dialog" }).click();
+
   // Restore the shared browser fixture for the rest of the serial suite.
   await openProfile(page);
   await page.getByLabel("Language", { exact: true }).selectOption("en");
