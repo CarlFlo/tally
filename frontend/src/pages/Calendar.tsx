@@ -27,7 +27,7 @@ import {
   type Show,
 } from "../lib";
 import { useNow } from "../releaseTime";
-import { dateTimeFormatter } from "../dateFormatting";
+import { dateTimeFormatter, displayLocale } from "../dateFormatting";
 import { CalendarGrid } from "./CalendarGrid";
 import { CalendarFilter } from "./CalendarFilter";
 import { CalendarHorizon } from "./CalendarHorizon";
