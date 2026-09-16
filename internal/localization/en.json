@@ -168,11 +168,29 @@
     "label": "Bell notifications",
     "title": "Notifications",
     "empty": "You're all caught up.",
-    "dismiss": "Dismiss notification"
+    "dismiss": "Dismiss notification",
+    "unread": "{{count}} unread",
+    "clearAll": "Clear all",
+    "failed": "Failed",
+    "started": "Started",
+    "success": "Success",
+    "dismissEntry": "Dismiss {{message}}",
+    "viewLogs": "View all logs"
   },
   "actions": {
     "refreshQueued": "Metadata refresh queued",
-    "removeShiftHint": "Hold Shift to remove without confirmation"
+    "removeShiftHint": "Hold Shift to remove without confirmation",
+    "showActions": "Show actions: {{name}}",
+    "actionsFor": "Actions for {{name}}",
+    "clearHistory": "Clear watch history",
+    "refreshMetadata": "Refresh metadata",
+    "removeShow": "Remove show",
+    "historyCleared": "Watch history cleared for {{name}}",
+    "showRemoved": "{{name}} removed",
+    "clearTitle": "Clear watch history for {{name}}?",
+    "removeTitle": "Remove {{name}}?",
+    "clearMessage": "All episodes of this show will become unwatched for your profile. Downloaded markers are kept.",
+    "removeMessage": "This show will leave your library and calendar. Your progress is kept if you follow it again. Hold Shift when removing to skip this prompt."
   },
   "backups": {
     "versionUnavailable": "Version unavailable",
