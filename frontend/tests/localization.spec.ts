@@ -1,3 +1,30 @@
+test("localization loading failure can be retried", async ({ page }) => {
+  await selectProfileByName(page, "My profile");
+  let failures = 0;
+  await page.route("**/api/locales", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/api/locales" && failures < 2) {
+      failures++;
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "temporary locale failure" }),
+      });
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.goto("/calendar");
+  await expect(
+    page.getByText("Localization could not be loaded.", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Your calendar." }),
+  ).toBeVisible();
+});
+
 import { expect, test } from "@playwright/test";
 import { openProfile, selectProfileByName } from "./navigation";
 
