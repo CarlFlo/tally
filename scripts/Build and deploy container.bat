@@ -26,8 +26,6 @@ echo.
 echo Branch: %BRANCH%
 echo Commit: %COMMIT%
 echo.
-echo Building the current checkout without changing Git state...
-echo.
 
 echo Validating Docker Compose configuration...
 docker compose config -q
@@ -37,42 +35,40 @@ if errorlevel 1 (
     exit /b 1
 )
 
+set "BUILD_LOG=%TEMP%\tally-build-%RANDOM%.log"
+set "DEPLOY_LOG=%TEMP%\tally-deploy-%RANDOM%.log"
+
 echo.
 echo Building Docker image...
-echo.
-echo The Dockerfile will:
-echo  - install locked frontend dependencies with npm ci
-echo  - build the React/Vite frontend
-echo  - embed the generated frontend assets
-echo  - download Go modules
-echo  - run go test ./...
-echo  - compile the production binary
-echo  - assemble the runtime image
-echo.
-
-docker compose build
+docker compose build >"%BUILD_LOG%" 2>&1
 if errorlevel 1 (
     echo.
     echo Docker image build failed.
+    echo.
+    type "%BUILD_LOG%"
+    del "%BUILD_LOG%" >nul 2>&1
     pause
     exit /b 1
 )
+del "%BUILD_LOG%" >nul 2>&1
 
-echo.
 echo Deploying built image...
-docker compose up -d --no-build
+docker compose up -d --no-build >"%DEPLOY_LOG%" 2>&1
 if errorlevel 1 (
     echo.
     echo Docker Compose deployment failed.
+    echo.
+    type "%DEPLOY_LOG%"
+    del "%DEPLOY_LOG%" >nul 2>&1
     pause
     exit /b 1
 )
+del "%DEPLOY_LOG%" >nul 2>&1
 
 set "HEALTH_URL=http://127.0.0.1:8080/healthz"
 set "APP_URL=http://127.0.0.1:8080"
 set "HEALTHY=0"
 
-echo.
 echo Waiting for Tally to become healthy...
 
 for /l %%A in (1,1,30) do (
@@ -87,9 +83,6 @@ for /l %%A in (1,1,30) do (
 )
 
 :healthy
-
-echo.
-docker compose ps
 
 if "%HEALTHY%"=="0" (
     echo.
