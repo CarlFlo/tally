@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   api,
   Empty,
@@ -39,6 +40,8 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
   const { t, i18n } = useTranslation();
   const { boot, notify } = useApp();
   const cache = useQueryClient();
+  const location = useLocation();
+  const navigate = useNavigate();
   const prefs = boot.preferences;
   const now = useNow(60_000);
   const todayKey = dateTimeFormatter("en-CA", {
@@ -111,6 +114,26 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
     };
   }, [localDay(end), cache]);
   const all = episodes.data || [];
+  const overlayEpisodeId = location.state?.calendarEpisodeId as string | undefined;
+  useEffect(() => {
+    if (!overlayEpisodeId) {
+      setSelected(null);
+      return;
+    }
+    const episode = all.find((item) => item.id === overlayEpisodeId);
+    if (episode) setSelected(episode);
+  }, [all, overlayEpisodeId]);
+  function selectEpisode(episode: Episode) {
+    setSelected(episode);
+    navigate(location.pathname + location.search, {
+      replace: !!overlayEpisodeId,
+      state: { ...(location.state || {}), calendarEpisodeId: episode.id },
+    });
+  }
+  function closeEpisode() {
+    if (overlayEpisodeId) navigate(-1);
+    else setSelected(null);
+  }
   const filtered = all.filter(
     (e) =>
       filter === "all" || (filter === "unwatched" ? !e.watched : !!e.watched),
@@ -266,7 +289,7 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
                           <button
                             className={`agenda-episode ${ep.watched || ep.downloaded ? "completed" : ep.favorite ? "favorite" : ""}`}
                             key={ep.id}
-                            onClick={() => setSelected(ep)}
+                            onClick={() => selectEpisode(ep)}
                           >
                             <Poster image={ep.show_image} name={ep.show_name} />
                             <span>
@@ -364,19 +387,26 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
           episodes={upcoming}
           prefs={prefs}
           today={todayKey}
-          select={setSelected}
+          select={selectEpisode}
           maxHeight={calendarHeight}
         />
       </div>
       {!!group.length && (
         <ReleaseGroupDialog
           episodes={all.filter((ep) => group.includes(ep.id))}
-          select={setSelected}
+          select={(episode) => {
+            setGroup([]);
+            selectEpisode(episode);
+          }}
           close={() => setGroup([])}
         />
       )}
       {selected && (
-        <EpisodeDrawer episode={selected} onClose={() => setSelected(null)} />
+        <EpisodeDrawer
+          episode={selected}
+          onClose={closeEpisode}
+          replaceNavigation={!!overlayEpisodeId}
+        />
       )}
     </div>
   );
