@@ -116,7 +116,7 @@ export function InboxDropdown() {
               </article>
             ))}
             {query.data && !query.data.entries.length && (
-              <p className="inbox-empty muted">You're all caught up.</p>
+              <p className="inbox-empty muted">{t("inbox.empty")}</p>
             )}
           </div>
           <Link className="inbox-all" to="/logs" onClick={() => setOpen(false)}>

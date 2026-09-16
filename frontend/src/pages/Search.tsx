@@ -166,7 +166,7 @@ export function SearchPage() {
     <div className="page">
       <div className="page-heading">
         <div>
-          <span className="eyebrow">YOU'RE IN THE DRIVER'S SEAT</span>
+          <span className="eyebrow">{t("search.eyebrow")}</span>
           <h1>
             {t("search.title")}<span className="accent">.</span>
           </h1>
@@ -242,7 +242,7 @@ export function SearchPage() {
                 type="number"
                 min="0"
                 step="0.1"
-                placeholder="Any"
+                placeholder={t("search.any")}
                 value={maxSize}
                 onChange={(e) => setMaxSize(e.target.value)}
               />
