@@ -23,6 +23,8 @@ type jackettItem struct {
 	Size      int64  `xml:"size"`
 	PubDate   string `xml:"pubDate"`
 	Indexer   string `xml:"jackettindexer"`
+	Author    string `xml:"author"`
+	Creator   string `xml:"creator"`
 	Enclosure struct {
 		URL    string `xml:"url,attr"`
 		Length int64  `xml:"length,attr"`
@@ -55,7 +57,11 @@ func parseJackettResults(body []byte) ([]SearchResult, error) {
 }
 
 func normalizeJackettItem(item jackettItem) SearchResult {
-	result := SearchResult{ID: item.GUID, Name: item.Title, Size: item.Size, Provider: item.Indexer, Source: "jackett", Published: item.PubDate}
+	uploader := strings.TrimSpace(item.Author)
+	if uploader == "" {
+		uploader = strings.TrimSpace(item.Creator)
+	}
+	result := SearchResult{ID: item.GUID, Name: item.Title, Size: item.Size, Provider: item.Indexer, Uploader: uploader, Source: "jackett", Published: item.PubDate}
 	if result.Provider == "" {
 		result.Provider = "Jackett"
 	}
@@ -93,6 +99,10 @@ func normalizeJackettItem(item jackettItem) SearchResult {
 		case "indexer":
 			if value != "" {
 				result.Provider = value
+			}
+		case "uploader", "author":
+			if value != "" {
+				result.Uploader = value
 			}
 		case "infohash":
 			result.InfoHash = value
