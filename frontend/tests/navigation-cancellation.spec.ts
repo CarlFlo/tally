@@ -38,7 +38,7 @@ test("leaving a tab aborts its pending request and a later mount still loads", a
     await route.fulfill({ json: { summary: [], daily: [], states: [], requests: [], next_scans: [] } });
   });
   await page.goto("/system/jobs");
-  await expect(page.locator(".job-card")).toHaveCount(3);
+  await expect(page.locator(".job-card")).toHaveCount(4);
   const pending = page.waitForRequest("**/api/statistics?*");
   await page.getByRole("link", { name: "Statistics", exact: true }).click();
   const request = await pending;
