@@ -6,7 +6,7 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 `feature/torrent-search-downloads`
 
-Status: implementation complete and validated on 2026-09-17.
+Status: implementation complete; latest validation pending.
 
 - [x] Torrent search submissions use clear download actions and correct success handling.
 - [x] Recent torrent submissions refresh through the normal live-update path instead of requiring a page reload.
@@ -17,8 +17,8 @@ Status: implementation complete and validated on 2026-09-17.
 - [x] Enforce disabled capabilities on the backend as well as hiding unavailable UI.
 - [x] Browser Back closes a Calendar show overlay before navigating away from the page.
 - [x] Saving a profile language applies only on Save profile, and the resulting success toast renders in the newly active locale.
-- [x] Add backend and browser regression coverage for the changed behavior.
-- [x] Full CI verification passes: frontend build/audit, Go vet/race tests, vulnerability scan, Playwright, Docker build, and container scan.
+- [x] Reconcile bundled localization files on startup while leaving uniquely named custom locales untouched.
+- [x] Add backend and browser regression coverage for changed behavior.
 
 ## Current product foundations
 
@@ -31,7 +31,7 @@ The following are established capabilities rather than active TODO items:
 - TVmaze metadata coordination with bounded requests, caching, retries, cancellation, rate limiting, and circuit protection.
 - Validated SQLite migrations through schema 7, pre-upgrade snapshots, archive backups, retention, staged validation, and in-process restore.
 - Manual Jackett search and qBittorrent submission/download monitoring with operator-managed credentials.
-- English and Ukrainian bundled locales plus validated hot-loaded custom locale files.
+- Version-managed English and Ukrainian bundled locales plus validated hot-loaded custom locale files.
 
 ## Deferred scope
 
