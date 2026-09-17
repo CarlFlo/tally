@@ -2,6 +2,7 @@ package torrent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -14,7 +15,10 @@ import (
 )
 
 type automationRequester struct {
-	magnetOnly bool
+	magnetOnly    bool
+	searchCalls   *int
+	torrentCalls  *int
+	beforeTorrent func() error
 }
 
 func (r automationRequester) Do(_ context.Context, request providers.Request) (providers.Response, error) {
@@ -23,11 +27,22 @@ func (r automationRequester) Do(_ context.Context, request providers.Request) (p
 		return providers.Response{}, err
 	}
 	if u.Path == "/download" {
+		if r.torrentCalls != nil {
+			*r.torrentCalls++
+		}
+		if r.beforeTorrent != nil {
+			if err := r.beforeTorrent(); err != nil {
+				return providers.Response{}, err
+			}
+		}
 		body := []byte(automationTorrentFixture("Example.Show.S01E02.1080p.WEB-DL.mkv"))
 		return providers.Response{Body: body, Status: 200}, nil
 	}
 	if !strings.HasSuffix(u.Path, jackettTorznabPath) {
 		return providers.Response{}, fmt.Errorf("unexpected provider request %s", request.URL)
+	}
+	if r.searchCalls != nil {
+		*r.searchCalls++
 	}
 	var enclosure string
 	if r.magnetOnly {
@@ -46,8 +61,12 @@ func (s automationClientSource) Current(context.Context) (DownloadClient, error)
 }
 
 type automationClient struct {
-	added int
-	data  []byte
+	added          int
+	data           []byte
+	addErr         error
+	reconcile      bool
+	lastHash       string
+	downloadsCalls int
 }
 
 func (c *automationClient) Name() string                             { return "test" }
@@ -56,9 +75,16 @@ func (c *automationClient) AddMagnet(context.Context, string) error { return fmt
 func (c *automationClient) AddTorrent(_ context.Context, data []byte) error {
 	c.added++
 	c.data = append([]byte(nil), data...)
-	return nil
+	if metadata, err := ParseTorrentMetadata(data); err == nil {
+		c.lastHash = metadata.InfoHashV1
+	}
+	return c.addErr
 }
 func (c *automationClient) Downloads(context.Context, string) (DownloadSnapshot, error) {
+	c.downloadsCalls++
+	if c.reconcile && c.lastHash != "" {
+		return DownloadSnapshot{Torrents: []Download{{Hash: c.lastHash, Category: TallyCategory}}}, nil
+	}
 	return DownloadSnapshot{}, nil
 }
 func (c *automationClient) Stop(context.Context, string) error         { return nil }
@@ -80,14 +106,7 @@ func automationTestStore(t *testing.T, now time.Time) *database.Store {
 	if err = (settings.Store{DB: db}).Ensure(ctx); err != nil {
 		t.Fatal(err)
 	}
-	search := `{"base_url":"http://jackett.test","api_key":"key","enabled":true}`
-	downloads := `{"enabled":true}`
-	automation := `{"enabled":true,"preferred_quality":"1080p","min_seeders":5,"high_confidence_only":true,"prefer_smaller":false,"release_delay_minutes":20,"retry_window_hours":24,"max_candidates":5}`
-	if _, err = db.ExecContext(ctx, `UPDATE application_settings SET data=? WHERE key='search';
-UPDATE application_settings SET data=? WHERE key='torrent';
-UPDATE application_settings SET data=? WHERE key='torrent_automation';`, search, downloads, automation); err != nil {
-		t.Fatal(err)
-	}
+	setAutomationSettings(t, db, true, true, true)
 	airstamp := now.Add(-time.Hour).UTC().Format(time.RFC3339)
 	if _, err = db.ExecContext(ctx, `INSERT INTO profiles(id,display_name,avatar,created_at,locale,auth_method) VALUES('profile-a','Alex','mint',1,'en','none');
 INSERT INTO shows(id,name,premiered) VALUES('show-a','Example Show','2026-01-01');
@@ -98,17 +117,32 @@ INSERT INTO profile_shows(profile_id,show_id,added_at) VALUES('profile-a','show-
 	return db
 }
 
+func setAutomationSettings(t *testing.T, db *database.Store, automationEnabled, searchEnabled, downloadsEnabled bool) {
+	t.Helper()
+	search := fmt.Sprintf(`{"base_url":"http://jackett.test","api_key":"key","enabled":%t}`, searchEnabled)
+	downloads := fmt.Sprintf(`{"enabled":%t}`, downloadsEnabled)
+	automation := fmt.Sprintf(`{"enabled":%t,"preferred_quality":"1080p","min_seeders":5,"high_confidence_only":true,"prefer_smaller":false,"release_delay_minutes":20,"retry_window_hours":24,"max_candidates":5}`, automationEnabled)
+	if _, err := db.ExecContext(context.Background(), `UPDATE application_settings SET data=? WHERE key='search';
+UPDATE application_settings SET data=? WHERE key='torrent';
+UPDATE application_settings SET data=? WHERE key='torrent_automation';`, search, downloads, automation); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func automationService(db *database.Store, requester automationRequester, client *automationClient, now time.Time) *AutomationService {
+	return &AutomationService{
+		DB:      db,
+		Control: requester,
+		Clients: automationClientSource{client: client},
+		Now:     func() time.Time { return now },
+	}
+}
+
 func TestAutomationDownloadsOnlyAfterVerifiedTorrentInspection(t *testing.T) {
 	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
 	db := automationTestStore(t, now)
 	client := &automationClient{}
-	service := &AutomationService{
-		DB:      db,
-		Control: automationRequester{},
-		Clients: automationClientSource{client: client},
-		Now:     func() time.Time { return now },
-	}
-	processed, err := service.Run(context.Background())
+	processed, err := automationService(db, automationRequester{}, client, now).Run(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,13 +171,7 @@ func TestAutomationNeverDownloadsMagnetOnlyCandidate(t *testing.T) {
 	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
 	db := automationTestStore(t, now)
 	client := &automationClient{}
-	service := &AutomationService{
-		DB:      db,
-		Control: automationRequester{magnetOnly: true},
-		Clients: automationClientSource{client: client},
-		Now:     func() time.Time { return now },
-	}
-	processed, err := service.Run(context.Background())
+	processed, err := automationService(db, automationRequester{magnetOnly: true}, client, now).Run(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,5 +195,144 @@ func TestAutomationNeverDownloadsMagnetOnlyCandidate(t *testing.T) {
 	}
 	if !foundMagnetReason {
 		t.Fatalf("magnet exclusion was not recorded in decision flow: %+v", runs[0].DecisionLog)
+	}
+}
+
+func TestAutomationNoOpsWhenRequiredCapabilityIsDisabled(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	for _, test := range []struct {
+		name                         string
+		automation, search, downloads bool
+	}{
+		{name: "automation", automation: false, search: true, downloads: true},
+		{name: "search", automation: true, search: false, downloads: true},
+		{name: "downloads", automation: true, search: true, downloads: false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			db := automationTestStore(t, now)
+			setAutomationSettings(t, db, test.automation, test.search, test.downloads)
+			searchCalls := 0
+			client := &automationClient{}
+			processed, err := automationService(db, automationRequester{searchCalls: &searchCalls}, client, now).Run(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if processed != 0 || searchCalls != 0 || client.added != 0 {
+				t.Fatalf("disabled %s capability performed work: processed=%d searches=%d added=%d", test.name, processed, searchCalls, client.added)
+			}
+		})
+	}
+}
+
+func TestAutomationNeverPolicySuppressesGlobalAutomation(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	if err := (AutomationStore{DB: db}).SetShowPolicy(context.Background(), "show-a", "never"); err != nil {
+		t.Fatal(err)
+	}
+	searchCalls := 0
+	client := &automationClient{}
+	processed, err := automationService(db, automationRequester{searchCalls: &searchCalls}, client, now).Run(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if processed != 0 || searchCalls != 0 || client.added != 0 {
+		t.Fatalf("never policy did not suppress automation: processed=%d searches=%d added=%d", processed, searchCalls, client.added)
+	}
+}
+
+func TestAutomationRetryBackoffGatesRepeatedNoCandidateRuns(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	store := AutomationStore{DB: db}
+	runID, err := store.StartRun(context.Background(), AutomationRun{
+		ShowID: "show-a", EpisodeID: "episode-a", ShowName: "Example Show", Season: 1, Episode: 2,
+		Query: "Example Show S01E02", StartedAt: now.Add(-10 * time.Minute).Unix(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = store.FinishRun(context.Background(), runID, RunNoVerifiedCandidate, ReleaseAssessment{Verification: VerificationUnverified}, ""); err != nil {
+		t.Fatal(err)
+	}
+	searchCalls := 0
+	client := &automationClient{}
+	service := automationService(db, automationRequester{searchCalls: &searchCalls}, client, now)
+	processed, err := service.Run(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if processed != 0 || searchCalls != 0 {
+		t.Fatalf("retry ran before 30 minute backoff: processed=%d searches=%d", processed, searchCalls)
+	}
+	if _, err = db.Exec("UPDATE torrent_automation_runs SET started_at=? WHERE id=?", now.Add(-31*time.Minute).Unix(), runID); err != nil {
+		t.Fatal(err)
+	}
+	processed, err = service.Run(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if processed != 1 || searchCalls != 1 || client.added != 1 {
+		t.Fatalf("retry did not resume after backoff: processed=%d searches=%d added=%d", processed, searchCalls, client.added)
+	}
+}
+
+func TestAutomationDownloadedEpisodeIsNotSubmittedTwice(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	client := &automationClient{}
+	service := automationService(db, automationRequester{}, client, now)
+	if processed, err := service.Run(context.Background()); err != nil || processed != 1 {
+		t.Fatalf("first run failed: processed=%d err=%v", processed, err)
+	}
+	if processed, err := service.Run(context.Background()); err != nil || processed != 0 {
+		t.Fatalf("downloaded episode was reconsidered: processed=%d err=%v", processed, err)
+	}
+	if client.added != 1 {
+		t.Fatalf("duplicate torrent submission occurred: %d", client.added)
+	}
+}
+
+func TestAutomationRechecksCapabilityBeforeSubmission(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	client := &automationClient{}
+	requester := automationRequester{beforeTorrent: func() error {
+		_, err := db.Exec(`UPDATE application_settings SET data='{"enabled":false}' WHERE key='torrent'`)
+		return err
+	}}
+	processed, err := automationService(db, requester, client, now).Run(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if processed != 1 || client.added != 0 {
+		t.Fatalf("disabled downloader reached submission: processed=%d added=%d", processed, client.added)
+	}
+	runs, err := (AutomationStore{DB: db}).ListRuns(context.Background(), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runs) != 1 || runs[0].Status != RunSkipped {
+		t.Fatalf("capability shutdown was not recorded as skipped: %+v", runs)
+	}
+}
+
+func TestAutomationReconcilesAmbiguousClientFailureByInfoHash(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	client := &automationClient{addErr: errors.New("ambiguous client response"), reconcile: true}
+	processed, err := automationService(db, automationRequester{}, client, now).Run(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if processed != 1 || client.added != 1 || client.downloadsCalls != 1 {
+		t.Fatalf("client failure was not reconciled: processed=%d added=%d downloads=%d", processed, client.added, client.downloadsCalls)
+	}
+	runs, err := (AutomationStore{DB: db}).ListRuns(context.Background(), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runs) != 1 || runs[0].Status != RunDownloaded || runs[0].SelectedInfoHash == "" {
+		t.Fatalf("reconciled submission was not persisted as downloaded: %+v", runs)
 	}
 }
