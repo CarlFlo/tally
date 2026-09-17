@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import {
   ArrowDownWideNarrow,
   Check,
+  ChevronDown,
   Clock3,
   Copy,
   Download,
@@ -25,26 +26,18 @@ import {
 } from "../lib";
 import { invalidateResources } from "../queryInvalidation";
 import { i18n } from "../i18n";
+import {
+  TorrentResultInspection,
+  type TorrentInspectionResult,
+} from "../TorrentResultInspection";
 import { TorrentTabs } from "./TorrentTabs";
+import "../torrent-selection.css";
 
-type AssessmentReason = { code: string; detail?: string };
-
-type Result = {
+type Result = TorrentInspectionResult & {
   id: string;
-  name: string;
-  size: number;
-  seeders: number;
   leechers: number;
-  provider: string;
-  magnet: string;
   published: string;
-  download_type: string;
   sendable: boolean;
-  confidence?: "high" | "medium" | "low" | "rejected";
-  verification?: "verified" | "unverified";
-  reasons?: AssessmentReason[];
-  hard_rejections?: AssessmentReason[];
-  previously_bad?: boolean;
 };
 
 const QUALITY_GROUPS = [
@@ -74,13 +67,6 @@ function torrentAge(value: string) {
   return days < 30 ? i18n.t("search.daysOld", { count: days }) : dateLabel(value);
 }
 
-function readableReason(reason: AssessmentReason) {
-  const key = `torrentConfidence.reason.${reason.code}`;
-  const fallback = reason.code.replaceAll("_", " ");
-  const label = i18n.t(key, { defaultValue: fallback });
-  return reason.detail ? `${label} · ${reason.detail.replaceAll("_", " ")}` : label;
-}
-
 export function SearchPage() {
   const { t } = useTranslation();
   const [params] = useSearchParams();
@@ -95,6 +81,7 @@ export function SearchPage() {
   const [error, setError] = useState<Error | null>(null);
   const [sending, setSending] = useState<string | null>(null);
   const [sent, setSent] = useState<string[]>([]);
+  const [expandedResult, setExpandedResult] = useState<string | null>(null);
   const [keys] = useState(new Map<string, string>());
   const [seeders, setSeeders] = useState(0);
   const [minSize, setMinSize] = useState("");
@@ -135,6 +122,7 @@ export function SearchPage() {
       );
       if (controller.signal.aborted) return;
       setResults(data.results);
+      setExpandedResult(null);
       if (data.warnings.length) notify(data.warnings.join(" · "), true);
       setSearched(true);
       setSent([]);
@@ -403,105 +391,120 @@ export function SearchPage() {
             ) : (
               <div className="torrent-results-list">
                 {filtered.map((result) => {
-                  const reasons = [...(result.reasons || []), ...(result.hard_rejections || [])];
+                  const expanded = expandedResult === result.id;
                   return (
-                    <div className="torrent-result" key={result.id}>
-                      <span className="torrent-file-icon">
-                        <Download size={19} />
-                      </span>
-                      <div className="torrent-result-body">
-                        <h4>{result.name}</h4>
-                        {(result.confidence || result.previously_bad) && (
-                          <div className="torrent-confidence-row">
-                            {result.confidence && (
-                              <span className={`badge confidence-${result.confidence}`}>
-                                {t(`torrentConfidence.${result.confidence}`, {
-                                  defaultValue: result.confidence.charAt(0).toUpperCase() + result.confidence.slice(1),
-                                })}
-                                {result.confidence !== "rejected" && result.verification
-                                  ? ` · ${t(`torrentConfidence.${result.verification}`, {
-                                      defaultValue: result.verification === "verified" ? "Verified" : "Unverified",
-                                    })}`
-                                  : ""}
+                    <div className="torrent-result-item" key={result.id}>
+                      <div
+                        className={`torrent-result torrent-result-expandable${expanded ? " is-expanded" : ""}`}
+                        role="button"
+                        tabIndex={0}
+                        aria-expanded={expanded}
+                        onClick={() => setExpandedResult(expanded ? null : result.id)}
+                        onKeyDown={(event) => {
+                          if (event.target !== event.currentTarget) return;
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            setExpandedResult(expanded ? null : result.id);
+                          }
+                        }}
+                      >
+                        <span className="torrent-file-icon">
+                          <Download size={19} />
+                        </span>
+                        <div className="torrent-result-body">
+                          <h4>{result.name}</h4>
+                          {(result.confidence || result.previously_bad) && (
+                            <div className="torrent-confidence-row">
+                              {result.confidence && (
+                                <span className={`badge confidence-${result.confidence}`}>
+                                  {t(`torrentConfidence.${result.confidence}`, {
+                                    defaultValue: result.confidence.charAt(0).toUpperCase() + result.confidence.slice(1),
+                                  })}
+                                  {result.confidence !== "rejected" && result.verification
+                                    ? ` · ${t(`torrentConfidence.${result.verification}`, {
+                                        defaultValue: result.verification === "verified" ? "Verified" : "Unverified",
+                                      })}`
+                                    : ""}
+                                </span>
+                              )}
+                              {result.previously_bad && (
+                                <span className="badge failed">
+                                  {t("torrentConfidence.previouslyBad", { defaultValue: "Previously marked bad" })}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          <div className="torrent-meta">
+                            <span>{bytes(result.size)}</span>
+                            <span className="mint-text">
+                              ↑ {t("search.seeders", { count: result.seeders })}
+                            </span>
+                            <span>↓ {t("search.leechers", { count: result.leechers })}</span>
+                            <span>{result.provider}</span>
+                            <span>{result.download_type}</span>
+                            {result.published && (
+                              <span title={dateLabel(result.published)}>
+                                {torrentAge(result.published)}
                               </span>
-                            )}
-                            {result.previously_bad && (
-                              <span className="badge failed">
-                                {t("torrentConfidence.previouslyBad", { defaultValue: "Previously marked bad" })}
-                              </span>
-                            )}
-                            {!!reasons.length && (
-                              <details className="torrent-confidence-details">
-                                <summary>{t("torrentConfidence.why", { defaultValue: "Why" })}</summary>
-                                <div>
-                                  {reasons.map((reason, index) => (
-                                    <span key={`${reason.code}-${index}`}>{readableReason(reason)}</span>
-                                  ))}
-                                </div>
-                              </details>
                             )}
                           </div>
-                        )}
-                        <div className="torrent-meta">
-                          <span>{bytes(result.size)}</span>
-                          <span className="mint-text">
-                            ↑ {t("search.seeders", { count: result.seeders })}
-                          </span>
-                          <span>↓ {t("search.leechers", { count: result.leechers })}</span>
-                          <span>{result.provider}</span>
-                          <span>{result.download_type}</span>
-                          {result.published && (
-                            <span title={dateLabel(result.published)}>
-                              {torrentAge(result.published)}
-                            </span>
+                        </div>
+                        <div className="torrent-actions">
+                          <button
+                            className="icon-button"
+                            title={t("search.copyMagnet")}
+                            aria-label={t("search.copyMagnetFor", { name: result.name })}
+                            disabled={!result.magnet}
+                            onClick={async (event) => {
+                              event.stopPropagation();
+                              try {
+                                await navigator.clipboard.writeText(result.magnet);
+                                notify(t("search.copied"));
+                              } catch {
+                                notify(t("search.clipboardError"), true);
+                              }
+                            }}
+                          >
+                            <Copy size={17} />
+                          </button>
+                          {settings.data?.torrent_downloads_enabled && (
+                            <button
+                              className={
+                                "button small " +
+                                (sent.includes(result.id) ? "active" : "")
+                              }
+                              disabled={
+                                !settings.data?.downloader_configured ||
+                                !result.sendable ||
+                                result.confidence === "rejected" ||
+                                sending !== null ||
+                                sent.includes(result.id)
+                              }
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void send(result);
+                              }}
+                            >
+                              {sending === result.id ? (
+                                <Busy />
+                              ) : sent.includes(result.id) ? (
+                                <Check size={16} />
+                              ) : (
+                                <Download size={16} />
+                              )}
+                              <span>
+                                {sent.includes(result.id) ? t("search.sentShort") : t("search.send")}
+                              </span>
+                            </button>
                           )}
+                          <ChevronDown
+                            size={17}
+                            aria-hidden="true"
+                            className={expanded ? "torrent-expand-icon is-expanded" : "torrent-expand-icon"}
+                          />
                         </div>
                       </div>
-                      <div className="torrent-actions">
-                        <button
-                          className="icon-button"
-                          title={t("search.copyMagnet")}
-                          aria-label={t("search.copyMagnetFor", { name: result.name })}
-                          disabled={!result.magnet}
-                          onClick={async () => {
-                            try {
-                              await navigator.clipboard.writeText(result.magnet);
-                              notify(t("search.copied"));
-                            } catch {
-                              notify(t("search.clipboardError"), true);
-                            }
-                          }}
-                        >
-                          <Copy size={17} />
-                        </button>
-                        {settings.data?.torrent_downloads_enabled && (
-                          <button
-                            className={
-                              "button small " +
-                              (sent.includes(result.id) ? "active" : "")
-                            }
-                            disabled={
-                              !settings.data?.downloader_configured ||
-                              !result.sendable ||
-                              result.confidence === "rejected" ||
-                              sending !== null ||
-                              sent.includes(result.id)
-                            }
-                            onClick={() => send(result)}
-                          >
-                            {sending === result.id ? (
-                              <Busy />
-                            ) : sent.includes(result.id) ? (
-                              <Check size={16} />
-                            ) : (
-                              <Download size={16} />
-                            )}
-                            <span>
-                              {sent.includes(result.id) ? t("search.sentShort") : t("search.send")}
-                            </span>
-                          </button>
-                        )}
-                      </div>
+                      {expanded && <TorrentResultInspection result={result} />}
                     </div>
                   );
                 })}
