@@ -24,9 +24,9 @@ Treat isolated reruns as diagnostic evidence, not as permission to ignore reprod
 
 Backend coverage includes authentication and sessions, profile isolation and roles, migrations and schema validation, backup/restore, settings revisions, schedules/jobs, provider coordination, cancellation, rate limiting, torrent protocols and automation, localization, notifications, and failure paths.
 
-Torrent coverage includes normalized Jackett metadata, release parsing/evaluation, confidence versus preference, `.torrent` parsing and file-tree inspection, hard rejections, bad-infohash handling, bounded candidate fallback, retry gating, duplicate prevention, capability no-op/re-check behavior, scheduler integration, and ambiguous qBittorrent submission reconciliation by infohash.
+Torrent coverage includes normalized Jackett metadata (including optional uploader/author data), release parsing/evaluation, confidence versus preference, keyword and allowlist filtering, trusted-source preference ranking, `.torrent` parsing and file-tree inspection, hard rejections, bad-infohash handling, bounded candidate fallback, retry gating, duplicate prevention, capability no-op/re-check behavior, scheduler integration, and ambiguous qBittorrent submission reconciliation by infohash.
 
-Browser coverage includes primary navigation, same-document lifecycle behavior, profile/login flows, localization, Calendar and show overlays, library state, settings, schedules/backups, notifications/logs, Jackett search, episode-aware torrent confidence, qBittorrent submission, Torrent Automation, Previous Runs/feedback, feature toggles and disabled routes, Downloads, responsive behavior, and persistence across reloads where relevant.
+Browser coverage includes primary navigation, same-document lifecycle behavior, profile/login flows, localization, Calendar and show overlays, library state, settings, schedules/backups, notifications/logs, Jackett search, episode-aware torrent confidence, expandable torrent-result evaluation, qBittorrent submission, Torrent Automation filters/trust controls, Previous Runs/feedback, feature toggles and disabled routes, Downloads, responsive behavior, and persistence across reloads where relevant.
 
 Schema 9 is the current database version. Migration tests must continue to cover supported older schemas and backup restore/upgrade paths, including durable torrent automation runs, show policies, feedback, and bad-infohash state.
 
@@ -38,7 +38,7 @@ External-service protocol tests use local fixtures or in-memory requesters. Vali
 
 Run the production frontend build and the focused browser tests. Run the full Playwright suite before finalizing a branch that changes shared navigation, dialogs, state management, localization, live updates, settings, or reusable components.
 
-When the bug depends on navigation or lifecycle, keep the same browser document alive in the regression test. A reload can hide leaked listeners, stale state, aborted-request reuse, or cleanup bugs.
+When the bug depends on navigation or lifecycle, keep the same browser document alive in the regression test. A reload can hide leaked listeners, stale state, aborted-request reuse, or cleanup bugs. Torrent Search route coverage should repeatedly cycle Search, Automation, and Previous Runs and must also prove that navigating away from a pending Search request stays responsive while the abandoned request is cancelled.
 
 ### Backend behavior
 
@@ -60,7 +60,9 @@ Global torrent automation configuration and per-show download policy are adminis
 
 Use deterministic local fixtures. Verify exact request semantics, authentication headers, redirect/error behavior, bounded responses, cancellation, and secret redaction. Feature toggles must be tested at both API and UI boundaries.
 
-For manual search, verify confidence appears only with authoritative episode context and that arbitrary free-text search is not assigned an authoritative confidence band. Confidence must remain separate from quality/size ranking.
+For manual search, verify confidence appears only with authoritative episode context and that arbitrary free-text search is not assigned an authoritative confidence band. Confidence must remain separate from quality/size/source ranking. Clicking a result should expand its inline evaluation without activating row actions, show a concise combined identity signal such as `Correct show and episode`, and present strengths and concerns without exposing the internal numeric score.
+
+Jackett uploader/author metadata is optional. Tests must cover uploader supplied through normalized Torznab metadata and the missing-uploader case. Provider/indexer identity is a separate preference signal and should remain usable even when uploader data is absent.
 
 For automatic downloads, prove all of the following as applicable:
 
@@ -68,6 +70,11 @@ For automatic downloads, prove all of the following as applicable:
 - actual `.torrent` metainfo is inspected before qBittorrent submission;
 - magnet-only candidates remain manual;
 - executable/script, sample-only, wrong-show/episode, unsupported pack, malformed metadata, and known-bad hashes are rejected;
+- minimum seeders and include/exclude keyword rules filter before deep inspection;
+- an active release-group or uploader allowlist is strict, including rejection of unknown/missing identity that cannot satisfy the allowlist;
+- preferred release groups, uploaders, and providers/indexers materially influence ordering among valid candidates but never alter correctness confidence or override hard rejection;
+- short keyword rules match release terms rather than accidental substrings in unrelated words;
+- the settings snapshot and Previous Runs explanation retain the exact filter/trust rules and counts used for the historical decision;
 - a failed shortlisted candidate can fall through to the next bounded candidate;
 - disabled search/download/automation capabilities cause a safe no-op and are re-checked before submission;
 - retry backoff does not silently lower the confidence standard;
