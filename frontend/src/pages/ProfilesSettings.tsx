@@ -29,7 +29,7 @@ import { PageHeader } from "../PageHeader";
 import { invalidateResources } from "../queryInvalidation";
 import { queryKeys } from "../queryKeys";
 
-type AuthMethod = "password" | "none" | "oidc_unlinked";
+type AuthMethod = "password" | "none";
 type AuthProfile = Profile & { auth_method?: AuthMethod };
 
 type SensitiveAction = {
@@ -120,14 +120,9 @@ export function ProfilesSettingsPage() {
   }
 
   function authLabel(profile: AuthProfile) {
-    switch (profileAuth(profile)) {
-      case "password":
-        return t("profile.authPassword", { defaultValue: "Password" });
-      case "oidc_unlinked":
-        return t("profile.authOIDCUnlinked", { defaultValue: "OIDC unlinked" });
-      default:
-        return t("profile.authNone", { defaultValue: "No authentication" });
-    }
+    return profileAuth(profile) === "password"
+      ? t("profile.authPassword", { defaultValue: "Password" })
+      : t("profile.authNone", { defaultValue: "No authentication" });
   }
 
   return (
@@ -282,9 +277,7 @@ function AuthenticationDialog({
   const { t } = useTranslation();
   const { boot, notify } = useApp();
   const existing = profileAuth(profile);
-  const [method, setMethod] = useState<"password" | "none">(
-    existing === "none" ? "none" : "password",
-  );
+  const [method, setMethod] = useState<AuthMethod>(existing);
   const [password, setPassword] = useState("");
   const [actorPassword, setActorPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -296,13 +289,6 @@ function AuthenticationDialog({
       })}
       onClose={onClose}
     >
-      {existing === "oidc_unlinked" && (
-        <p className="muted">
-          {t("profile.oidcDormantHelp", {
-            defaultValue: "This profile has an existing OIDC identity, but OIDC sign-in is currently inactive. Choose a local authentication method to use the profile.",
-          })}
-        </p>
-      )}
       <form
         onSubmit={async (event) => {
           event.preventDefault();
@@ -322,7 +308,7 @@ function AuthenticationDialog({
       >
         <label>
           {t("profile.authentication", { defaultValue: "Authentication" })}
-          <select value={method} onChange={(event) => setMethod(event.target.value as "password" | "none")}>
+          <select value={method} onChange={(event) => setMethod(event.target.value as AuthMethod)}>
             <option value="password">{t("profile.authPassword", { defaultValue: "Password" })}</option>
             <option value="none">{t("profile.authNone", { defaultValue: "No authentication" })}</option>
           </select>
@@ -381,7 +367,7 @@ function CreateProfileDialog({ onClose }: { onClose: () => void }) {
   );
   const [customColor, setCustomColor] = useState("");
   const [locale, setLocale] = useState("en");
-  const [method, setMethod] = useState<"password" | "none">("password");
+  const [method, setMethod] = useState<AuthMethod>("password");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -445,7 +431,7 @@ function CreateProfileDialog({ onClose }: { onClose: () => void }) {
         </label>
         <label>
           {t("profile.authentication", { defaultValue: "Authentication" })}
-          <select value={method} onChange={(event) => setMethod(event.target.value as "password" | "none")}>
+          <select value={method} onChange={(event) => setMethod(event.target.value as AuthMethod)}>
             <option value="password">{t("profile.authPassword", { defaultValue: "Password" })}</option>
             <option value="none">{t("profile.authNone", { defaultValue: "No authentication" })}</option>
           </select>
