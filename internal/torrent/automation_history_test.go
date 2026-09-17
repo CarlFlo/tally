@@ -65,9 +65,6 @@ func TestMarkBadPreservesRunAndBlocksSelectedHash(t *testing.T) {
 	if _, err = db.ExecContext(ctx, "INSERT INTO profiles(id,display_name,avatar,created_at,locale,auth_method) VALUES('profile-a','Alex','mint',1,'en','none')"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = db.ExecContext(ctx, "INSERT INTO profile_roles(profile_id,is_admin) VALUES('profile-a',1)"); err != nil {
-		t.Fatal(err)
-	}
 	store := AutomationStore{DB: db}
 	runID, err := store.StartRun(ctx, AutomationRun{ShowID: "show-1", EpisodeID: "episode-1", ShowName: "Example Show", Season: 1, Episode: 2, Query: "Example Show S01E02"})
 	if err != nil {
