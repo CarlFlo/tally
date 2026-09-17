@@ -293,7 +293,7 @@ func (s AutomationStore) ShowPolicy(ctx context.Context, showID string) (string,
 
 func (s AutomationStore) SetShowPolicy(ctx context.Context, showID, policy string) error {
 	switch policy {
-	case "default", "notify", "auto", "never":
+	case "default", "auto", "never":
 	default:
 		return fmt.Errorf("invalid show automation policy")
 	}
