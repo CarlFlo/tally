@@ -72,22 +72,50 @@ func normalizeJackettItem(item jackettItem) SearchResult {
 		result.URL, result.DownloadType = link, "Torrent file"
 	}
 	peers, explicitLeechers := 0, false
+	categorySeen := map[int]bool{}
 	for _, attribute := range item.Attrs {
-		switch strings.ToLower(attribute.Name) {
+		name := strings.ToLower(strings.TrimSpace(attribute.Name))
+		value := strings.TrimSpace(attribute.Value)
+		switch name {
 		case "seeders":
-			result.Seeders, _ = strconv.Atoi(attribute.Value)
+			result.Seeders, _ = strconv.Atoi(value)
 		case "peers":
-			peers, _ = strconv.Atoi(attribute.Value)
+			peers, _ = strconv.Atoi(value)
 		case "leechers":
-			result.Leechers, _ = strconv.Atoi(attribute.Value)
+			result.Leechers, _ = strconv.Atoi(value)
 			explicitLeechers = true
+		case "grabs":
+			result.Grabs, _ = strconv.Atoi(value)
 		case "magneturl":
-			if ValidMagnet(attribute.Value) {
-				result.Magnet, result.DownloadType = attribute.Value, "Magnet"
+			if ValidMagnet(value) {
+				result.Magnet, result.DownloadType = value, "Magnet"
 			}
 		case "indexer":
-			if attribute.Value != "" {
-				result.Provider = attribute.Value
+			if value != "" {
+				result.Provider = value
+			}
+		case "infohash":
+			result.InfoHash = value
+		case "category":
+			if category, err := strconv.Atoi(value); err == nil && !categorySeen[category] {
+				categorySeen[category] = true
+				result.Categories = append(result.Categories, category)
+			}
+		case "tvdbid":
+			result.TVDBID = value
+		case "tmdbid":
+			result.TMDBID = value
+		case "imdbid":
+			result.IMDBID = value
+		case "tvmazeid":
+			result.TVMazeID = value
+		case "downloadvolumefactor":
+			if factor, err := strconv.ParseFloat(value, 64); err == nil {
+				result.DownloadVolumeFactor = &factor
+			}
+		case "uploadvolumefactor":
+			if factor, err := strconv.ParseFloat(value, 64); err == nil {
+				result.UploadVolumeFactor = &factor
 			}
 		}
 	}
