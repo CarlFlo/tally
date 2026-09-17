@@ -28,7 +28,7 @@ func (r automationRequester) Do(_ context.Context, request providers.Request) (p
 	}
 	if u.Path == "/download" {
 		if r.torrentCalls != nil {
-			*r.torrentCalls++
+			(*r.torrentCalls)++
 		}
 		if r.beforeTorrent != nil {
 			if err := r.beforeTorrent(); err != nil {
@@ -42,7 +42,7 @@ func (r automationRequester) Do(_ context.Context, request providers.Request) (p
 		return providers.Response{}, fmt.Errorf("unexpected provider request %s", request.URL)
 	}
 	if r.searchCalls != nil {
-		*r.searchCalls++
+		(*r.searchCalls)++
 	}
 	var enclosure string
 	if r.magnetOnly {
@@ -119,12 +119,37 @@ INSERT INTO profile_shows(profile_id,show_id,added_at) VALUES('profile-a','show-
 
 func setAutomationSettings(t *testing.T, db *database.Store, automationEnabled, searchEnabled, downloadsEnabled bool) {
 	t.Helper()
-	search := fmt.Sprintf(`{"base_url":"http://jackett.test","api_key":"key","enabled":%t}`, searchEnabled)
-	downloads := fmt.Sprintf(`{"enabled":%t}`, downloadsEnabled)
-	automation := fmt.Sprintf(`{"enabled":%t,"preferred_quality":"1080p","min_seeders":5,"high_confidence_only":true,"prefer_smaller":false,"release_delay_minutes":20,"retry_window_hours":24,"max_candidates":5}`, automationEnabled)
-	if _, err := db.ExecContext(context.Background(), `UPDATE application_settings SET data=? WHERE key='search';
-UPDATE application_settings SET data=? WHERE key='torrent';
-UPDATE application_settings SET data=? WHERE key='torrent_automation';`, search, downloads, automation); err != nil {
+	ctx := context.Background()
+	store := settings.Store{DB: db}
+
+	var search settings.Search
+	searchRevision, err := store.Load(ctx, "search", &search)
+	if err != nil {
+		t.Fatal(err)
+	}
+	search = settings.Search{BaseURL: "http://jackett.test", APIKey: "key", Enabled: searchEnabled}
+	if _, err = store.Save(ctx, "search", search, searchRevision); err != nil {
+		t.Fatal(err)
+	}
+
+	var downloads settings.Torrent
+	downloadRevision, err := store.Load(ctx, "torrent", &downloads)
+	if err != nil {
+		t.Fatal(err)
+	}
+	downloads.Enabled = downloadsEnabled
+	if _, err = store.Save(ctx, "torrent", downloads, downloadRevision); err != nil {
+		t.Fatal(err)
+	}
+
+	var automation settings.TorrentAutomation
+	automationRevision, err := store.Load(ctx, "torrent_automation", &automation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	automation = settings.DefaultTorrentAutomation()
+	automation.Enabled = automationEnabled
+	if _, err = store.Save(ctx, "torrent_automation", automation, automationRevision); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -201,7 +226,7 @@ func TestAutomationNeverDownloadsMagnetOnlyCandidate(t *testing.T) {
 func TestAutomationNoOpsWhenRequiredCapabilityIsDisabled(t *testing.T) {
 	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
 	for _, test := range []struct {
-		name                         string
+		name                          string
 		automation, search, downloads bool
 	}{
 		{name: "automation", automation: false, search: true, downloads: true},
@@ -298,7 +323,15 @@ func TestAutomationRechecksCapabilityBeforeSubmission(t *testing.T) {
 	db := automationTestStore(t, now)
 	client := &automationClient{}
 	requester := automationRequester{beforeTorrent: func() error {
-		_, err := db.Exec(`UPDATE application_settings SET data='{"enabled":false}' WHERE key='torrent'`)
+		ctx := context.Background()
+		store := settings.Store{DB: db}
+		var downloads settings.Torrent
+		revision, err := store.Load(ctx, "torrent", &downloads)
+		if err != nil {
+			return err
+		}
+		downloads.Enabled = false
+		_, err = store.Save(ctx, "torrent", downloads, revision)
 		return err
 	}}
 	processed, err := automationService(db, requester, client, now).Run(context.Background())
