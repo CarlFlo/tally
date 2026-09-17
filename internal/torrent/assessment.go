@@ -45,12 +45,15 @@ type AssessmentReason struct {
 }
 
 type ParsedRelease struct {
-	Season     int    `json:"season,omitempty"`
-	Episode    int    `json:"episode,omitempty"`
-	Resolution string `json:"resolution,omitempty"`
-	Source     string `json:"source,omitempty"`
-	Codec      string `json:"codec,omitempty"`
-	Group      string `json:"group,omitempty"`
+	Title        string `json:"title,omitempty"`
+	Season       int    `json:"season,omitempty"`
+	Episode      int    `json:"episode,omitempty"`
+	Resolution   string `json:"resolution,omitempty"`
+	Source       string `json:"source,omitempty"`
+	Codec        string `json:"codec,omitempty"`
+	Group        string `json:"group,omitempty"`
+	MultiEpisode bool   `json:"multi_episode,omitempty"`
+	SeasonPack   bool   `json:"season_pack,omitempty"`
 }
 
 type TorrentFile struct {
