@@ -84,7 +84,7 @@ Backups can be created and restored from the web interface or CLI. Commands that
 
 English and Ukrainian are bundled. Language is selected per profile, and missing translation keys fall back to English.
 
-Custom locale JSON files can be placed in `/config/locales` and are validated and hot-reloaded without restarting Tally.
+Bundled locale files in `/config/locales` are managed by Tally and reconciled on startup. Custom translations should use their own unique locale filename; those files are validated and hot-reloaded without restarting Tally.
 
 See [docs/LOCALIZATION.md](docs/LOCALIZATION.md) for the locale format and translation workflow.
 
