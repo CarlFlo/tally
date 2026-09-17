@@ -10,6 +10,7 @@ import (
 
 	"github.com/CarlFlo/tally/internal/database"
 	"github.com/CarlFlo/tally/internal/providers"
+	"github.com/CarlFlo/tally/internal/settings"
 )
 
 type automationRequester struct {
@@ -49,9 +50,9 @@ type automationClient struct {
 	data  []byte
 }
 
-func (c *automationClient) Name() string                              { return "test" }
-func (c *automationClient) TestConnection(context.Context) error     { return nil }
-func (c *automationClient) AddMagnet(context.Context, string) error  { return fmt.Errorf("automation must not submit magnets") }
+func (c *automationClient) Name() string                             { return "test" }
+func (c *automationClient) TestConnection(context.Context) error    { return nil }
+func (c *automationClient) AddMagnet(context.Context, string) error { return fmt.Errorf("automation must not submit magnets") }
 func (c *automationClient) AddTorrent(_ context.Context, data []byte) error {
 	c.added++
 	c.data = append([]byte(nil), data...)
@@ -76,6 +77,9 @@ func automationTestStore(t *testing.T, now time.Time) *database.Store {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
+	if err = (settings.Store{DB: db}).Ensure(ctx); err != nil {
+		t.Fatal(err)
+	}
 	search := `{"base_url":"http://jackett.test","api_key":"key","enabled":true}`
 	downloads := `{"enabled":true}`
 	automation := `{"enabled":true,"preferred_quality":"1080p","min_seeders":5,"high_confidence_only":true,"prefer_smaller":false,"release_delay_minutes":20,"retry_window_hours":24,"max_candidates":5}`
@@ -99,10 +103,10 @@ func TestAutomationDownloadsOnlyAfterVerifiedTorrentInspection(t *testing.T) {
 	db := automationTestStore(t, now)
 	client := &automationClient{}
 	service := &AutomationService{
-		DB: db,
+		DB:      db,
 		Control: automationRequester{},
 		Clients: automationClientSource{client: client},
-		Now: func() time.Time { return now },
+		Now:     func() time.Time { return now },
 	}
 	processed, err := service.Run(context.Background())
 	if err != nil {
@@ -134,10 +138,10 @@ func TestAutomationNeverDownloadsMagnetOnlyCandidate(t *testing.T) {
 	db := automationTestStore(t, now)
 	client := &automationClient{}
 	service := &AutomationService{
-		DB: db,
+		DB:      db,
 		Control: automationRequester{magnetOnly: true},
 		Clients: automationClientSource{client: client},
-		Now: func() time.Time { return now },
+		Now:     func() time.Time { return now },
 	}
 	processed, err := service.Run(context.Background())
 	if err != nil {
