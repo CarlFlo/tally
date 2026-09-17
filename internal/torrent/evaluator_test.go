@@ -41,6 +41,9 @@ func TestParseReleaseName(t *testing.T) {
 			title:        "show",
 			season:       1,
 			episode:      1,
+			resolution:   "1080p",
+			source:       "web-dl",
+			codec:        "h264",
 			multiEpisode: true,
 		},
 		{
@@ -48,6 +51,9 @@ func TestParseReleaseName(t *testing.T) {
 			release:    "Show.S01.1080p.BluRay.x265-GROUP",
 			title:      "show",
 			season:     1,
+			resolution: "1080p",
+			source:     "bluray",
+			codec:      "h265",
 			seasonPack: true,
 		},
 	}
