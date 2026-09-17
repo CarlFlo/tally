@@ -30,6 +30,8 @@ import { Notice, type Toast } from "./Notice";
 import { CalendarPage } from "./pages/Calendar";
 import { SearchPage } from "./pages/Search";
 import { DownloadsPage } from "./pages/Downloads";
+import { TorrentAutomationPage } from "./pages/TorrentAutomation";
+import { PreviousTorrentRunsPage } from "./pages/PreviousTorrentRuns";
 import { AddShow, ShowPage, ShowsPage } from "./pages/Shows";
 import { PasswordGate } from "./PasswordGate";
 import { ProfilePicker } from "./ProfilePicker";
@@ -306,6 +308,26 @@ function App() {
                       element={
                         boot.torrent_search_enabled ? (
                           <SearchPage />
+                        ) : (
+                          <Navigate to="/calendar" replace />
+                        )
+                      }
+                    />
+                    <Route
+                      path="/search/automation"
+                      element={
+                        boot.torrent_search_enabled && boot.profile.is_admin ? (
+                          <TorrentAutomationPage />
+                        ) : (
+                          <Navigate to="/search" replace />
+                        )
+                      }
+                    />
+                    <Route
+                      path="/search/runs"
+                      element={
+                        boot.torrent_search_enabled ? (
+                          <PreviousTorrentRunsPage />
                         ) : (
                           <Navigate to="/calendar" replace />
                         )
