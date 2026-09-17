@@ -7,6 +7,7 @@ import {
   History,
   Search,
   ShieldCheck,
+  Star,
   XCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -90,13 +91,20 @@ function StatusIcon({ status }: { status?: string }) {
 }
 
 function ConfidenceBadge({ run }: { run: AutomationRun }) {
+  const { t } = useTranslation();
   if (!run.confidence) return null;
   return (
     <span className={`badge confidence-${run.confidence}`}>
-      {titleCase(run.confidence)}
-      {run.verification ? ` · ${titleCase(run.verification)}` : ""}
+      {t(`torrentConfidence.${run.confidence}`, { defaultValue: titleCase(run.confidence) })}
+      {run.verification
+        ? ` · ${t(`torrentConfidence.${run.verification}`, { defaultValue: titleCase(run.verification) })}`
+        : ""}
     </span>
   );
+}
+
+function joined(value: unknown) {
+  return Array.isArray(value) && value.length ? value.join(", ") : "—";
 }
 
 export function PreviousTorrentRunsPage() {
@@ -298,36 +306,77 @@ function RunInspection({ run }: { run: AutomationRun }) {
 }
 
 function DecisionData({ step }: { step: DecisionStep }) {
+  const { t } = useTranslation();
   const data = step.data || {};
   const candidates = Array.isArray(data.candidates) ? data.candidates : [];
   const payload = data.payload as any;
+  const metric = (key: string, label: string) =>
+    typeof data[key] === "number" ? <span>{data[key]} {label}</span> : null;
   return (
     <>
       {step.stage === "search" && typeof data.candidate_count === "number" && (
-        <p className="muted small-text">{data.candidate_count} candidates returned</p>
+        <p className="muted small-text">
+          {t("torrentRuns.candidatesReturned", {
+            count: data.candidate_count,
+            defaultValue: "{{count}} candidates returned",
+          })}
+        </p>
       )}
       {step.stage === "filter" && (
         <div className="decision-metrics">
-          {typeof data.rejected === "number" && <span>{data.rejected} rejected</span>}
-          {typeof data.magnet_only === "number" && <span>{data.magnet_only} magnet-only</span>}
-          {typeof data.previously_bad === "number" && <span>{data.previously_bad} previously marked bad</span>}
-          {typeof data.shortlisted === "number" && <span>{data.shortlisted} shortlisted</span>}
+          {metric("rejected", t("torrentRuns.filterRejected", { defaultValue: "identity/confidence rejected" }))}
+          {metric("below_min_seeders", t("torrentRuns.filterSeeders", { defaultValue: "below minimum seeders" }))}
+          {metric("keyword_filtered", t("torrentRuns.filterKeywords", { defaultValue: "removed by keyword rules" }))}
+          {metric("group_filtered", t("torrentRuns.filterGroups", { defaultValue: "removed by group allowlist" }))}
+          {metric("uploader_filtered", t("torrentRuns.filterUploaders", { defaultValue: "removed by uploader allowlist" }))}
+          {metric("non_high_confidence", t("torrentRuns.filterConfidence", { defaultValue: "not High confidence" }))}
+          {metric("magnet_only", t("torrentRuns.filterMagnets", { defaultValue: "magnet-only" }))}
+          {metric("previously_bad", t("torrentRuns.filterBad", { defaultValue: "previously marked bad" }))}
+          {metric("shortlisted", t("torrentRuns.filterShortlisted", { defaultValue: "shortlisted" }))}
         </div>
       )}
       {!!candidates.length && (
         <div className="table-scroll decision-candidates">
           <table>
-            <thead><tr><th>#</th><th>Release</th><th>Seeds</th><th>Size</th><th>Confidence</th></tr></thead>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>{t("torrentRuns.release", { defaultValue: "Release" })}</th>
+                <th>{t("torrentRuns.source", { defaultValue: "Source" })}</th>
+                <th>{t("torrentRuns.seeds", { defaultValue: "Seeds" })}</th>
+                <th>{t("torrentRuns.size", { defaultValue: "Size" })}</th>
+                <th>{t("torrentRuns.confidence", { defaultValue: "Confidence" })}</th>
+              </tr>
+            </thead>
             <tbody>
-              {candidates.map((candidate: any) => (
-                <tr key={`${candidate.rank}-${candidate.name}`}>
-                  <td>{candidate.rank}</td>
-                  <td>{candidate.name}</td>
-                  <td>{candidate.seeders}</td>
-                  <td>{candidate.size ? bytes(candidate.size) : "—"}</td>
-                  <td>{titleCase(candidate.confidence || "")}</td>
-                </tr>
-              ))}
+              {candidates.map((candidate: any) => {
+                const preferred = candidate.preferences || {};
+                const preferredLabels = [
+                  preferred.preferred_uploader ? t("torrentRuns.preferredUploader", { defaultValue: "preferred uploader" }) : "",
+                  preferred.preferred_provider ? t("torrentRuns.preferredProvider", { defaultValue: "preferred provider" }) : "",
+                  preferred.preferred_group ? t("torrentRuns.preferredGroup", { defaultValue: "preferred group" }) : "",
+                ].filter(Boolean);
+                return (
+                  <tr key={`${candidate.rank}-${candidate.name}`}>
+                    <td>{candidate.rank}</td>
+                    <td>
+                      {candidate.name}
+                      {!!preferredLabels.length && (
+                        <span className="candidate-preference-note">
+                          <Star size={12} /> {preferredLabels.join(" · ")}
+                        </span>
+                      )}
+                    </td>
+                    <td>
+                      {candidate.provider || "—"}
+                      {candidate.uploader ? <small>{candidate.uploader}</small> : null}
+                    </td>
+                    <td>{candidate.seeders}</td>
+                    <td>{candidate.size ? bytes(candidate.size) : "—"}</td>
+                    <td>{titleCase(candidate.confidence || "")}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -379,6 +428,13 @@ function RunDetails({ run }: { run: AutomationRun }) {
         <div><dt>{t("torrentRuns.showPolicy", { defaultValue: "Show policy" })}</dt><dd>{titleCase(snapshot.show_policy || "default")}</dd></div>
         <div><dt>{t("torrentRuns.minSeeders", { defaultValue: "Minimum seeders" })}</dt><dd>{automation.min_seeders ?? "—"}</dd></div>
         <div><dt>{t("torrentRuns.quality", { defaultValue: "Preferred quality" })}</dt><dd>{automation.preferred_quality || "—"}</dd></div>
+        <div><dt>{t("torrentRuns.includeKeywords", { defaultValue: "Include keywords" })}</dt><dd>{automation.include_keywords || "—"}</dd></div>
+        <div><dt>{t("torrentRuns.excludeKeywords", { defaultValue: "Exclude keywords" })}</dt><dd>{automation.exclude_keywords || "—"}</dd></div>
+        <div><dt>{t("torrentRuns.allowedGroups", { defaultValue: "Allowed groups" })}</dt><dd>{joined(automation.allowed_groups)}</dd></div>
+        <div><dt>{t("torrentRuns.preferredGroups", { defaultValue: "Preferred groups" })}</dt><dd>{joined(automation.preferred_groups)}</dd></div>
+        <div><dt>{t("torrentRuns.allowedUploaders", { defaultValue: "Allowed uploaders" })}</dt><dd>{joined(automation.allowed_uploaders)}</dd></div>
+        <div><dt>{t("torrentRuns.preferredUploaders", { defaultValue: "Preferred uploaders" })}</dt><dd>{joined(automation.preferred_uploaders)}</dd></div>
+        <div><dt>{t("torrentRuns.preferredProviders", { defaultValue: "Preferred providers" })}</dt><dd>{joined(automation.preferred_providers)}</dd></div>
         <div><dt>{t("torrentRuns.releaseDelay", { defaultValue: "Release delay" })}</dt><dd>{automation.release_delay_minutes != null ? `${automation.release_delay_minutes} min` : "—"}</dd></div>
         <div><dt>{t("torrentRuns.engine", { defaultValue: "Decision engine" })}</dt><dd>v{run.engine_version}</dd></div>
         <div><dt>{t("torrentRuns.infohash", { defaultValue: "Infohash" })}</dt><dd><code>{run.selected_infohash ? `${run.selected_infohash.slice(0, 10)}…${run.selected_infohash.slice(-6)}` : "—"}</code></dd></div>
