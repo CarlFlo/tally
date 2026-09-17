@@ -26,6 +26,7 @@ func (s *Server) editableSettings(w http.ResponseWriter, r *http.Request, sessio
 		return nil
 	}
 	var out any
+	key := section
 	switch section {
 	case "backups":
 		out = &settings.Backups{}
@@ -35,15 +36,22 @@ func (s *Server) editableSettings(w http.ResponseWriter, r *http.Request, sessio
 		out = &settings.Search{}
 	case "torrent":
 		out = &settings.Torrent{}
+	case "torrent-automation":
+		out = &settings.TorrentAutomation{}
+		key = "torrent_automation"
 	default:
 		return apiError{404, "unknown settings section"}
 	}
-	rev, e := s.settingsStore().Load(r.Context(), section, out)
+	rev, e := s.settingsStore().Load(r.Context(), key, out)
 	if e != nil {
 		return e
 	}
 	if search, ok := out.(*settings.Search); ok {
 		effective := search.Effective()
+		out = &effective
+	}
+	if automation, ok := out.(*settings.TorrentAutomation); ok {
+		effective := automation.Effective()
 		out = &effective
 	}
 	response := map[string]any{"data": out, "revision": rev}
