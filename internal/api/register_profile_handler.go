@@ -9,13 +9,12 @@ import (
 )
 
 func (s *Server) registerProfile(w http.ResponseWriter, r *http.Request, _ auth.Session) error {
-	if s.Config.AuthMode == "oidc" {
-		return bad("create your profile through single sign-on")
-	}
 	if session, _ := s.Auth.Resolve(r); session.Profile != "" {
 		return apiError{409, "sign out before creating a profile here"}
 	}
-	var in struct{ Name, Avatar, Locale, Password string }
+	var in struct {
+		Name, Avatar, Locale, Password, AuthMethod string
+	}
 	if err := decode(r, &in); err != nil {
 		return err
 	}
@@ -31,8 +30,21 @@ func (s *Server) registerProfile(w http.ResponseWriter, r *http.Request, _ auth.
 	if s.Locales == nil || !s.Locales.Valid(in.Locale) {
 		return badCode("profile_locale_invalid", "choose an available language")
 	}
+	if in.AuthMethod == "" {
+		if in.Password == "" {
+			in.AuthMethod = auth.ProfileAuthNone
+		} else {
+			in.AuthMethod = auth.ProfileAuthPassword
+		}
+	}
+	if in.AuthMethod != auth.ProfileAuthPassword && in.AuthMethod != auth.ProfileAuthNone {
+		return bad("choose Password or No authentication")
+	}
 	hash := ""
-	if s.Config.AuthMode == "local" {
+	if in.AuthMethod == auth.ProfileAuthPassword {
+		if in.Password == "" {
+			return bad("password is required")
+		}
 		var err error
 		hash, err = s.Auth.HashPassword(r.Context(), in.Password)
 		if err != nil {
@@ -46,12 +58,8 @@ func (s *Server) registerProfile(w http.ResponseWriter, r *http.Request, _ auth.
 	if err != nil {
 		return err
 	}
-	if s.Config.AuthMode == "local" {
-		if err = s.Auth.NewSession(r.Context(), w, r, profile.ID, false); err != nil {
-			return err
-		}
-	} else {
-		s.Auth.Cookie(w, r, "tally_profile", profile.ID, 365*24*3600)
+	if err = s.Auth.NewSession(r.Context(), w, r, profile.ID, false); err != nil {
+		return err
 	}
 	jsonResponse(w, 201, profile)
 	return nil
