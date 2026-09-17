@@ -10,18 +10,26 @@ func (s *Service) Change(ctx context.Context, w http.ResponseWriter, r *http.Req
 	if e := s.Policy(password); e != nil {
 		return e
 	}
+	if !session.Restricted {
+		release, err := s.acquireHashMemory(ctx)
+		if err != nil {
+			return err
+		}
+		var currentHash string
+		queryErr := s.DB.QueryRowContext(ctx, "SELECT hash FROM local_credentials WHERE profile_id=?", session.Profile).Scan(&currentHash)
+		valid := queryErr == nil && Verify(currentHash, current)
+		release()
+		if !valid {
+			return fmt.Errorf("current password is incorrect")
+		}
+	}
+
 	release, err := s.acquireHashMemory(ctx)
 	if err != nil {
 		return err
 	}
-	defer release()
-	if !session.Restricted {
-		var hash string
-		if e := s.DB.QueryRowContext(ctx, "SELECT hash FROM local_credentials WHERE profile_id=?", session.Profile).Scan(&hash); e != nil || !Verify(hash, current) {
-			return fmt.Errorf("current password is incorrect")
-		}
-	}
 	hash, e := Hash(password)
+	release()
 	if e != nil {
 		return e
 	}
