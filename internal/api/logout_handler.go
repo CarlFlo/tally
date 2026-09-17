@@ -14,12 +14,7 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request, _ auth.Session) 
 		}
 	}
 	s.Auth.Cookie(w, r, "tally_session", "", -1)
-	if s.Config.AuthMode == "disabled" {
-		// Retain an explicit choice to leave, even on a single-profile installation.
-		s.Auth.Cookie(w, r, "tally_profile", "signed-out", 365*24*3600)
-	} else {
-		s.Auth.Cookie(w, r, "tally_profile", "", -1)
-	}
+	s.Auth.Cookie(w, r, "tally_profile", "", -1)
 	jsonResponse(w, 200, map[string]bool{"ok": true})
 	return nil
 }
