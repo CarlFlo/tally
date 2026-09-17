@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
-import { MoreVertical, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
+import { Check, MoreVertical, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
 import { api, Confirm, useApp, type Show } from "./lib";
 import { invalidateResources } from "./queryInvalidation";
 import { useTranslation } from "react-i18next";
 
 type Action = "remove" | "clear";
+type ShowAutomationPolicy = "default" | "auto" | "never";
+
 export function ShowActionsMenu({
   show,
   detail = false,
@@ -22,9 +24,21 @@ export function ShowActionsMenu({
   const [busy, setBusy] = useState(false);
   const root = useRef<HTMLDivElement>(null),
     trigger = useRef<HTMLButtonElement>(null);
-  const { notify } = useApp();
+  const { notify, boot } = useApp();
   const cache = useQueryClient(),
     location = useLocation();
+  const canManageAutomation =
+    detail &&
+    !!boot.profile?.is_admin &&
+    boot.torrent_search_enabled &&
+    boot.torrent_downloads_enabled;
+  const policy = useQuery<{ policy: ShowAutomationPolicy }>({
+    queryKey: ["torrent-automation-show-policy", show.id],
+    queryFn: ({ signal }) =>
+      api(`/torrents/automation/shows/${show.id}`, "GET", undefined, signal),
+    enabled: canManageAutomation,
+  });
+
   useEffect(() => {
     setOpen(false);
     setConfirm(null);
@@ -66,6 +80,21 @@ export function ShowActionsMenu({
           ? t("actions.historyCleared", { name: show.name })
           : t("actions.showRemoved", { name: show.name }),
       );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function updateAutomationPolicy(next: ShowAutomationPolicy) {
+    close();
+    setBusy(true);
+    try {
+      await api(`/torrents/automation/shows/${show.id}`, "PUT", {
+        policy: next,
+      });
+      await policy.refetch();
+      notify(t("actions.automationPolicySaved"));
+    } catch (error) {
+      notify((error as Error).message, true);
     } finally {
       setBusy(false);
     }
@@ -151,6 +180,26 @@ export function ShowActionsMenu({
               {t("actions.refreshMetadata")}
             </button>
           )}
+          {canManageAutomation &&
+            (["default", "auto", "never"] as const).map((value) => (
+              <button
+                key={value}
+                role="menuitem"
+                disabled={policy.isPending}
+                onClick={() => void updateAutomationPolicy(value)}
+              >
+                <Check
+                  size={16}
+                  style={{
+                    visibility:
+                      (policy.data?.policy || "default") === value
+                        ? "visible"
+                        : "hidden",
+                  }}
+                />
+                {t(`actions.automationPolicy_${value}`)}
+              </button>
+            ))}
           <button
             role="menuitem"
             className="danger-text"
