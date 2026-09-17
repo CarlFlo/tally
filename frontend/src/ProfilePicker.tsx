@@ -8,7 +8,7 @@ import { Logo } from "./Logo";
 import { useLocalization } from "./i18n";
 
 type AuthProfile = Profile & {
-  auth_method?: "password" | "none" | "oidc_unlinked";
+  auth_method?: "password" | "none";
 };
 
 function authMethod(profile: AuthProfile) {
@@ -40,10 +40,6 @@ export function ProfilePicker({
     const method = authMethod(profile);
     if (method === "password") {
       navigate("/login/" + profile.id);
-      return;
-    }
-    if (method === "oidc_unlinked") {
-      notify(t("login.oidcUnlinked"), true);
       return;
     }
     setBusy(true);

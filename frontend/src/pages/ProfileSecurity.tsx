@@ -8,7 +8,7 @@ import { PageHeader } from "../PageHeader";
 import { invalidateResources } from "../queryInvalidation";
 
 type AuthProfile = Profile & {
-  auth_method?: "password" | "none" | "oidc_unlinked";
+  auth_method?: "password" | "none";
 };
 
 function profileAuth(profile: AuthProfile) {
@@ -98,7 +98,7 @@ export function ProfileSecurityPage() {
                 {busy && <Busy />}{t("settings.changePassword")}
               </button>
             </form>
-          ) : method === "none" ? (
+          ) : (
             <>
               <p><strong>{t("profile.authNone", { defaultValue: "No authentication" })}</strong></p>
               <p className="muted">
@@ -111,15 +111,6 @@ export function ProfileSecurityPage() {
                   {t("profile.manageAuthentication", { defaultValue: "Manage authentication" })}
                 </NavLink>
               )}
-            </>
-          ) : (
-            <>
-              <p><strong>{t("profile.authOIDCUnlinked", { defaultValue: "OIDC unlinked" })}</strong></p>
-              <p className="muted">
-                {t("profile.oidcDormantHelp", {
-                  defaultValue: "OIDC sign-in is currently inactive. An administrator must choose Password or No authentication for this profile.",
-                })}
-              </p>
             </>
           )}
         </section>

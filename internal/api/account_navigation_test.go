@@ -84,18 +84,3 @@ func TestPasswordSignOutRevokesSessionBeforeAnotherSignIn(t *testing.T) {
 	expect(t, login, 200)
 	expect(t, request(t, h, "GET", "/api/shows", nil, login.Result().Cookies()...), 200)
 }
-
-func TestOIDCUnlinkedProfileCannotUseDormantOIDCLogin(t *testing.T) {
-	s, h, _ := testServer(t, "local")
-	if _, err := s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at,auth_method) VALUES('profile-oidc','Alex','mint',?,'oidc_unlinked')", time.Now().Unix()); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := s.DB.Exec("INSERT INTO profile_identities(issuer,subject,profile_id) VALUES('https://issuer.example','alex','profile-oidc')"); err != nil {
-		t.Fatal(err)
-	}
-	selected := request(t, h, "POST", "/api/profiles/select", map[string]string{"profile": "profile-oidc"})
-	expect(t, selected, 403)
-	if !strings.Contains(selected.Body.String(), "OIDC is currently unavailable") {
-		t.Fatal("dormant OIDC profile should explain how to recover access")
-	}
-}
