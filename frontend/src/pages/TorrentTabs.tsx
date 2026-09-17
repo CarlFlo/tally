@@ -2,6 +2,7 @@ import { Bot, History, Search } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useApp } from "../lib";
+import "../torrent-automation.css";
 
 export function TorrentTabs() {
   const { t } = useTranslation();
