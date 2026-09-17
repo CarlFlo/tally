@@ -102,6 +102,20 @@ func ValidateSchema(ctx context.Context, db Querier) error {
 			rows.Close()
 		}
 	}
+	if version >= 9 {
+		for _, query := range []string{
+			"SELECT id,show_id,episode_id,show_name,season,episode,query,status,confidence,verification,selected_name,selected_infohash,settings_snapshot,decision_log,engine_version,started_at,ended_at,duration_ms FROM torrent_automation_runs LIMIT 0",
+			"SELECT run_id,profile_id,reason,note,created_at FROM torrent_automation_feedback LIMIT 0",
+			"SELECT infohash,reason,source_run_id,marked_by,created_at FROM torrent_bad_hashes LIMIT 0",
+			"SELECT show_id,policy,updated_at FROM torrent_show_policy LIMIT 0",
+		} {
+			rows, err := db.QueryContext(ctx, query)
+			if err != nil {
+				return fmt.Errorf("database torrent automation schema is incomplete: %w", err)
+			}
+			rows.Close()
+		}
+	}
 	profileQuery := "SELECT id,display_name,avatar,created_at FROM profiles LIMIT 0"
 	if version >= 7 {
 		profileQuery = "SELECT id,display_name,avatar,created_at,locale FROM profiles LIMIT 0"
