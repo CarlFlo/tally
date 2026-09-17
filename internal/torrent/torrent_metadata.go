@@ -61,8 +61,8 @@ func ParseTorrentMetadata(data []byte) (TorrentMetadata, error) {
 	}
 
 	metadata := TorrentMetadata{Name: torrentString(info.dict, "name.utf-8", "name")}
-	if metadata.Name == "" {
-		return TorrentMetadata{}, fmt.Errorf("torrent metadata is missing a name")
+	if !validTorrentPathSegment(metadata.Name) {
+		return TorrentMetadata{}, fmt.Errorf("torrent metadata has an invalid name")
 	}
 
 	rawInfo := data[info.start:info.end]
