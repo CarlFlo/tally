@@ -22,14 +22,8 @@ func (s *Server) updateProfileAuthentication(w http.ResponseWriter, r *http.Requ
 	if in.Method != auth.ProfileAuthPassword && in.Method != auth.ProfileAuthNone {
 		return bad("choose Password or No authentication")
 	}
-	actorMethod, err := s.Auth.ProfileAuthMethod(r.Context(), session.Profile)
-	if err != nil {
-		return err
-	}
-	if actorMethod == auth.ProfileAuthPassword {
-		if err := s.Auth.Reauthenticate(r.Context(), session.Profile, in.ActorPassword); err != nil {
-			return apiError{401, err.Error()}
-		}
+	if err := s.reauthenticateIfProtected(r.Context(), session.Profile, in.ActorPassword); err != nil {
+		return apiError{401, err.Error()}
 	}
 	if err := s.Auth.SetProfileAuthentication(r.Context(), id, in.Method, in.Password); err != nil {
 		if err.Error() == "profile not found" {
