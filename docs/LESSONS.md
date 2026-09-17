@@ -114,6 +114,24 @@ Do not add a polling fallback merely to support unusual filesystems unless that 
 
 ## External integrations
 
+### Separate discovery, decision, and execution
+
+An external search provider should not become the authority for whether a result is safe or correct, and an execution client should not be asked to receive unvalidated work merely so the application can inspect it afterward. Keep the stages explicit: discover candidates cheaply, decide locally from normalized metadata and authoritative application context, inspect the selected payload when possible, then execute the approved side effect.
+
+This separation also makes confidence and preference easier to reason about. Confidence answers whether the candidate appears to be the intended thing; quality, size, or other preferences choose among candidates that have already met the correctness bar.
+
+### Verify expensive candidates lazily
+
+Deep inspection can multiply provider traffic dramatically if it is applied to every search result. Use cheap metadata to reject and rank first, then perform expensive inspection only for a bounded shortlist or a candidate the user explicitly selected.
+
+A verification failure should normally advance to the next bounded candidate rather than lowering the acceptance threshold. Conservatism and fallback are compatible; accepting a weaker unverified result is not required to keep automation moving.
+
+### Reconcile ambiguous side effects before retrying
+
+A network error after a write request does not prove the remote system rejected the write. If the operation has a stable identity—an infohash, idempotency key, transaction ID, or other unique handle—query the destination for that identity before retrying.
+
+Blind retries after an ambiguous response turn temporary transport uncertainty into duplicate side effects. Record reconciliation in operational history so later debugging can distinguish a clean acknowledgement from a recovered ambiguous success.
+
 ### Implement the real protocol, not an assumed web-API shape
 
 A successful endpoint may return plain text, an empty body, or a status code that differs from a typical JSON API. Validate success according to the external system's documented contract, not according to generic client assumptions.
@@ -132,7 +150,7 @@ Independent capabilities deserve independent toggles. Hiding unavailable navigat
 
 ### Preserve saved secrets intentionally
 
-Editing a URL or non-secret field should not force a secret to be re-entered. Treat a blank concealed secret input as "retain existing" unless the UI explicitly offers removal. Never expose secrets in general APIs, logs, errors, telemetry, or activity records.
+Editing a URL or non-secret field should not force a secret to be re-entered. Treat a blank concealed secret input as "retain existing" unless the UI explicitly offers removal. Never expose secrets in general APIs, logs, errors, telemetry, activity records, or decision history.
 
 ## Data, migrations, and backups
 
@@ -201,6 +219,12 @@ This separation avoids inconsistent scheduling across profiles and makes dayligh
 Logs should preserve broad operational history. User notifications should be selective and actionable. Routine actions initiated by the same user usually do not need attention-grabbing notifications, while failed scheduled/background work often does.
 
 Offer useful categories with sensible defaults rather than exposing every possible event as a separate preference.
+
+### Preserve original decisions; append feedback
+
+When a system exposes explainability for an automated decision, later user feedback should not rewrite the original decision record. Preserve the settings snapshot, inputs, selection, verification result, and outcome that actually occurred, then append feedback as a later event.
+
+This distinction keeps history trustworthy while still allowing feedback such as an exact bad hash to influence future decisions.
 
 ### Preserve actor context in privileged activity
 
