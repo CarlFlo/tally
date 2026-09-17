@@ -46,7 +46,7 @@ async function ensureExampleShow(page: Page) {
   return match[1];
 }
 
-test("episode search shows confidence and administrators can set the global show override", async ({
+test("episode search expands into a strengths and concerns evaluation", async ({
   page,
 }) => {
   await selectProfileByName(page, "My profile");
@@ -62,13 +62,23 @@ test("episode search shows confidence and administrators can set the global show
   await expect(page.locator(".torrent-result").first().locator(".confidence-high")).toContainText(
     "High · Unverified",
   );
-  await page
-    .locator(".torrent-result")
-    .first()
-    .getByText("Why", { exact: true })
-    .click();
-  await expect(page.getByText("Show matches", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("Episode matches", { exact: true }).first()).toBeVisible();
+
+  await page.locator(".torrent-result").first().click();
+  await expect(page.locator(".torrent-result-inspection")).toHaveCount(1);
+  await expect(page.getByText("Final evaluation", { exact: true })).toBeVisible();
+  await expect(page.getByText("Correct show and episode", { exact: true })).toBeVisible();
+  await expect(page.getByText("90 seeders available", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Magnet payload cannot be inspected before download", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Strengths", { exact: true })).toBeVisible();
+  await expect(page.getByText("Concerns", { exact: true })).toBeVisible();
+
+  await page.locator(".torrent-result").nth(1).click();
+  await expect(page.locator(".torrent-result-inspection")).toHaveCount(1);
+  await expect(page.locator(".torrent-result").nth(1)).toHaveAttribute("aria-expanded", "true");
+  await page.locator(".torrent-result").nth(1).click();
+  await expect(page.locator(".torrent-result-inspection")).toHaveCount(0);
 
   await page.goto(`/shows/${showID}`);
   await page.getByRole("button", { name: "Show actions: Example Show" }).click();
@@ -94,7 +104,7 @@ test("episode search shows confidence and administrators can set the global show
   expect(reset.ok()).toBe(true);
 });
 
-test("automation page exposes guarded settings and disabled torrent capabilities hide routes", async ({
+test("automation page exposes release filters trust rules and disabled capability guards", async ({
   page,
 }) => {
   await selectProfileByName(page, "My profile");
@@ -105,6 +115,21 @@ test("automation page exposes guarded settings and disabled torrent capabilities
   await expect(
     page.getByText("Enable automatic torrent downloads", { exact: true }),
   ).toBeVisible();
+  await expect(page.getByText("Release filters", { exact: true })).toBeVisible();
+  await expect(page.getByText("Release groups", { exact: true })).toBeVisible();
+  await expect(page.getByText("Source trust", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Allowed release groups", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Allowed uploaders", { exact: true })).toBeVisible();
+  await expect(
+    page.getByLabel("Preferred Jackett providers / indexers", { exact: true }),
+  ).toBeVisible();
+
+  const exclude = page.getByLabel("Exclude keywords", { exact: true });
+  await expect(exclude).toHaveValue("cam telesync hardsub dubbed");
+  await exclude.fill("custom-filter");
+  await page.getByRole("button", { name: "Reset filters", exact: true }).click();
+  await expect(exclude).toHaveValue("cam telesync hardsub dubbed");
+
   await expect(
     page.getByText(/Automatic downloads require High confidence and a verified \.torrent payload/),
   ).toBeVisible();
@@ -132,6 +157,29 @@ test("automation page exposes guarded settings and disabled torrent capabilities
   await page.unroute("**/api/bootstrap");
 });
 
+test("torrent search tabs remain responsive under rapid repeated navigation", async ({
+  page,
+}) => {
+  await selectProfileByName(page, "My profile");
+  await page.goto("/search");
+
+  for (let index = 0; index < 6; index++) {
+    await page.getByRole("link", { name: "Automation", exact: true }).click();
+    await expect(page).toHaveURL(/\/search\/automation$/);
+    await expect(page.getByLabel("Minimum seeders", { exact: true })).toBeEnabled();
+
+    await page.getByRole("link", { name: "Previous Runs", exact: true }).click();
+    await expect(page).toHaveURL(/\/search\/runs$/);
+    await expect(page.getByRole("link", { name: "Search", exact: true })).toBeEnabled();
+
+    await page.getByRole("link", { name: "Search", exact: true }).click();
+    await expect(page).toHaveURL(/\/search$/);
+    const input = page.getByRole("textbox", { name: "Torrent search query" });
+    await input.fill(`navigation-${index}`);
+    await expect(input).toHaveValue(`navigation-${index}`);
+  }
+});
+
 test("previous runs explains verified decisions, accepts bad feedback and stays responsive", async ({
   page,
 }) => {
@@ -156,6 +204,10 @@ test("previous runs explains verified decisions, accepts bad feedback and stays 
         min_seeders: 5,
         preferred_quality: "1080p",
         release_delay_minutes: 20,
+        include_keywords: "",
+        exclude_keywords: "cam telesync hardsub dubbed",
+        preferred_groups: ["FLUX"],
+        preferred_providers: ["Fixture HD"],
       },
     },
     decision_log: [
@@ -172,6 +224,10 @@ test("previous runs explains verified decisions, accepts bad feedback and stays 
         summary: "One candidate remained eligible.",
         data: {
           rejected: 1,
+          below_min_seeders: 0,
+          keyword_filtered: 0,
+          group_filtered: 0,
+          uploader_filtered: 0,
           magnet_only: 0,
           previously_bad: 0,
           shortlisted: 1,
@@ -179,6 +235,8 @@ test("previous runs explains verified decisions, accepts bad feedback and stays 
             {
               rank: 1,
               name: "Example.Show.S01E02.1080p.WEB-DL.mkv",
+              provider: "Fixture HD",
+              uploader: "fixture-uploader",
               seeders: 90,
               size: 2_147_483_648,
               confidence: "high",
