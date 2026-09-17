@@ -9,7 +9,7 @@ import (
 func TestAutomationKeywordAndAllowlistRules(t *testing.T) {
 	config := settings.DefaultTorrentAutomation()
 	config.IncludeKeywords = "web proper"
-	config.ExcludeKeywords = "dubbed hardsub"
+	config.ExcludeKeywords = "dubbed hardsub cam"
 	config.AllowedGroups = []string{"FLUX", "NTb"}
 	config.AllowedUploaders = []string{"trusted-user"}
 
@@ -18,6 +18,9 @@ func TestAutomationKeywordAndAllowlistRules(t *testing.T) {
 	}
 	if automationKeywordsMatch("Example.Show.S01E02.1080p.WEB.PROPER.DUBBED-FLUX", config) {
 		t.Fatal("exclude keyword was ignored")
+	}
+	if !automationKeywordsMatch("Camera.Show.S01E02.1080p.WEB.PROPER-FLUX", config) {
+		t.Fatal("short keyword matched inside an unrelated release token")
 	}
 	if !automationGroupAllowed("flux", config) || automationGroupAllowed("OTHER", config) {
 		t.Fatal("release group allowlist is not case-insensitive and restrictive")
