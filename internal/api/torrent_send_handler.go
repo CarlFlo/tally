@@ -61,7 +61,11 @@ func (s *Server) torrentSend(w http.ResponseWriter, r *http.Request, session aut
 		jsonResponse(w, 200, map[string]string{"status": "sent"})
 		return nil
 	}
+
+	inspectionRejected := false
 	if result.Magnet != "" {
+		// Magnet-only results cannot expose their payload before the client
+		// retrieves BitTorrent metadata. They remain a manual-only path.
 		e = client.AddMagnet(r.Context(), result.Magnet)
 	} else {
 		var data []byte
@@ -72,6 +76,10 @@ func (s *Server) torrentSend(w http.ResponseWriter, r *http.Request, session aut
 			data, e = provider.FetchTorrent(r.Context(), result.URL)
 		}
 		if e == nil {
+			_, e = torrent.VerifyTorrentBytes(torrent.ReleaseAssessment{Confidence: torrent.ConfidenceLow}, result, data)
+			inspectionRejected = e != nil
+		}
+		if e == nil {
 			e = client.AddTorrent(r.Context(), data)
 		}
 	}
@@ -79,12 +87,17 @@ func (s *Server) torrentSend(w http.ResponseWriter, r *http.Request, session aut
 	if e != nil {
 		status = "failed"
 		errorText = e.Error()
-		s.Jobs.Alert("downloader", "error", "Torrent submission failed. Check the client before retrying.")
+		if !inspectionRejected {
+			s.Jobs.Alert("downloader", "error", "Torrent submission failed. Check the client before retrying.")
+		}
 	}
 	if _, writeErr := s.DB.Exec("UPDATE torrent_send_history SET status=?,error=? WHERE id=?", status, errorText, id); writeErr != nil {
 		return writeErr
 	}
 	if e != nil {
+		if inspectionRejected {
+			return bad(e.Error())
+		}
 		return remote(e)
 	}
 	jsonResponse(w, 200, map[string]string{"status": status})
