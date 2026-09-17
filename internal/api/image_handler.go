@@ -1,9 +1,9 @@
 package api
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"image"
 	"io"
 	"net/http"
@@ -37,25 +37,17 @@ func serveCachedImage(w http.ResponseWriter, r *http.Request, path string) bool 
 	return true
 }
 
-func writeCachedImage(dir, path string, data []byte) error {
-	if err := os.MkdirAll(dir, 0700); err != nil {
-		return err
-	}
-	file, err := os.CreateTemp(dir, ".image-*")
+func validateImageFile(path string) error {
+	file, err := os.Open(path)
 	if err != nil {
 		return err
 	}
-	temp := file.Name()
-	defer os.Remove(temp)
-	if _, err = file.Write(data); err == nil {
-		err = file.Close()
-	} else {
-		_ = file.Close()
+	defer file.Close()
+	cfg, format, err := image.DecodeConfig(file)
+	if err != nil || (format != "png" && format != "jpeg" && format != "webp") || cfg.Width > 5000 || cfg.Height > 5000 || int64(cfg.Width)*int64(cfg.Height) > 20000000 {
+		return errors.New("provider returned an invalid image")
 	}
-	if err != nil {
-		return err
-	}
-	return os.Rename(temp, path)
+	return nil
 }
 
 func (s *Server) image(w http.ResponseWriter, r *http.Request, _ auth.Session) error {
@@ -71,19 +63,28 @@ func (s *Server) image(w http.ResponseWriter, r *http.Request, _ auth.Session) e
 	if serveCachedImage(w, r, path) {
 		return nil
 	}
-	res, err := s.Control.Do(r.Context(), providers.Request{Provider: "tvmaze-images", URL: raw, Trigger: "image_cache", Coalesce: true, MaxBytes: 4 << 20})
+	download, err := s.Control.DownloadToTempFile(r.Context(), providers.Request{
+		Provider: "tvmaze-images",
+		URL:      raw,
+		Trigger:  "image_cache",
+		MaxBytes: 4 << 20,
+	}, dir)
 	if err != nil {
 		return remote(err)
 	}
-	cfg, format, err := image.DecodeConfig(bytes.NewReader(res.Body))
-	if err != nil || (format != "png" && format != "jpeg" && format != "webp") || cfg.Width > 5000 || cfg.Height > 5000 || cfg.Width*cfg.Height > 20000000 {
-		return bad("provider returned an invalid image")
+	defer os.Remove(download.Path)
+	if err = validateImageFile(download.Path); err != nil {
+		return bad(err.Error())
 	}
-	if err = writeCachedImage(dir, path, res.Body); err != nil {
+	if err = os.Rename(download.Path, path); err != nil {
+		// Another concurrent request may have populated the same cache entry.
+		if serveCachedImage(w, r, path) {
+			return nil
+		}
 		return err
 	}
-	w.Header().Set("Content-Type", http.DetectContentType(res.Body))
-	w.Header().Set("Cache-Control", "private,max-age=604800")
-	_, _ = w.Write(res.Body)
+	if !serveCachedImage(w, r, path) {
+		return errors.New("cached image could not be opened")
+	}
 	return nil
 }

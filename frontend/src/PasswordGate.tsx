@@ -34,7 +34,7 @@ export function PasswordGate({
           }}
         >
           <label>
-            {t("passwordGate.newPasswordOrPin")}
+            {t("passwordGate.newPassword")}
             <input
               type="password"
               autoComplete="new-password"

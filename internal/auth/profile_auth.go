@@ -14,12 +14,11 @@ func (s *Service) HashPassword(ctx context.Context, password string) (string, er
 	if err := s.Policy(password); err != nil {
 		return "", err
 	}
-	select {
-	case s.hashes <- struct{}{}:
-		defer func() { <-s.hashes }()
-	case <-ctx.Done():
-		return "", ctx.Err()
+	release, err := s.acquireHashMemory(ctx)
+	if err != nil {
+		return "", err
 	}
+	defer release()
 	return Hash(password)
 }
 

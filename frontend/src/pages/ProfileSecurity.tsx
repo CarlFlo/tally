@@ -83,7 +83,7 @@ export function ProfileSecurityPage() {
                 />
               </label>
               <label>
-                {t("settings.newPasswordOrPin")}
+                {t("settings.newPassword")}
                 <input
                   type="password"
                   autoComplete="new-password"

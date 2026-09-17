@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 7
+    "catalogVersion": 8
   },
   "common": {
     "save": "Save",
@@ -201,7 +201,7 @@
     "subtitle": "Your shows, your progress, your next great episode.",
     "footer": "A personal space for the shows you love.",
     "choosePassword": "Choose a password to secure your profile before continuing.",
-    "passwordOrPin": "Password",
+    "password": "Password",
     "setPasswordContinue": "Set password and continue",
     "enterSpace": "Enter your space",
     "forgotPassword": "Forgot password? Send recovery to server logs",
@@ -211,7 +211,7 @@
   "passwordGate": {
     "title": "Make it yours.",
     "temporary": "Replace your temporary password to continue.",
-    "newPasswordOrPin": "New Password",
+    "newPassword": "New password",
     "setNewPassword": "Set new password"
   },
   "appearance": {
@@ -560,7 +560,7 @@
     "authentication": "Authentication",
     "passwordChangeHelp": "Changing your password signs out your other sessions.",
     "currentPassword": "Current password",
-    "newPasswordOrPin": "New Password",
+    "newPassword": "New password",
     "changePassword": "Change password",
     "authDisabled": "Authentication is disabled. Profiles are convenient personal spaces for a trusted network. Enable local or OIDC authentication through your deployment environment.",
     "sessionsTitle": "Your sessions",
