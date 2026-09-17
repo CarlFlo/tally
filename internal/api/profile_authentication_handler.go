@@ -42,7 +42,6 @@ func (s *Server) updateProfileAuthentication(w http.ResponseWriter, r *http.Requ
 			return err
 		}
 	}
-	s.publish("profiles", map[string]any{"profile_id": id})
 	jsonResponse(w, 200, map[string]bool{"ok": true})
 	return nil
 }
