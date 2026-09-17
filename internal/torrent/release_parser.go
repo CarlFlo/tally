@@ -36,9 +36,18 @@ func ParseReleaseName(name string) ParsedRelease {
 		parsed.Episode, _ = strconv.Atoi(episodeText)
 		parsed.Title = normalizeReleaseTitle(trimmed[:match[0]])
 		parsed.MultiEpisode = releaseMultiPattern.MatchString(trimmed)
+	} else if seasonMatch := releaseSeasonPattern.FindStringSubmatchIndex(trimmed); seasonMatch != nil {
+		seasonText := ""
+		if seasonMatch[2] >= 0 && seasonMatch[3] >= 0 {
+			seasonText = trimmed[seasonMatch[2]:seasonMatch[3]]
+		} else if seasonMatch[4] >= 0 && seasonMatch[5] >= 0 {
+			seasonText = trimmed[seasonMatch[4]:seasonMatch[5]]
+		}
+		parsed.Season, _ = strconv.Atoi(seasonText)
+		parsed.Title = normalizeReleaseTitle(trimmed[:seasonMatch[0]])
+		parsed.SeasonPack = true
 	} else {
 		parsed.Title = normalizeReleaseTitle(trimmed)
-		parsed.SeasonPack = releaseSeasonPattern.MatchString(trimmed)
 	}
 
 	if resolution := releaseResolution.FindString(trimmed); resolution != "" {
