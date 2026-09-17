@@ -1,12 +1,11 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { KeyRound, Laptop, ShieldCheck, Trash2, UserRound, X } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
-import { api, Busy, resetSession, useApp, useLocal, type Profile } from "../lib";
+import { api, Busy, dateLabel, resetSession, useApp, useLocal, type Profile } from "../lib";
 import { PageHeader } from "../PageHeader";
 import { invalidateResources } from "../queryInvalidation";
-import { dateLabel } from "../lib";
 
 type AuthProfile = Profile & {
   auth_method?: "password" | "none" | "oidc_unlinked";
