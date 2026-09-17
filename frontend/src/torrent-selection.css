@@ -189,6 +189,21 @@
   font-size: 0.84rem;
 }
 
+.candidate-preference-note {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  color: var(--mint, #78d5b5);
+  font-size: 0.72rem;
+}
+
+.decision-candidates td small {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted);
+}
+
 @media (max-width: 850px) {
   .torrent-inspection-meta {
     grid-template-columns: repeat(2, minmax(0, 1fr));
