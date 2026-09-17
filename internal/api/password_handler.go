@@ -7,15 +7,19 @@ import (
 )
 
 func (s *Server) password(w http.ResponseWriter, r *http.Request, session auth.Session) error {
-	if s.Config.AuthMode != "local" {
-		return bad("password changes require local authentication")
+	method, err := s.Auth.ProfileAuthMethod(r.Context(), session.Profile)
+	if err != nil {
+		return err
+	}
+	if method != auth.ProfileAuthPassword {
+		return bad("password changes require password authentication")
 	}
 	var in struct{ Current, Password string }
-	if e := decode(r, &in); e != nil {
-		return e
+	if err = decode(r, &in); err != nil {
+		return err
 	}
-	if e := s.Auth.Change(r.Context(), w, r, session, in.Current, in.Password); e != nil {
-		return bad(e.Error())
+	if err = s.Auth.Change(r.Context(), w, r, session, in.Current, in.Password); err != nil {
+		return bad(err.Error())
 	}
 	jsonResponse(w, 200, map[string]bool{"ok": true})
 	return nil
