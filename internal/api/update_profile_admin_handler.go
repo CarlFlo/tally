@@ -29,8 +29,8 @@ func (s *Server) updateProfileAdmin(w http.ResponseWriter, r *http.Request, sess
 		jsonResponse(w, 200, map[string]bool{"ok": true, "is_admin": current})
 		return nil
 	}
-	if current && !in.Admin && s.Config.AuthMode == "local" {
-		if err := s.Auth.Reauthenticate(r.Context(), session.Profile, in.Password); err != nil {
+	if current && !in.Admin {
+		if err := s.reauthenticateIfProtected(r.Context(), session.Profile, in.Password); err != nil {
 			return apiError{401, err.Error()}
 		}
 	}
