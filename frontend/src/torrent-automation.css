@@ -1,0 +1,415 @@
+.torrent-tabs {
+  margin-bottom: 24px;
+}
+
+.torrent-automation-settings {
+  display: grid;
+  gap: 16px;
+  max-width: 920px;
+}
+
+.torrent-automation-settings .settings-card {
+  margin: 0;
+}
+
+.torrent-automation-settings .settings-grid {
+  margin-top: 18px;
+}
+
+.compact-toggle {
+  margin-top: 18px;
+}
+
+.automation-magnet-note {
+  margin-top: 18px;
+}
+
+.torrent-confidence-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 7px 0 4px;
+}
+
+.badge.confidence-high {
+  color: var(--mint);
+}
+
+.badge.confidence-medium {
+  color: var(--amber);
+}
+
+.badge.confidence-low,
+.badge.confidence-rejected {
+  color: var(--danger);
+}
+
+.torrent-confidence-details {
+  position: relative;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.torrent-confidence-details summary {
+  cursor: pointer;
+  user-select: none;
+}
+
+.torrent-confidence-details > div {
+  display: grid;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface2);
+}
+
+.torrent-run-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(420px, 2.1fr) minmax(210px, 0.8fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.torrent-run-list,
+.torrent-run-inspection,
+.torrent-run-details {
+  min-width: 0;
+}
+
+.torrent-run-list {
+  padding: 14px;
+}
+
+.torrent-run-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.torrent-run-list-head h3 {
+  margin: 0;
+}
+
+.torrent-run-filter {
+  margin: 14px 0;
+}
+
+.torrent-run-items {
+  display: grid;
+  gap: 7px;
+  max-height: 68vh;
+  overflow: auto;
+}
+
+.torrent-run-item {
+  width: 100%;
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  text-align: left;
+  background: transparent;
+}
+
+.torrent-run-item:hover {
+  background: var(--surface2);
+}
+
+.torrent-run-item.selected {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.torrent-run-item-title,
+.torrent-run-item-badges,
+.torrent-run-statuses {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.torrent-run-item-title {
+  justify-content: space-between;
+}
+
+.torrent-run-inspection {
+  padding: 20px;
+}
+
+.torrent-run-inspection-head h2 {
+  margin: 5px 0;
+  overflow-wrap: anywhere;
+}
+
+.torrent-run-statuses {
+  margin-top: 12px;
+}
+
+.torrent-run-feedback-banner {
+  display: flex;
+  gap: 10px;
+  margin: 18px 0;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--danger) 42%, var(--border));
+  border-radius: 9px;
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+}
+
+.torrent-run-feedback-banner p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.decision-timeline {
+  display: grid;
+  gap: 0;
+  margin-top: 22px;
+}
+
+.decision-step {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 10px;
+  position: relative;
+  padding-bottom: 14px;
+}
+
+.decision-step:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 17px;
+  top: 30px;
+  bottom: -5px;
+  width: 1px;
+  background: color-mix(in srgb, var(--accent) 52%, var(--border));
+}
+
+.decision-marker {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border));
+  border-radius: 50%;
+  background: var(--surface2);
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  z-index: 1;
+}
+
+.decision-card {
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface2);
+}
+
+.decision-card p {
+  margin: 7px 0 0;
+}
+
+.decision-step-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.decision-step-head h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  color: var(--text);
+  font-size: 0.94rem;
+}
+
+.decision-metrics,
+.torrent-payload-summary,
+.decision-rejections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.decision-metrics span,
+.torrent-payload-summary > span,
+.decision-rejections span {
+  padding: 4px 7px;
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.decision-rejections span {
+  color: var(--danger);
+}
+
+.decision-candidates {
+  margin-top: 12px;
+}
+
+.decision-candidates table {
+  font-size: 0.78rem;
+}
+
+.torrent-payload-summary > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.torrent-payload-summary details {
+  flex-basis: 100%;
+  margin-top: 4px;
+}
+
+.torrent-payload-summary summary,
+.raw-run-data summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.torrent-file-tree {
+  display: grid;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.torrent-file-tree > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  font-size: 0.76rem;
+}
+
+.torrent-file-tree code {
+  overflow-wrap: anywhere;
+}
+
+.torrent-file-tree span {
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+.torrent-run-details {
+  padding: 16px;
+  position: sticky;
+  top: 76px;
+}
+
+.torrent-run-detail-list {
+  display: grid;
+  gap: 0;
+  margin: 14px 0;
+}
+
+.torrent-run-detail-list > div {
+  display: grid;
+  gap: 3px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.torrent-run-detail-list dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.torrent-run-detail-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.82rem;
+}
+
+.raw-run-data {
+  margin-top: 14px;
+}
+
+.raw-run-data pre {
+  max-height: 360px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.68rem;
+}
+
+.mark-bad-run {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.mark-bad-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 14px;
+}
+
+.mark-bad-form h3 {
+  margin: 0;
+}
+
+.mark-bad-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.mark-bad-form textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+@media (max-width: 1180px) {
+  .torrent-run-layout {
+    grid-template-columns: minmax(220px, 0.8fr) minmax(0, 2fr);
+  }
+  .torrent-run-details {
+    grid-column: 2;
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .torrent-tabs {
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .torrent-run-layout {
+    display: block;
+  }
+  .torrent-run-list,
+  .torrent-run-inspection,
+  .torrent-run-details {
+    margin-bottom: 14px;
+  }
+  .torrent-run-items {
+    max-height: 280px;
+  }
+  .decision-step {
+    grid-template-columns: 30px minmax(0, 1fr);
+  }
+  .decision-marker {
+    width: 28px;
+    height: 28px;
+  }
+  .decision-step:not(:last-child)::before {
+    left: 14px;
+    top: 27px;
+  }
+}
