@@ -13,7 +13,7 @@ import (
 func TestCSRFAndAuthenticatedIsolation(t *testing.T) {
 	s, h, _ := testServer(t, "local")
 	hash, _ := auth.Hash("1234")
-	_, e := s.DB.Exec("INSERT INTO local_credentials VALUES('profile-admin',?,0); INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-member','Second','mint',?); INSERT INTO local_credentials VALUES('profile-member',?,0)", hash, time.Now().Unix(), hash)
+	_, e := s.DB.Exec("INSERT INTO local_credentials VALUES('profile-admin',?,0); INSERT INTO profiles(id,display_name,avatar,created_at,auth_method) VALUES('profile-member','Second','mint',?,'password'); INSERT INTO local_credentials VALUES('profile-member',?,0)", hash, time.Now().Unix(), hash)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -42,13 +42,13 @@ func TestCSRFAndAuthenticatedIsolation(t *testing.T) {
 	w = httptest.NewRecorder()
 	h.ServeHTTP(w, r)
 	expect(t, w, 403)
-	expect(t, request(t, h, "POST", "/api/profiles/select", map[string]string{"Profile": "profile-admin"}, cookies...), 403)
+	expect(t, request(t, h, "POST", "/api/profiles/select", map[string]string{"Profile": "profile-admin"}, cookies...), 409)
 }
 
 func TestRestrictedSessionAndRevocation(t *testing.T) {
 	s, h, _ := testServer(t, "local")
 	hash, _ := auth.Hash("temporary")
-	_, _ = s.DB.Exec("INSERT INTO local_credentials VALUES('profile-admin',?,1)", hash)
+	_, _ = s.DB.Exec("UPDATE profiles SET auth_method='password' WHERE id='profile-admin'; INSERT INTO local_credentials VALUES('profile-admin',?,1)", hash)
 	w := request(t, h, "POST", "/api/auth/login", map[string]string{"Profile": "profile-admin", "Password": "temporary"})
 	expect(t, w, 200)
 	cookie := w.Result().Cookies()

@@ -130,9 +130,6 @@ func ValidateSchema(ctx context.Context, db Querier) error {
 		"SELECT id,profile_id,query FROM torrent_search_history LIMIT 0",
 		"SELECT id,profile_id,idempotency_key,request_hash,status FROM torrent_send_history LIMIT 0",
 	}
-	if version < 8 {
-		queries = append(queries, "SELECT issuer,subject,profile_id FROM profile_identities LIMIT 0")
-	}
 	for _, query := range queries {
 		rows, e := db.QueryContext(ctx, query)
 		if e != nil {

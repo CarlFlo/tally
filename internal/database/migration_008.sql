@@ -6,4 +6,4 @@ WHERE EXISTS (
   SELECT 1 FROM local_credentials c WHERE c.profile_id=profiles.id
 );
 
-DROP TABLE profile_identities;
+DROP TABLE IF EXISTS profile_identities;

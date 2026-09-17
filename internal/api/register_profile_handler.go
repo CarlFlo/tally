@@ -13,7 +13,11 @@ func (s *Server) registerProfile(w http.ResponseWriter, r *http.Request, _ auth.
 		return apiError{409, "sign out before creating a profile here"}
 	}
 	var in struct {
-		Name, Avatar, Locale, Password, AuthMethod string
+		Name       string `json:"name"`
+		Avatar     string `json:"avatar"`
+		Locale     string `json:"locale"`
+		Password   string `json:"password"`
+		AuthMethod string `json:"auth_method"`
 	}
 	if err := decode(r, &in); err != nil {
 		return err

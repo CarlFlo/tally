@@ -15,7 +15,6 @@ INSERT INTO profile_id_aliases(alias,profile_id)
  SELECT old_id,new_id FROM profile_id_migration;
 
 UPDATE profile_preferences SET profile_id=(SELECT new_id FROM profile_id_migration WHERE old_id=profile_id);
-UPDATE profile_identities SET profile_id=(SELECT new_id FROM profile_id_migration WHERE old_id=profile_id);
 UPDATE local_credentials SET profile_id=(SELECT new_id FROM profile_id_migration WHERE old_id=profile_id);
 UPDATE sessions SET profile_id=(SELECT new_id FROM profile_id_migration WHERE old_id=profile_id);
 UPDATE profile_shows SET profile_id=(SELECT new_id FROM profile_id_migration WHERE old_id=profile_id);

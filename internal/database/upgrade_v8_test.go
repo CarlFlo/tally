@@ -22,9 +22,6 @@ func TestVersionSevenUpgradeAddsPerProfileAuthentication(t *testing.T) {
 	if _, err = raw.Exec("INSERT INTO local_credentials(profile_id,hash,must_change) VALUES('password-profile','hash',0)"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = raw.Exec("INSERT INTO profile_identities(issuer,subject,profile_id) VALUES('https://unused.example','subject','open-profile')"); err != nil {
-		t.Fatal(err)
-	}
 	if err = raw.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -44,12 +41,5 @@ func TestVersionSevenUpgradeAddsPerProfileAuthentication(t *testing.T) {
 	}
 	if passwordMethod != "password" || openMethod != "none" {
 		t.Fatalf("unexpected auth methods: password=%q open=%q", passwordMethod, openMethod)
-	}
-	var identities int
-	if err = db.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='profile_identities'").Scan(&identities); err != nil {
-		t.Fatal(err)
-	}
-	if identities != 0 {
-		t.Fatal("unused OIDC identity table survived schema 8")
 	}
 }

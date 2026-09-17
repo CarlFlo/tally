@@ -19,7 +19,6 @@ func TestVersionFiveUpgradeRewritesEveryProfileReference(t *testing.T) {
 	if _, err = raw.Exec(`
 		INSERT INTO profiles VALUES('user0','Owner','violet',1),('user1','Member','mint',2);
 		INSERT INTO profile_preferences VALUES('user0','{"theme":"dark"}');
-		INSERT INTO profile_identities VALUES('https://issuer.example','subject','user0');
 		INSERT INTO local_credentials VALUES('user0','fixture-hash',0);
 		INSERT INTO sessions VALUES('session','user0',1,1,9999999999,0,'fixture');
 		INSERT INTO shows(id,name) VALUES('show','Example');
@@ -74,7 +73,6 @@ func TestVersionFiveUpgradeRewritesEveryProfileReference(t *testing.T) {
 		args  []any
 	}{
 		{"preference", "SELECT COUNT(*) FROM profile_preferences WHERE profile_id=?", []any{ownerID}},
-		{"identity", "SELECT COUNT(*) FROM profile_identities WHERE profile_id=?", []any{ownerID}},
 		{"credential", "SELECT COUNT(*) FROM local_credentials WHERE profile_id=?", []any{ownerID}},
 		{"session", "SELECT COUNT(*) FROM sessions WHERE profile_id=?", []any{ownerID}},
 		{"follow", "SELECT COUNT(*) FROM profile_shows WHERE profile_id=?", []any{ownerID}},
@@ -95,9 +93,9 @@ func TestVersionFiveUpgradeRewritesEveryProfileReference(t *testing.T) {
 	}
 
 	for _, table := range []string{
-		"profiles", "profile_preferences", "profile_identities", "local_credentials",
-		"sessions", "profile_shows", "profile_episode_state", "torrent_search_history",
-		"torrent_send_history", "show_actions", "inbox_state", "inbox_dismissals", "activity_log",
+		"profiles", "profile_preferences", "local_credentials", "sessions", "profile_shows",
+		"profile_episode_state", "torrent_search_history", "torrent_send_history", "show_actions",
+		"inbox_state", "inbox_dismissals", "activity_log",
 	} {
 		column := "profile_id"
 		if table == "profiles" {

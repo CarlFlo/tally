@@ -2,7 +2,6 @@ CREATE TABLE profiles (id TEXT PRIMARY KEY, display_name TEXT NOT NULL, avatar T
 CREATE TABLE counters (key TEXT PRIMARY KEY, value INTEGER NOT NULL);
 INSERT INTO counters VALUES ('profile',0);
 CREATE TABLE profile_preferences (profile_id TEXT PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE, data TEXT NOT NULL DEFAULT '{}');
-CREATE TABLE profile_identities (issuer TEXT NOT NULL, subject TEXT NOT NULL, profile_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE, UNIQUE(issuer,subject));
 CREATE TABLE local_credentials (profile_id TEXT PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE, hash TEXT NOT NULL, must_change INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE sessions (id TEXT PRIMARY KEY, profile_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE, created_at INTEGER NOT NULL, last_seen INTEGER NOT NULL, expires_at INTEGER NOT NULL, restricted INTEGER NOT NULL DEFAULT 0, user_agent TEXT NOT NULL DEFAULT '');
 CREATE INDEX session_profile ON sessions(profile_id);
