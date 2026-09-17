@@ -22,6 +22,7 @@ Prefer current repository documentation and code over historical assumptions. Gi
 - Keep authorization, feature availability, validation, and durable invariants backend-authoritative.
 - Preserve existing security protections; never weaken security or tests to simplify a change.
 - Use the localization system for user-facing text.
+- Increment a bundled locale's `_meta.catalogVersion` whenever its keys, translated text, placeholders, or metadata change meaningfully; never reuse or decrease a bundled catalog version.
 - Do not use deprecated APIs.
 - Treat tests and regression coverage as part of the implementation.
 
