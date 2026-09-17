@@ -27,6 +27,13 @@ type AutomationConfig = {
 };
 
 type SavedAutomation = { data: AutomationConfig; revision: number };
+type RuleText = {
+  allowed_groups: string;
+  preferred_groups: string;
+  allowed_uploaders: string;
+  preferred_uploaders: string;
+  preferred_providers: string;
+};
 
 const RULE_DEFAULTS = {
   include_keywords: "",
@@ -40,6 +47,16 @@ const RULE_DEFAULTS = {
 
 function listValue(values: string[]) {
   return values.join(", ");
+}
+
+function ruleTextFromConfig(data: AutomationConfig): RuleText {
+  return {
+    allowed_groups: listValue(data.allowed_groups || []),
+    preferred_groups: listValue(data.preferred_groups || []),
+    allowed_uploaders: listValue(data.allowed_uploaders || []),
+    preferred_uploaders: listValue(data.preferred_uploaders || []),
+    preferred_providers: listValue(data.preferred_providers || []),
+  };
 }
 
 function parseList(value: string) {
@@ -73,13 +90,16 @@ export function TorrentAutomationPage() {
   );
   const previous = useRef<SavedAutomation | null>(null);
   const [data, setData] = useState<AutomationConfig | null>(null);
+  const [ruleText, setRuleText] = useState<RuleText | null>(null);
   const [revision, setRevision] = useState(0);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!query.data) return;
     if (!data || JSON.stringify(data) === JSON.stringify(previous.current?.data)) {
-      setData({ ...query.data.data, high_confidence_only: true, rules_version: 1 });
+      const next = { ...query.data.data, high_confidence_only: true, rules_version: 1 };
+      setData(next);
+      setRuleText(ruleTextFromConfig(next));
       setRevision(query.data.revision);
     }
     previous.current = query.data;
@@ -87,28 +107,48 @@ export function TorrentAutomationPage() {
 
   if (query.error)
     return <ErrorState error={query.error} retry={() => query.refetch()} />;
-  if (!data || !query.data) return <Busy />;
+  if (!data || !ruleText || !query.data) return <Busy />;
 
   function change(next: Partial<AutomationConfig>) {
     setData((current) => (current ? { ...current, ...next } : current));
   }
 
+  function changeRuleText(next: Partial<RuleText>) {
+    setRuleText((current) => (current ? { ...current, ...next } : current));
+  }
+
   function resetRules() {
     change({ ...RULE_DEFAULTS, rules_version: 1 });
+    setRuleText({
+      allowed_groups: "",
+      preferred_groups: "",
+      allowed_uploaders: "",
+      preferred_uploaders: "",
+      preferred_providers: "",
+    });
   }
 
   async function save(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
+    const next: AutomationConfig = {
+      ...data,
+      high_confidence_only: true,
+      rules_version: 1,
+      allowed_groups: parseList(ruleText.allowed_groups),
+      preferred_groups: parseList(ruleText.preferred_groups),
+      allowed_uploaders: parseList(ruleText.allowed_uploaders),
+      preferred_uploaders: parseList(ruleText.preferred_uploaders),
+      preferred_providers: parseList(ruleText.preferred_providers),
+    };
     try {
       const result = await api<{ revision: number }>(
         "/settings/torrent-automation",
         "PUT",
-        {
-          data: { ...data, high_confidence_only: true, rules_version: 1 },
-          revision,
-        },
+        { data: next, revision },
       );
+      setData(next);
+      setRuleText(ruleTextFromConfig(next));
       setRevision(result.revision);
       await invalidateResources(cache, ["editable-settings", "settings", "jobs"]);
       notify(
@@ -309,9 +349,9 @@ export function TorrentAutomationPage() {
               <textarea
                 rows={3}
                 disabled={busy}
-                value={listValue(data.allowed_groups)}
+                value={ruleText.allowed_groups}
                 placeholder={t("torrentAutomation.listPlaceholder", { defaultValue: "One per line or comma separated" })}
-                onChange={(event) => change({ allowed_groups: parseList(event.target.value) })}
+                onChange={(event) => changeRuleText({ allowed_groups: event.target.value })}
               />
             </label>
             <label>
@@ -319,9 +359,9 @@ export function TorrentAutomationPage() {
               <textarea
                 rows={3}
                 disabled={busy}
-                value={listValue(data.preferred_groups)}
+                value={ruleText.preferred_groups}
                 placeholder={t("torrentAutomation.listPlaceholder", { defaultValue: "One per line or comma separated" })}
-                onChange={(event) => change({ preferred_groups: parseList(event.target.value) })}
+                onChange={(event) => changeRuleText({ preferred_groups: event.target.value })}
               />
             </label>
           </div>
@@ -344,9 +384,9 @@ export function TorrentAutomationPage() {
               <textarea
                 rows={3}
                 disabled={busy}
-                value={listValue(data.allowed_uploaders)}
+                value={ruleText.allowed_uploaders}
                 placeholder={t("torrentAutomation.listPlaceholder", { defaultValue: "One per line or comma separated" })}
-                onChange={(event) => change({ allowed_uploaders: parseList(event.target.value) })}
+                onChange={(event) => changeRuleText({ allowed_uploaders: event.target.value })}
               />
             </label>
             <label>
@@ -354,9 +394,9 @@ export function TorrentAutomationPage() {
               <textarea
                 rows={3}
                 disabled={busy}
-                value={listValue(data.preferred_uploaders)}
+                value={ruleText.preferred_uploaders}
                 placeholder={t("torrentAutomation.listPlaceholder", { defaultValue: "One per line or comma separated" })}
-                onChange={(event) => change({ preferred_uploaders: parseList(event.target.value) })}
+                onChange={(event) => changeRuleText({ preferred_uploaders: event.target.value })}
               />
             </label>
           </div>
@@ -365,9 +405,9 @@ export function TorrentAutomationPage() {
             <textarea
               rows={3}
               disabled={busy}
-              value={listValue(data.preferred_providers)}
+              value={ruleText.preferred_providers}
               placeholder={t("torrentAutomation.providerPlaceholder", { defaultValue: "Use the provider names shown in search results" })}
-              onChange={(event) => change({ preferred_providers: parseList(event.target.value) })}
+              onChange={(event) => changeRuleText({ preferred_providers: event.target.value })}
             />
           </label>
         </section>
