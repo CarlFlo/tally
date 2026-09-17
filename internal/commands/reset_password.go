@@ -27,6 +27,9 @@ func resetPassword(ctx context.Context, db *database.Store, args []string) error
 		return err
 	}
 	defer tx.Rollback()
+	if _, err = tx.ExecContext(ctx, "UPDATE profiles SET auth_method='password' WHERE id=?", profileID); err != nil {
+		return err
+	}
 	if _, err = tx.ExecContext(ctx, "INSERT INTO local_credentials VALUES(?,?,1) ON CONFLICT(profile_id) DO UPDATE SET hash=excluded.hash,must_change=1", profileID, hash); err != nil {
 		return err
 	}
