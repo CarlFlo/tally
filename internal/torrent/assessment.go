@@ -1,6 +1,9 @@
 package torrent
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 type Confidence string
 
@@ -91,6 +94,30 @@ func (a ReleaseAssessment) Rejected() bool {
 
 func (a ReleaseAssessment) EligibleForAutomaticDownload() bool {
 	return a.Confidence == ConfidenceHigh && a.Verification == VerificationVerified && len(a.HardRejections) == 0
+}
+
+func VerifyTorrentBytes(base ReleaseAssessment, candidate SearchResult, data []byte) (ReleaseAssessment, error) {
+	metadata, err := ParseTorrentMetadata(data)
+	if err != nil {
+		base.Verification = VerificationUnverified
+		base.Reasons = append(base.Reasons, AssessmentReason{Code: ReasonTorrentMetadataFailed})
+		return base, fmt.Errorf("torrent metadata could not be inspected")
+	}
+	assessment := ApplyPayloadVerification(base, candidate, metadata)
+	if !assessment.Rejected() {
+		return assessment, nil
+	}
+	for _, reason := range assessment.HardRejections {
+		switch reason.Code {
+		case ReasonInfoHashMismatch:
+			return assessment, fmt.Errorf("torrent metadata did not match the selected result")
+		case ReasonBlockedPayload:
+			return assessment, fmt.Errorf("torrent contains executable or script files")
+		case ReasonMissingVideo:
+			return assessment, fmt.Errorf("torrent contains no supported video files")
+		}
+	}
+	return assessment, fmt.Errorf("torrent failed inspection")
 }
 
 func ApplyPayloadVerification(base ReleaseAssessment, candidate SearchResult, metadata TorrentMetadata) ReleaseAssessment {
