@@ -130,16 +130,19 @@ export function TorrentAutomationPage() {
 
   async function save(event: FormEvent) {
     event.preventDefault();
+    const currentData = data;
+    const currentRuleText = ruleText;
+    if (!currentData || !currentRuleText) return;
     setBusy(true);
     const next: AutomationConfig = {
-      ...data,
+      ...currentData,
       high_confidence_only: true,
       rules_version: 1,
-      allowed_groups: parseList(ruleText.allowed_groups),
-      preferred_groups: parseList(ruleText.preferred_groups),
-      allowed_uploaders: parseList(ruleText.allowed_uploaders),
-      preferred_uploaders: parseList(ruleText.preferred_uploaders),
-      preferred_providers: parseList(ruleText.preferred_providers),
+      allowed_groups: parseList(currentRuleText.allowed_groups),
+      preferred_groups: parseList(currentRuleText.preferred_groups),
+      allowed_uploaders: parseList(currentRuleText.allowed_uploaders),
+      preferred_uploaders: parseList(currentRuleText.preferred_uploaders),
+      preferred_providers: parseList(currentRuleText.preferred_providers),
     };
     try {
       const result = await api<{ revision: number }>(
