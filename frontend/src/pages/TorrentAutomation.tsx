@@ -45,6 +45,10 @@ const RULE_DEFAULTS = {
   preferred_providers: [] as string[],
 };
 
+function normalizeConfig(data: AutomationConfig): AutomationConfig {
+  return { ...data, high_confidence_only: true, rules_version: 1 };
+}
+
 function listValue(values: string[]) {
   return values.join(", ");
 }
@@ -96,14 +100,25 @@ export function TorrentAutomationPage() {
 
   useEffect(() => {
     if (!query.data) return;
-    if (!data || JSON.stringify(data) === JSON.stringify(previous.current?.data)) {
-      const next = { ...query.data.data, high_confidence_only: true, rules_version: 1 };
+    const previousData = previous.current
+      ? normalizeConfig(previous.current.data)
+      : null;
+    const previousRuleText = previousData
+      ? ruleTextFromConfig(previousData)
+      : null;
+    const draftIsClean =
+      !data ||
+      (!!previousData &&
+        JSON.stringify(data) === JSON.stringify(previousData) &&
+        JSON.stringify(ruleText) === JSON.stringify(previousRuleText));
+    if (draftIsClean) {
+      const next = normalizeConfig(query.data.data);
       setData(next);
       setRuleText(ruleTextFromConfig(next));
       setRevision(query.data.revision);
     }
     previous.current = query.data;
-  }, [data, query.data]);
+  }, [query.data]);
 
   if (query.error)
     return <ErrorState error={query.error} retry={() => query.refetch()} />;
