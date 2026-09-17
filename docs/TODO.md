@@ -11,20 +11,20 @@ Status: torrent confidence, verified inspection, automation, and Previous Runs i
 ### Evaluation and search metadata
 
 - [ ] Add one backend-owned torrent evaluation model shared by manual search and future automation.
-- [ ] Keep confidence (`high`, `medium`, `low`, `rejected`) separate from user preference/ranking.
-- [ ] Enrich normalized Jackett/Torznab results with useful metadata when supplied: category, infohash, external IDs, grabs, and ratio/download factors.
+- [x] Keep confidence (`high`, `medium`, `low`, `rejected`) separate from user preference/ranking.
+- [x] Enrich normalized Jackett/Torznab results with useful metadata when supplied: category, infohash, external IDs, grabs, and ratio/download factors.
 - [ ] Add conservative release parsing/matching for show identity, aliases/year, season/episode forms, quality/source/codec clues, seeders, and size sanity.
-- [ ] Treat specials, multi-episode releases, season packs, ambiguous identities, and malformed titles conservatively.
+- [x] Treat specials, multi-episode releases, season packs, ambiguous identities, and malformed titles conservatively.
 - [ ] Surface compact localized confidence on manual search without exposing internal numeric scoring.
 
 ### Torrent verification
 
-- [ ] Deep-inspect only shortlisted/selected candidates rather than every Jackett result.
-- [ ] Fetch retrievable `.torrent` files through the provider coordination boundary without exposing provider URLs to the browser.
-- [ ] Parse bencoded torrent metadata locally, derive/validate infohash as appropriate, and inspect the complete file tree before qBittorrent submission.
+- [x] Deep-inspect only shortlisted/selected candidates rather than every Jackett result.
+- [x] Fetch retrievable `.torrent` files through the provider coordination boundary without exposing provider URLs to the browser.
+- [x] Parse bencoded torrent metadata locally, derive/validate infohash as appropriate, and inspect the complete file tree before qBittorrent submission.
 - [ ] Reject clearly unsuitable payloads such as missing meaningful video, executable/script content, suspicious archive-only payloads, sample-only payloads, episode mismatch, or previously blocked infohashes.
-- [ ] Record verification as `verified` or `unverified`; automatic download requires a verified candidate.
-- [ ] Magnet-only results remain available for manual download but are never eligible for automatic download because their payload cannot be inspected first.
+- [x] Record verification as `verified` or `unverified`; automatic download requires a verified candidate.
+- [x] Magnet-only results remain available for manual download but are never eligible for automatic download because their payload cannot be inspected first.
 - [ ] If the best candidate fails verification, continue through the next bounded shortlist candidate rather than immediately failing the run.
 
 ### Global automation
