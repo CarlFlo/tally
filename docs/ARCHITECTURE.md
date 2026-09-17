@@ -1,83 +1,132 @@
-# Go code map
+# Architecture
 
-## Frontend navigation lifecycle
+Tally is one Go service serving an embedded React application and a permanent SQLite database. The architecture favors explicit domain ownership, bounded asynchronous work, backend-enforced security, and profile-specific state over generic frameworks or duplicated client state.
 
-The authenticated route tree follows normal React Router lifecycle instead of forcing a full subtree remount on every pathname change. Core Calendar, Shows and Search code stays eager for fast primary navigation; System, Settings and Logs are route-level lazy chunks. The header, query cache and single live-event subscription stay mounted. Dialogs close during layout cleanup before DOM removal, and components explicitly reset state only where their own lifecycle requires it. Navigation has no cooldown, pointer lock or blocking overlay.
+## Core ownership rules
 
-React Query owns read deduplication and AbortSignals; imperative connection tests use `useLatestRequest` and torrent search owns an abortable latest request. `requestPool.ts` bounds API transport to six active requests and 64 queued requests, removes aborted queue entries and releases slots on failures. API calls have a 90-second deadline, including queue and response-body time. Durable manual writes may complete after a page leaves, but stale show deletion callbacks cannot navigate the new page. Live events coalesce refreshes without replacing in-flight fetches and exclude input-driven discovery/cron previews.
+- Shared TV metadata belongs to the deployment, never to a profile.
+- Profiles own follows, favorites, preferences, localization, and episode state.
+- Authentication maps to opaque immutable profile IDs; authorization is role-based.
+- External provider IDs are mappings, not application-wide primary identifiers.
+- SQLite is the source of truth for durable application state.
+- Infrastructure configuration comes from environment variables; operator-editable application settings live in SQLite.
+- Outbound provider work goes through the provider coordinator.
+- Torrent search and download submission remain user-initiated/manual.
 
-Provider shared requests retain work while at least one caller needs it. The last caller leaving cancels downstream HTTP/slot waits; at most 64 distinct shared operations may remain outstanding, including operations still unwinding cancellation. TVmaze image fetches use that coalescing without storing a duplicate response body in the provider SQLite cache: validated image bytes are published atomically into the filesystem cache and cache hits are streamed from disk. Browser stress tests use freshly built embedded assets, retain the same document and verify input, listener/interval/stream counts and transport concurrency after repeated switching.
+## Backend map
 
-Tally uses the repository-root `main.go` as the small process entrypoint. `internal/commands` owns process setup and operator commands, while the other `internal` packages own application domains. Files target one responsibility and about 150-200 lines. Domain types and repositories live beside the services that use them, so a feature can be understood without traversing generic model/helper layers.
+| Area | Responsibility |
+| --- | --- |
+| `main.go` | Small process entrypoint and top-level error handling |
+| `internal/commands` | Startup/shutdown, configuration wiring, deployment lock, operator commands |
+| `internal/api` | HTTP routes, authorization, validation, response handling, live events, SPA serving |
+| `internal/auth` | Passwords, sessions, recovery, OIDC, identity mapping |
+| `internal/profiles` | Profile lifecycle, roles, names, avatars, sensitive role changes |
+| `internal/metadata` | TV metadata, persistence, follows/import queue, TVmaze integration |
+| `internal/providers` | Bounded outbound request admission, retries, rate limits, circuits, telemetry, cancellation |
+| `internal/jobs` | Scheduled/manual jobs, failure state, job history and alert creation |
+| `internal/settings` | Durable editable settings and validation |
+| `internal/notifications` | Bell-event subscriptions, notification outbox, release delivery, Webhook/Discord |
+| `internal/activity` | Durable credential-free activity records |
+| `internal/inbox` | Profile-scoped inbox/read/dismissal state |
+| `internal/library` | Transactional library/follow changes |
+| `internal/torrent` | Jackett search, opaque selections, client adapters, qBittorrent protocol |
+| `internal/database` | SQLite opening, migrations, validation, snapshots |
+| `internal/backup` | Backup creation, verification, inventory, retention, restore |
+| `internal/localization` | Bundled locale catalogs, validation, registry and filesystem watching |
+| `internal/config` | Validated deployment/environment configuration |
+| `web` | Embedded production frontend assets |
 
-| Package | Responsibility | Useful entry points |
-| --- | --- | --- |
-| `main.go` | Process entrypoint and top-level error logging | `main.go` |
-| `internal/commands` | Configuration, deployment lock, startup/shutdown, CLI commands | `main.go`, `serve.go`, individual command files |
-| `internal/api` | HTTP routes, authorization, request/response handling | `routes.go`, `authenticated_handler.go`, `security_middleware.go`, named `*_handler.go` files |
-| `internal/auth` | Passwords, sessions, recovery, OIDC | `auth.go`, `login.go`, `session.go`, `oidc_callback.go`, `identity_repository.go` |
-| `internal/metadata` | TVmaze protocol, shared metadata, queued follows | `tvmaze.go`, `service.go`, `repository.go`, `queue_worker.go` |
-| `internal/jobs` | Bounded job execution, schedules, alert creation, notification-worker lifecycle | `jobs.go`, `dependencies.go`, `trigger.go`, individual `*_job.go` files |
-| `internal/providers` | All outbound request coordination | `request_dispatch.go`, `request_execute.go`, `admission.go`, `rate_limit.go`, `circuit_breaker.go` |
-| `internal/torrent` | Manual Jackett search, download-client adapters and stored connections | `jackett.go`, `jackett_results.go`, `jackett_fetch.go`, `client_registry.go`, `clients.go`, `client_prepare.go`, `qbittorrent.go` |
-| `internal/profiles` | Transactional profile lifecycle, role changes, avatar colors and display-name validation | `repository.go`, `roles.go`, `avatar.go`, `name.go` |
-| `internal/inbox` | Profile-scoped activity feeds and durable seen/clear/dismiss state | `store.go`, `state.go` |
-| `internal/activity` | Durable, credential-free event records | `record.go` |
-| `internal/library` | Transactional follow changes and their activity | `follow.go` |
-| `internal/notifications` | Event subscriptions, durable outbox, release scheduling and Webhook/Discord delivery | `service.go`, `activity_queue.go`, `release_queue.go`, `delivery.go`, `message.go`, `send.go`, `schedule.go` |
-| `internal/settings` | Durable editable settings and their validation | `settings.go`, `search.go`, `webhook.go`, `defaults.go` |
-| `internal/database` | SQLite opening, migration, validation and snapshots | `database.go`, `migrations.go`, `schema_validation.go`, `snapshot.go` |
-| `internal/backup` | Snapshot archives, validation, restore and retention | `create.go`, `archive_writer.go`, `extract.go`, `snapshot_validation.go`, `restore.go` |
-| `internal/config` | Validated infrastructure environment values | `config.go`, `load.go`, `url.go` |
-| `web` | Embedded production frontend | `embed.go` |
+Keep new code in the owning domain. Prefer narrow interfaces at boundaries and concrete service types inside a domain. Avoid generic `utils`, global mutable runtime state, or a repository abstraction that hides important SQL transaction boundaries.
 
-## Boundaries
+## Database and identity
 
-- HTTP handler filenames identify individual operations. Routing, JSON handling, authorization, security middleware, health checks and SPA assets are separate. Existing JSON response shapes and routes remain stable.
-- Metadata models (`show.go`, `episode.go`, `season.go`) describe provider data. `sync.go` fetches that data; `Repository.Save` persists the complete response transactionally. Shared metadata never becomes profile-owned.
-- Jobs accept small `MetadataSource`, `ProviderControl` and `BackupCreator` interfaces. Constructors return concrete services. Each job implementation returns a named `runResult` with an explicit error.
-- TVmaze, Jackett, torrent-client adapters and OIDC transport accept `providers.Requester`. Production wiring always supplies the coordinator. Request admission, rate limiting, one HTTP attempt, cache handling, retry policy, circuit state and telemetry have distinct files.
-- SQLite remains concrete infrastructure. Repositories and transaction boundaries remain in their owning domains; no general-purpose repository framework is introduced. Main and provider-cache databases use WAL with an explicit 1000-page autocheckpoint; maintenance performs passive checkpoints and clean shutdown truncates WAL after application work has stopped.
-- Torrent selections belong to a `Server` instance. Jackett only searches configured indexers; Tally owns filtering and opaque user selections, and the configured torrent client performs downloads. Adapter definitions are constructed afresh, including their field slices. Package-level values are limited to embedded resources, sentinel errors and precompiled read-only validation patterns; mutable runtime state belongs to service instances.
-- Backup creation is a pipeline: snapshot, enumerate durable files, write archive, verify, publish, retain. The `backups` directory is the archive inventory source of truth; regular `.zip` files are discovered directly and receive deterministic filesystem-derived API IDs, so manually copied archives require no SQLite registration. Archive manifest inspection is cached by filename, size and nanosecond mtime, so unchanged ZIPs are not reopened on every listing; the filesystem remains authoritative and the explicit Refresh action rescans it. Extraction separates path/size checks, manifest/checksum validation and database validation. Manifests retain format 1 and optionally record the source Tally version; schema compatibility remains authoritative for restore. In-app restore validates and migrates a staged database first, then replaces durable SQLite table contents in one live transaction.
+SQLite runs with foreign keys and WAL enabled. Schema changes are explicit sequential migrations; schema 7 is current. Existing databases receive a validated pre-upgrade snapshot before migration. Migration work is transactional and validated before commit; downgrades from a newer unsupported schema are refused.
 
-## Working on a feature
+Profiles use generated opaque IDs. Administrator privileges live in explicit role data rather than a special account ID. Database constraints protect invariants such as retaining an administrator while profiles remain, with API and UI checks providing additional defense in depth.
 
-Frontend pages use one outer `.page` container for responsive padding, width and centering. Use `PageHeader` for a text title, eyebrow and description (System, Settings and Profile share it); use `.settings-tabs` for section navigation. Nested System content removes its own outer padding. The root reserves scrollbar space to prevent route/loading height changes from moving content. Do not introduce route-specific heading margins or raw HTML rendering: header props are strings escaped by React.
+Sensitive administrator demotion/deletion under local authentication re-authenticates the acting administrator using the actor's credentials. Authorization is always enforced by the backend even when matching controls are hidden in the frontend.
 
-Treat provider metadata and form values as untrusted text. Keep URL and template validation on the server, outbound calls behind the coordinator, SQL values parameterized, and operator/profile authorization at existing API boundaries. Webhook templates operate on decoded JSON string values, never executable code or HTML. Add failure-path tests when changing these boundaries.
+## Frontend state and navigation
 
-Start with the route or domain entry point above, then read its focused implementation and matching tests. Add new files when responsibilities diverge. Keep related transactional work together even when a file needs a little more space; the size target is a readability guide.
+React Router owns page navigation. The authenticated application shell, query cache, header, and live-event connection remain mounted while route content changes normally. Do not force full application remounts to solve local state problems.
 
-The refactor's largest production Go file is 143 lines, down from 466. Test fixtures and regression tests are also split by responsibility, with all application Go files below 150 lines at this checkpoint. Tests assert behavior and failure boundaries rather than enforcing file counts.
+React Query owns server-read caching, deduplication, invalidation, and AbortSignals. Imperative actions that can be superseded use explicit latest-request ownership. Shared API transport is bounded so rapid navigation cannot create unbounded concurrent work or queues.
 
-Run `go test ./...`, `go vet ./...` and the frontend build after relevant changes. Concurrency changes also need `go test -race ./...`; HTTP/application changes should run the existing Playwright suite against its isolated fixtures.
+Components clean up dialogs, listeners, observers, timers, subscriptions, and asynchronous work on unmount. Durable writes may complete after navigation, but callbacks from an abandoned page must not mutate or navigate the newly active page.
 
-## Library and notification milestone
+Overlays that are meaningful navigation state should participate in browser history. For example, opening Calendar show details pushes overlay state so browser Back closes the overlay before leaving the Calendar page.
 
-Schema 4 adds `activity_log`, `browser_preferences`, `notification_state`, and `notification_outbox`. Existing schema 1-3 upgrades remain sequential and take a validated snapshot before migration. Activity records intentionally retain actor/show labels without foreign keys, so deleting an account or removing a follow does not erase the deployment's history. Application APIs never put connection bodies or credentials in activity descriptions.
+Live events invalidate only relevant resources. They should refresh visible server state without overwriting dirty form drafts or causing input-driven requests to restart unnecessarily.
 
-`admin_paths.go` identifies deployment-only API paths and authorization checks the authenticated profile's administrator role even when authentication is disabled. `capabilities_handler.go` exposes only connection availability and safe provider names for personal search. Browser appearance has a public CSRF-protected update handler and a random HttpOnly browser cookie; profile appearance remains independent.
+## Draft state versus applied state
 
-The notification worker runs as one cancellable goroutine. It wakes immediately for explicit notification work, sleeps until an earlier pending delivery when known, and otherwise reconciles every 30 seconds instead of polling SQLite once per second. A tick reads at most 100 activity entries and 100 releases, then attempts at most 10 due deliveries within a 30-second context. System errors and job failures take priority. Each send reloads settings and claims its pending row against the settings revision; master-toggle changes cannot revive a previously selected, skipped notification. Delivery uses `providers.Requester`, with production always injecting the coordinator. Failure is recorded before the attempt to prevent automatic duplicate sends after ambiguous responses or crashes. Pending releases survive restarts and use unique episode event keys. Date-only metadata is not assigned an invented release time.
+Forms should distinguish draft values from authoritative saved state. Profile language selection is a draft until Save profile succeeds; only then does the saved locale become authoritative. Similar forms should not visually imply persistence before the backend accepts the change.
 
-Frontend components keep show actions, login appearance, danger-zone deletion, notification fields/settings, logs, and release-time formatting separate from the existing pages.
+Immediate toggles are appropriate only when the product intentionally defines the toggle itself as the save action. Keep those semantics explicit instead of mixing auto-save and staged-save behavior in one control group.
 
-## Header, onboarding, and backup milestone
+When authoritative state changes invalidate derived UI, render feedback from the new state rather than capturing stale derived values. Localization-sensitive toast messages, for example, should resolve their translation after the new locale is active.
 
-Schema 5 adds `inbox_state` and `inbox_dismissals`, both owned by immutable profile IDs. The activity feed has independent visibility and read/dismissal state: the administrator sees deployment activity, other profiles see only their own. `/api/logs` applies the same scope to rows, counts, search, and action options. Operator System pages remain guarded; `/logs` is a personal activity page for members and redirects to System Logs for the administrator. The inbox excludes noisy per-episode progress and archive-download events.
+## Localization
 
-Password setup inserts credentials exactly once inside a transaction; an existing hash cannot be overwritten, including by competing setup requests. Public registration uses the same transactional profile repository as administrator creation, preserves non-reused IDs, checks the profile limit, and requires a password in local mode. Existing signed-in sessions must sign out before registration/setup. Password strings preserve spaces, case, and symbols; display names reject controls and trim outer whitespace.
+Locale catalogs are server-owned and loaded from the persistent data directory. English is the canonical key contract and final fallback; Ukrainian is bundled as an additional locale. Operators may add validated locale files without rebuilding Tally.
 
-Backups use the fixed data-directory subfolder, and that folder is the inventory source of truth. Regular `.zip` files placed there manually are listed without database metadata; corrupt archives remain visible for download/deletion but cannot be restored. Retention settings are loaded from SQLite for every retention pass, while automatic archive selection and pruning come from the filesystem inventory. Backup download, restore, and deletion require the administrator and use deterministic archive IDs derived from filenames. Downloads remain confined beneath an `os.Root`; management operations reject unsafe names, symlinks, and non-regular archives. Restore fully extracts and validates the archive, upgrades compatible older schemas in staging, normalizes runtime schedules, prepares avatars without overwriting conflicting files, and only then copies durable database state inside one transaction. Failed application rolls back the database and any newly prepared avatars, while successful restore takes effect in the existing process.
+Profile locale is authoritative. The browser does not auto-select locale from browser preferences. Locale changes update document language/direction metadata and all frontend translation consumers.
 
-Schedule updates combine optimistic revision checks, the job update, and activity logging in one transaction. The scheduler sleeps until the nearest enabled `next_run` and is explicitly woken by schedule/resume/completion changes instead of querying SQLite every second. Cron expressions are interpreted in the deployment `TZ` timezone (UTC when unset), including next-run recalculation when a job starts, while profile timezone is display-only for timestamps such as previews, calendar releases, job times, and last-sync labels. Notification delivery time is always interpreted in deployment `TZ`; the old persisted timezone field is retained only for data compatibility and is normalized to the server timezone when settings are loaded or saved. Profile timezone is presentation-only and the notification UI converts the next server-time delivery for the current user. A checkbox save sends the stored cron, preserving an unsaved editor draft. The frontend has focused profile/menu/inbox, login credentials/registration, schedule/retention/backup, System, calendar grid/horizon, and release grouping components. Known full-season labels use declared season metadata; an incomplete imported episode list does not establish a complete season.
+User-facing frontend text belongs in the localization catalogs. Provider metadata, raw server logs, protocol identifiers, and unstable provider errors remain untranslated unless a stable application error code exists.
 
+See `LOCALIZATION.md` for catalog format and authoring rules.
 
-## Profile roles and identity
+## Provider and asynchronous work
 
-Schema 6 removes the sequential `userN` identity model. Profiles use opaque generated IDs and administrator access lives in `profile_roles`; no profile is permanent. Migration 6 rewrites profile-owned foreign keys, preserves legacy IDs only in `profile_id_aliases` for migration/session compatibility, and removes the obsolete profile counter.
+All production external-provider requests use the coordinator. It centralizes admission limits, response-size bounds, retries, Retry-After handling, rate limiting, circuit state, cancellation, caching policy, and telemetry.
 
-The first profile created in an empty deployment is promoted automatically by the database trigger. While any profiles remain, database triggers prevent the last administrator from being demoted or deleted, so API/UI checks are defense in depth rather than the security boundary. Deleting the sole remaining profile is valid; the next profile created becomes administrator.
+Shared requests continue only while at least one caller still needs the result. When the last waiter leaves, downstream HTTP work and admission waits are cancelled. Queued work must be removable on cancellation, and every acquired concurrency slot must be released on all success/error paths.
 
-Administrator promotion is role-based. Under local authentication, demoting or deleting an administrator requires re-authentication with the acting administrator's own password. Profile creation/deletion and administrator grant/revoke activity is always logged and can be delivered through the `profile_access_changed` notification subscription.
+Background jobs are bounded and cancellable. Schedules are persisted, wake the scheduler when relevant state changes, and use deployment timezone for execution. Profile timezone affects presentation, not server execution semantics.
+
+Prefer event-driven refresh and filesystem watchers to frequent polling. Watchers are intentionally not masked by a polling fallback on unusual network filesystems unless a future requirement explicitly adds one.
+
+## Torrent capabilities
+
+Torrent search and torrent downloading are independent capabilities.
+
+- Search availability is controlled by the saved search setting and configured Jackett connection.
+- Download availability is controlled by its own saved torrent-download setting and configured client.
+- When a capability is disabled, the frontend hides navigation/actions that cannot work.
+- The backend independently rejects disabled operations; hiding UI is not enforcement.
+- Capability toggles sit outside the provider/client configuration section they govern so disabling a feature does not make its own switch unreachable.
+
+Jackett search returns normalized results and opaque profile-bound selections. Tally does not expose provider download URLs to the browser. qBittorrent submissions and status queries use the adapter protocol; protocol success is determined by the actual client contract rather than assumptions such as requiring a JSON response.
+
+The Downloads page reflects client-reported torrent state. Tally does not automatically choose torrents, scan media, rename files, or mark episodes downloaded merely because a torrent was submitted.
+
+## Activity, logs, and notifications
+
+Logs are the complete operational history appropriate to the current profile/administrator scope. Bell notifications are intentionally more selective and configurable so routine user-initiated saves do not become noise.
+
+Activity records must not contain credentials. Notification delivery uses durable outbox/state where required and reloads authoritative settings before sending. Ambiguous or failed external deliveries must be observable without silently duplicating sends.
+
+## Backups and restore
+
+Backup creation follows a pipeline: snapshot durable state, collect durable files, write the archive, verify it, publish it, and apply retention. The backup directory is the archive inventory source of truth; valid manually copied archives can be discovered without separate registration metadata.
+
+Caches and environment-provided secrets are excluded. UI-managed credentials are durable application state and belong in protected backups.
+
+Restore extracts into staging, validates archive paths/sizes/checksums, validates and upgrades the staged database when compatible, prepares durable files, and only then applies database state transactionally. A failed restore must leave the running state usable. Relational restore tests must account for foreign-key cascades and insertion/deletion ordering.
+
+## Secrets and settings
+
+Infrastructure configuration remains environment-owned. User/operator-managed integrations and schedules are stored in SQLite and applied without process restart where supported.
+
+Secrets are revealed only in explicitly authorized settings views. General APIs, logs, errors, notifications, telemetry, and activity records must not echo them. When editing a connection, an intentionally blank secret field means retain the saved secret unless the operation explicitly requests removal/replacement.
+
+## Working on a change
+
+Start from the domain entry point and matching tests. Preserve API contracts, transaction boundaries, authorization, provider-coordinator usage, localization, and existing UX unless the task explicitly changes them.
+
+Use one outer `.page` container for normal pages and the shared page-header/navigation patterns rather than route-specific layout workarounds. Keep accessibility labels stable enough for both users and automated browser tests.
+
+When a bug reveals a reusable engineering principle, capture the generalized lesson in `LESSONS.md`. Keep incident-specific history in Git rather than expanding architecture or roadmap files with dated narratives.
+
+Validation expectations are defined in `VALIDATION.md`.
