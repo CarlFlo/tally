@@ -45,7 +45,7 @@ func Load() (Config, error) {
 	c.Timezone = s("TZ", "UTC")
 	c.Theme = s("APP_THEME_DEFAULT", "system")
 	c.MaxProfiles = i("APP_MAX_PROFILES", 8, 1, 100)
-	c.PasswordMin = i("LOCAL_PASSWORD_MIN_LENGTH", 6, 1, 128)
+	c.PasswordMin = i("LOCAL_PASSWORD_MIN_LENGTH", 4, 1, 128)
 	c.PasswordMax = i("LOCAL_PASSWORD_MAX_LENGTH", 128, 4, 1024)
 	c.ResetCooldown = d("LOCAL_PASSWORD_RESET_COOLDOWN", "60s")
 	c.SessionIdle = d("SESSION_IDLE_TIMEOUT", "30d")
