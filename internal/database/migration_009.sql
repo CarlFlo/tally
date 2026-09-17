@@ -41,6 +41,6 @@ CREATE TABLE torrent_bad_hashes (
 
 CREATE TABLE torrent_show_policy (
     show_id TEXT PRIMARY KEY REFERENCES shows(id) ON DELETE CASCADE,
-    policy TEXT NOT NULL CHECK(policy IN ('default','notify','auto','never')),
+    policy TEXT NOT NULL CHECK(policy IN ('default','auto','never')),
     updated_at INTEGER NOT NULL
 );
