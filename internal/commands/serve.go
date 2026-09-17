@@ -75,12 +75,12 @@ func serve(ctx context.Context, c config.Config, db *database.Store, b *backup.S
 		return err
 	}
 
-	s := &api.Server{DB: db, Backup: b, Config: c, Auth: a, OIDC: auth.NewOIDC(a, p), Metadata: m, Control: p, Jobs: j, Events: hub, Locales: locales, Clients: clients, Assets: web.Assets()}
+	s := &api.Server{DB: db, Backup: b, Config: c, Auth: a, Metadata: m, Control: p, Jobs: j, Events: hub, Locales: locales, Clients: clients, Assets: web.Assets()}
 	server := &http.Server{Addr: c.Addr, Handler: s.Handler(), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 20 * time.Second, WriteTimeout: 120 * time.Second, IdleTimeout: 90 * time.Second, MaxHeaderBytes: 32 << 10}
 	errors := make(chan error, 1)
 	started = true
 	go func() {
-		slog.Info("Tally is ready", "address", c.Addr, "auth_mode", c.AuthMode, "schema", database.Version)
+		slog.Info("Tally is ready", "address", c.Addr, "schema", database.Version)
 		errors <- server.ListenAndServe()
 	}()
 

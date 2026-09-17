@@ -6,10 +6,22 @@ import (
 )
 
 const (
-	ProfileAuthPassword     = "password"
-	ProfileAuthNone         = "none"
-	ProfileAuthOIDCUnlinked = "oidc_unlinked"
+	ProfileAuthPassword = "password"
+	ProfileAuthNone     = "none"
 )
+
+func (s *Service) HashPassword(ctx context.Context, password string) (string, error) {
+	if err := s.Policy(password); err != nil {
+		return "", err
+	}
+	select {
+	case s.hashes <- struct{}{}:
+		defer func() { <-s.hashes }()
+	case <-ctx.Done():
+		return "", ctx.Err()
+	}
+	return Hash(password)
+}
 
 func (s *Service) ProfileAuthMethod(ctx context.Context, profile string) (string, error) {
 	var method string
@@ -18,9 +30,6 @@ func (s *Service) ProfileAuthMethod(ctx context.Context, profile string) (string
 		FROM profiles p WHERE p.id=?`, profile).Scan(&method, &hasPassword); err != nil {
 		return "", err
 	}
-	// A real local credential takes precedence over a stale/default `none` value.
-	// Migration 8 normalizes persisted data, while this also keeps older fixtures
-	// and recovery paths safe during the transition.
 	if hasPassword {
 		return ProfileAuthPassword, nil
 	}

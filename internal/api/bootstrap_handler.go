@@ -25,6 +25,6 @@ func (s *Server) bootstrap(w http.ResponseWriter, r *http.Request, _ auth.Sessio
 	}
 	var preferenceCount int
 	_ = s.DB.QueryRowContext(r.Context(), "SELECT COUNT(*) FROM profile_preferences WHERE profile_id=?", session.Profile).Scan(&preferenceCount)
-	jsonResponse(w, 200, map[string]any{"version": appversion.Version, "browser_theme": s.browserTheme(r), "profiles": profiles, "profile": profile, "preferences": prefs, "preferences_initialized": preferenceCount > 0, "auth_mode": "local", "restricted": session.Restricted, "warning": "", "max_profiles": s.Config.MaxProfiles, "password_min": s.Config.PasswordMin, "password_max": s.Config.PasswordMax, "jackett_enabled": s.torrentSearchEnabled(r.Context()), "torrent_search_enabled": s.torrentSearchEnabled(r.Context()), "torrent_downloads_enabled": s.torrentDownloadsEnabled(r.Context())})
+	jsonResponse(w, 200, map[string]any{"version": appversion.Version, "browser_theme": s.browserTheme(r), "profiles": profiles, "profile": profile, "preferences": prefs, "preferences_initialized": preferenceCount > 0, "restricted": session.Restricted, "warning": "", "max_profiles": s.Config.MaxProfiles, "password_min": s.Config.PasswordMin, "password_max": s.Config.PasswordMax, "jackett_enabled": s.torrentSearchEnabled(r.Context()), "torrent_search_enabled": s.torrentSearchEnabled(r.Context()), "torrent_downloads_enabled": s.torrentDownloadsEnabled(r.Context())})
 	return nil
 }

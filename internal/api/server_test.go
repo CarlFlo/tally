@@ -47,12 +47,10 @@ func testServer(t *testing.T, _ string) (*Server, http.Handler, *fakeTV) {
 		t.Fatal(e)
 	}
 	t.Cleanup(func() { db.Close() })
-	// Production databases start empty. API tests seed an explicit administrator
-	// with a neutral ID so authorization tests cannot depend on legacy identity names.
 	if _, e = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at,auth_method) VALUES('profile-admin','My profile','violet',?,'none')", time.Now().Unix()); e != nil {
 		t.Fatal(e)
 	}
-	c := config.Config{DataDir: dir, AuthMode: "local", MaxProfiles: 3, PasswordMin: 4, PasswordMax: 128, Timezone: "UTC", Theme: "system", SessionIdle: 30 * 24 * time.Hour, SessionAbsolute: 180 * 24 * time.Hour, ResetCooldown: time.Minute}
+	c := config.Config{DataDir: dir, MaxProfiles: 3, PasswordMin: 4, PasswordMax: 128, Timezone: "UTC", Theme: "system", SessionIdle: 30 * 24 * time.Hour, SessionAbsolute: 180 * 24 * time.Hour, ResetCooldown: time.Minute}
 	p, e := providers.New(context.Background(), db, dir, 2, 0)
 	if e != nil {
 		t.Fatal(e)
@@ -72,10 +70,6 @@ func testServer(t *testing.T, _ string) (*Server, http.Handler, *fakeTV) {
 	return s, testLegacyProfileCookies(s, s.Handler()), tv
 }
 
-// Most API tests predate normal sessions for no-auth profiles and use a
-// tally_profile cookie as a compact fixture. Translate that test-only cookie
-// into a real server session so unrelated tests keep exercising production
-// authorization without preserving the removed runtime behavior.
 func testLegacyProfileCookies(s *Server, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if _, err := r.Cookie("tally_session"); err != nil {

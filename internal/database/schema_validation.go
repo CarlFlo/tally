@@ -109,10 +109,9 @@ func ValidateSchema(ctx context.Context, db Querier) error {
 	if version >= 8 {
 		profileQuery = "SELECT id,display_name,avatar,created_at,locale,auth_method FROM profiles LIMIT 0"
 	}
-	for _, query := range []string{
+	queries := []string{
 		profileQuery,
 		"SELECT profile_id,data FROM profile_preferences LIMIT 0",
-		"SELECT issuer,subject,profile_id FROM profile_identities LIMIT 0",
 		"SELECT profile_id,hash,must_change FROM local_credentials LIMIT 0",
 		"SELECT id,profile_id,last_seen,expires_at,restricted FROM sessions LIMIT 0",
 		"SELECT id,name,next_check_at,provider_updated_at FROM shows LIMIT 0",
@@ -130,7 +129,11 @@ func ValidateSchema(ctx context.Context, db Querier) error {
 		"SELECT id,filename,kind FROM backup_records LIMIT 0",
 		"SELECT id,profile_id,query FROM torrent_search_history LIMIT 0",
 		"SELECT id,profile_id,idempotency_key,request_hash,status FROM torrent_send_history LIMIT 0",
-	} {
+	}
+	if version < 8 {
+		queries = append(queries, "SELECT issuer,subject,profile_id FROM profile_identities LIMIT 0")
+	}
+	for _, query := range queries {
 		rows, e := db.QueryContext(ctx, query)
 		if e != nil {
 			return fmt.Errorf("database schema is incomplete: %w", e)

@@ -4,15 +4,12 @@ go 1.27.1
 
 require (
 	github.com/fsnotify/fsnotify v1.10.1
-	github.com/coreos/go-oidc/v3 v3.21.0
-	github.com/go-jose/go-jose/v4 v4.1.5
 	github.com/gofrs/flock v0.13.1
 	github.com/lnquy/cron v1.1.1
 	github.com/robfig/cron/v3 v3.0.1
 	golang.org/x/crypto v0.57.0
 	golang.org/x/image v0.46.0
 	golang.org/x/net v0.59.0
-	golang.org/x/oauth2 v0.37.0
 	golang.org/x/sync v0.23.0
 	modernc.org/sqlite v1.59.0
 )

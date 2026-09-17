@@ -25,8 +25,6 @@ func (s *Server) selectProfile(w http.ResponseWriter, r *http.Request, _ auth.Se
 		}
 	case auth.ProfileAuthPassword:
 		return apiError{403, "password required"}
-	case auth.ProfileAuthOIDCUnlinked:
-		return apiError{403, "OIDC is currently unavailable; an administrator must change this profile's authentication method"}
 	default:
 		return apiError{403, "profile authentication is unavailable"}
 	}

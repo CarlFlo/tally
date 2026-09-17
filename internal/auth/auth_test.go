@@ -16,7 +16,7 @@ func testAuth(t *testing.T) *Service {
 		t.Fatal(e)
 	}
 	t.Cleanup(func() { db.Close() })
-	return New(db, config.Config{AuthMode: "local", PasswordMin: 4, PasswordMax: 128, ResetCooldown: time.Minute, SessionIdle: time.Hour, SessionAbsolute: 24 * time.Hour, MaxProfiles: 3, OIDCAutoCreate: true})
+	return New(db, config.Config{PasswordMin: 4, PasswordMax: 128, ResetCooldown: time.Minute, SessionIdle: time.Hour, SessionAbsolute: 24 * time.Hour, MaxProfiles: 3})
 }
 func TestOpaquePasswordHashAndPolicy(t *testing.T) {
 	s := testAuth(t)
@@ -49,7 +49,7 @@ func TestOpaquePasswordHashAndPolicy(t *testing.T) {
 func TestRecoveryExpiryRestartAndForcedReplacement(t *testing.T) {
 	s := testAuth(t)
 	hash, _ := Hash("original")
-	if _, err := s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-fixture','Fixture','violet',1)"); err != nil {
+	if _, err := s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at,auth_method) VALUES('profile-fixture','Fixture','violet',1,'password')"); err != nil {
 		t.Fatal(err)
 	}
 	_, _ = s.DB.Exec("INSERT INTO local_credentials VALUES('profile-fixture',?,0)", hash)
@@ -94,29 +94,5 @@ func TestRecoveryExpiryRestartAndForcedReplacement(t *testing.T) {
 	_ = s.DB.QueryRow("SELECT hash FROM local_credentials WHERE profile_id='profile-fixture'").Scan(&stored)
 	if !Verify(stored, "changed") || Verify(stored, "original") {
 		t.Fatal("password replacement failed")
-	}
-}
-func TestOIDCIdentityIsIssuerAndSubject(t *testing.T) {
-	s := testAuth(t)
-	o := NewOIDC(s, nil)
-	ctx := context.Background()
-	first, e := o.MapIdentity(ctx, "https://issuer.example", "abc", "Same Name")
-	if e != nil || len(first) != 32 || first == "profile-fixture" {
-		t.Fatalf("first identity is not generated: %s %v", first, e)
-	}
-	same, e := o.MapIdentity(ctx, "https://issuer.example", "abc", "Changed Name")
-	if e != nil || same != first {
-		t.Fatal("mutable display name changed identity")
-	}
-	second, e := o.MapIdentity(ctx, "https://another.example", "abc", "Same Name")
-	if e != nil || second == first {
-		t.Fatal("issuer was ignored")
-	}
-	third, e := o.MapIdentity(ctx, "https://issuer.example", "xyz", "Same Name")
-	if e != nil || third == first || third == second {
-		t.Fatal("subject was ignored")
-	}
-	if _, e = o.MapIdentity(ctx, "https://issuer.example", "over-limit", "Name"); e == nil {
-		t.Fatal("OIDC ignored profile maximum")
 	}
 }

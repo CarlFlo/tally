@@ -25,13 +25,6 @@ func Load() (Config, error) {
 		}
 		return v
 	}
-	b := func(key string, fallback bool) bool {
-		v, err := strconv.ParseBool(s(key, strconv.FormatBool(fallback)))
-		if err != nil {
-			errors = append(errors, key+" must be true or false")
-		}
-		return v
-	}
 	d := func(key, fallback string) time.Duration {
 		raw := s(key, fallback)
 		if strings.HasSuffix(raw, "d") {
@@ -48,10 +41,6 @@ func Load() (Config, error) {
 	}
 	c.Addr = s("APP_ADDR", ":8080")
 	c.DataDir = s("APP_DATA_DIR", "/config")
-	// Authentication is selected per profile. Keep AuthMode fixed to local for
-	// compatibility with older internal call sites while the legacy OIDC code
-	// remains dormant and unregistered.
-	c.AuthMode = "local"
 	c.PublicURL = s("APP_PUBLIC_URL", "")
 	c.Timezone = s("TZ", "UTC")
 	c.Theme = s("APP_THEME_DEFAULT", "system")
@@ -66,12 +55,6 @@ func Load() (Config, error) {
 	c.BatchSize = i("JOB_MAX_BATCH_SIZE", 50, 1, 500)
 	c.ProviderConcurrency = i("PROVIDER_MAX_CONCURRENCY", 2, 1, 16)
 	c.JobRuntime = d("JOB_MAX_RUNTIME", "5m")
-	c.OIDCIssuer = s("OIDC_ISSUER_URL", "")
-	c.OIDCClientID = s("OIDC_CLIENT_ID", "")
-	c.OIDCSecret = s("OIDC_CLIENT_SECRET", "")
-	c.OIDCRedirect = s("OIDC_REDIRECT_URL", "")
-	c.OIDCScopes = s("OIDC_SCOPES", "openid,profile,email")
-	c.OIDCAutoCreate = b("OIDC_AUTO_CREATE_USERS", true)
 	c.RawRetention = i("STATS_RAW_RETENTION_DAYS", 30, 1, 365)
 	c.AggregateRetention = i("STATS_AGGREGATE_RETENTION_DAYS", 365, 30, 3650)
 	if c.Theme != "system" && c.Theme != "light" && c.Theme != "dark" {
@@ -86,23 +69,14 @@ func Load() (Config, error) {
 	if _, err := time.LoadLocation(c.Timezone); err != nil {
 		errors = append(errors, "TZ must be an IANA timezone")
 	}
-	for key, v := range map[string]string{"APP_PUBLIC_URL": c.PublicURL, "OIDC_ISSUER_URL": c.OIDCIssuer, "OIDC_REDIRECT_URL": c.OIDCRedirect} {
-		if v != "" {
-			if err := ValidateURL(v); err != nil {
-				errors = append(errors, key+": "+err.Error())
-			}
-		}
-	}
-	if c.OIDCRedirect != "" {
-		u, err := url.Parse(c.OIDCRedirect)
-		if err == nil && (u.Path != "/auth/oidc/callback" || u.RawQuery != "") {
-			errors = append(errors, "OIDC_REDIRECT_URL must end in /auth/oidc/callback with no query")
-		}
-	}
 	if c.PublicURL != "" {
-		u, err := url.Parse(c.PublicURL)
-		if err == nil && ((u.Path != "" && u.Path != "/") || u.RawQuery != "") {
-			errors = append(errors, "APP_PUBLIC_URL must be the root HTTP(S) origin")
+		if err := ValidateURL(c.PublicURL); err != nil {
+			errors = append(errors, "APP_PUBLIC_URL: "+err.Error())
+		} else {
+			u, err := url.Parse(c.PublicURL)
+			if err == nil && ((u.Path != "" && u.Path != "/") || u.RawQuery != "") {
+				errors = append(errors, "APP_PUBLIC_URL must be the root HTTP(S) origin")
+			}
 		}
 	}
 	if len(errors) > 0 {

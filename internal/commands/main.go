@@ -30,9 +30,9 @@ func Run(args []string) error {
 	switch command {
 	case "healthcheck":
 		return healthcheck(c)
-	case "serve", "backup", "restore", "verify-backup", "link-identity", "reset-password", "delete-backup":
+	case "serve", "backup", "restore", "verify-backup", "reset-password", "delete-backup":
 	default:
-		return fmt.Errorf("usage: tally [serve|healthcheck|backup|restore <archive>|verify-backup <archive>|link-identity <profile-id-or-name> <issuer> <subject>|reset-password <profile-id-or-name>|delete-backup <filename>]")
+		return fmt.Errorf("usage: tally [serve|healthcheck|backup|restore <archive>|verify-backup <archive>|reset-password <profile-id-or-name>|delete-backup <filename>]")
 	}
 	if err = os.MkdirAll(c.DataDir, 0700); err != nil {
 		return err
@@ -103,8 +103,6 @@ func Run(args []string) error {
 	defer db.Close()
 
 	switch command {
-	case "link-identity":
-		return linkIdentity(ctx, db, args)
 	case "reset-password":
 		return resetPassword(ctx, db, args)
 	case "backup":

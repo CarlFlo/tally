@@ -20,7 +20,6 @@ type Server struct {
 	Backup     *backup.Service
 	Config     config.Config
 	Auth       *auth.Service
-	OIDC       *auth.OIDC
 	Metadata   *metadata.Service
 	Control    *providers.Coordinator
 	Jobs       *jobs.Service

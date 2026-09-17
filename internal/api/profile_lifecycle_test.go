@@ -22,7 +22,6 @@ func TestProfileIDsAreOpaqueAndLastAdminIsProtected(t *testing.T) {
 	}
 	expect(t, request(t, h, "POST", "/api/profiles", map[string]any{"name": "Over limit"}, admin), 400)
 
-	// Existing profiles must never be stranded without an administrator.
 	expect(t, request(t, h, "PATCH", "/api/profiles/profile-admin/admin", map[string]any{"is_admin": false}, admin), 400)
 	expect(t, request(t, h, "DELETE", "/api/profiles/profile-admin", nil, admin), 400)
 
@@ -58,8 +57,7 @@ func TestDeletingOnlyProfileAllowsCleanFirstAdminBootstrap(t *testing.T) {
 		t.Fatal("last profile was not deleted", err)
 	}
 
-	signedOut := profileCookie(t, deleted)
-	created := request(t, h, "POST", "/api/auth/register", map[string]any{"name": "New owner"}, signedOut)
+	created := request(t, h, "POST", "/api/auth/register", map[string]any{"name": "New owner"})
 	expect(t, created, 201)
 	var body map[string]any
 	if err := json.Unmarshal(created.Body.Bytes(), &body); err != nil {
