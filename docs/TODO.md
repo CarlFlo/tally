@@ -23,7 +23,7 @@ Status: per-profile authentication rework in progress.
 - [ ] Let profile creation and profile management explicitly choose and change the authentication method.
 - [ ] Show each profile's authentication method on `/settings/profiles` and clearly warn when No authentication is selected.
 - [ ] Use normal server sessions for no-auth profiles instead of a global disabled-auth path.
-- [ ] Keep existing OIDC code/data dormant and unlinked from the active login flow for now.
+- [x] Remove the unused OIDC implementation, configuration, dependencies, identity table, and related UI/docs remnants.
 - [ ] Update authentication regression coverage and run the full required validation suite.
 
 ## Current product foundations
@@ -35,7 +35,7 @@ The following are established capabilities rather than active TODO items:
 - Calendar, library, discovery, show details, episode state, favorites, responsive themes, and profile-specific localization.
 - SQLite-backed application settings, schedules, jobs, statistics, logs, bell notifications, Webhook/Discord delivery, and live updates.
 - TVmaze metadata coordination with bounded requests, caching, retries, cancellation, rate limiting, and circuit protection.
-- Validated SQLite migrations through schema 7, pre-upgrade snapshots, archive backups, retention, staged validation, and in-process restore.
+- Validated SQLite migrations through schema 8, pre-upgrade snapshots, archive backups, retention, staged validation, and in-process restore.
 - Manual Jackett search and qBittorrent submission/download monitoring with operator-managed credentials.
 - Version-managed English and Ukrainian bundled locales plus validated hot-loaded custom locale files.
 
@@ -43,7 +43,6 @@ The following are established capabilities rather than active TODO items:
 
 These remain intentionally outside the current product unless a future task explicitly changes the scope:
 
-- OIDC/SSO enrollment and provider configuration. Existing OIDC implementation/data may remain dormant for future work.
 - Automatic torrent selection or automatic downloading.
 - Torrent scanning, renaming, importing, or media-library lifecycle management.
 - Additional downloader adapters beyond the currently supported client.
