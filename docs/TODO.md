@@ -10,58 +10,59 @@ Status: torrent confidence, verified inspection, automation, and Previous Runs i
 
 ### Evaluation and search metadata
 
-- [x] Add one backend-owned torrent evaluation model shared by manual search and future automation.
+- [x] Add one backend-owned torrent evaluation model shared by manual search and automation.
 - [x] Keep confidence (`high`, `medium`, `low`, `rejected`) separate from user preference/ranking.
 - [x] Enrich normalized Jackett/Torznab results with useful metadata when supplied: category, infohash, external IDs, grabs, and ratio/download factors.
 - [x] Add conservative release parsing/matching for show identity, aliases/year, season/episode forms, quality/source/codec clues, seeders, and size sanity.
 - [x] Treat specials, multi-episode releases, season packs, ambiguous identities, and malformed titles conservatively.
-- [ ] Surface compact localized confidence on manual search without exposing internal numeric scoring. Only show confidence when an actual episode target is known; do not infer authoritative confidence from arbitrary free-text search.
+- [x] Surface compact localized confidence on manual search without exposing internal numeric scoring. Only show confidence when an actual episode target is known; do not infer authoritative confidence from arbitrary free-text search.
 
 ### Torrent verification
 
 - [x] Deep-inspect only shortlisted/selected candidates rather than every Jackett result.
 - [x] Fetch retrievable `.torrent` files through the provider coordination boundary without exposing provider URLs to the browser.
 - [x] Parse bencoded torrent metadata locally, derive/validate infohash as appropriate, and inspect the complete file tree before qBittorrent submission.
-- [ ] Reject clearly unsuitable payloads such as missing meaningful video, executable/script content, suspicious archive-only payloads, sample-only payloads, episode mismatch, or previously blocked infohashes.
+- [x] Reject clearly unsuitable payloads such as missing meaningful video, executable/script content, suspicious archive-only payloads, sample-only payloads, episode mismatch, or previously blocked infohashes.
 - [x] Record verification as `verified` or `unverified`; automatic download requires a verified candidate.
 - [x] Magnet-only results remain available for manual download but are never eligible for automatic download because their payload cannot be inspected first.
-- [ ] If the best candidate fails verification, continue through the next bounded shortlist candidate rather than immediately failing the run.
+- [x] If the best candidate fails verification, continue through the next bounded shortlist candidate rather than immediately failing the run.
 
 ### Global automation
 
-- [ ] Add an `Automation` tab inside Torrent Search; automation/download policy is deployment-global, not profile-owned.
-- [ ] Add minimal global controls: enable automatic downloads, preferred quality, minimum seeders, high-confidence-only default, and a sensible built-in release delay/retry policy.
-- [ ] Add global per-show download policy: use default/manual, notify only where applicable, auto-download, or never download without creating contradictory per-profile downloader behavior.
-- [ ] Keep existing search/download capability toggles backend-authoritative; automation must stop before submission if downloading becomes disabled mid-run.
-- [ ] Prevent duplicate grabs and serialize decisions per episode while keeping overall work bounded/cancellable.
-- [ ] Treat `no verified candidate` as a normal outcome, not an operational error, and retry later within a bounded window rather than accepting a weak match.
-- [ ] Avoid duplicate qBittorrent submissions after ambiguous/time-out responses by reconciling against the selected infohash where possible.
+- [x] Add an `Automation` tab inside Torrent Search; automation/download policy is deployment-global, not profile-owned.
+- [x] Add minimal global controls: enable automatic downloads, preferred quality, minimum seeders, release delay, and bounded retry behavior. High + Verified remains an invariant rather than a tunable lower threshold.
+- [ ] Add a global per-show download override UI using download-only choices: `Default`, `Auto-download`, or `Never auto-download`. Notifications remain profile-owned and are not part of this policy.
+- [x] Keep existing search/download capability toggles backend-authoritative; automation stops before submission if downloading becomes disabled mid-run.
+- [x] Prevent duplicate grabs and serialize decisions per episode while keeping overall work bounded/cancellable.
+- [x] Treat `no verified candidate` as a normal outcome, not an operational error, and retry later within a bounded window rather than accepting a weak match.
+- [x] Avoid duplicate qBittorrent submissions after ambiguous/time-out responses by reconciling against the selected infohash where possible.
+- [x] Expose Torrent automation as its own independent scheduler job with a default 15-minute cadence and normal scheduler controls/history.
 
 ### Previous Runs
 
-- [ ] Add a `Previous Runs` tab inside Torrent Search; this is the user-facing explainability/history surface rather than an "Audit" page.
-- [ ] Persist immutable global run records containing episode/show IDs, query, settings snapshot, candidate/filter/ranking decisions, verification result, selected infohash, submission result, timestamps/durations, and decision-engine version.
-- [ ] Never persist credentials, authenticated URLs, cookies, API keys, or other connection secrets in run history.
-- [ ] Render desktop runs/timeline/details layout and responsive tablet/mobile variants in the existing Tally visual language.
-- [ ] Show a chronological decision timeline: search, filtering, candidate ranking, torrent inspection, decision, qBittorrent submission, and later feedback.
-- [ ] Allow verified torrent inspection details to expand into the parsed file tree.
-- [ ] Add `Mark as bad` feedback with reasons such as wrong show/episode/language, poor quality, corrupt, suspicious files, or other.
-- [ ] Preserve original decisions and append later feedback instead of rewriting history.
-- [ ] Block the exact bad infohash globally while avoiding automatic whole-indexer/release-group blacklisting from a single report.
-- [ ] Previously bad hashes remain visible in manual search with a warning but are automatically excluded from automation.
-- [ ] Add bounded retention for detailed run history while retaining the small bad-infohash history needed to prevent repeat selection loops.
+- [x] Add a `Previous Runs` tab inside Torrent Search; this is the user-facing explainability/history surface rather than an "Audit" page.
+- [x] Persist immutable global run records containing episode/show IDs, query, settings snapshot, candidate/filter/ranking decisions, verification result, selected infohash, submission result, timestamps/durations, and decision-engine version.
+- [x] Never persist credentials, authenticated URLs, cookies, API keys, or other connection secrets in run history.
+- [x] Render desktop runs/timeline/details layout and responsive tablet/mobile variants in the existing Tally visual language.
+- [x] Show a chronological decision timeline: search, filtering, candidate ranking, torrent inspection, decision, qBittorrent submission, and later feedback.
+- [x] Allow verified torrent inspection details to expand into the parsed file tree.
+- [x] Add `Mark as bad` feedback with reasons such as wrong show/episode/language, poor quality, corrupt, suspicious files, or other.
+- [x] Preserve original decisions and append later feedback instead of rewriting history.
+- [x] Block the exact bad infohash globally while avoiding automatic whole-indexer/release-group blacklisting from a single report.
+- [x] Previously bad hashes remain visible in manual search with a warning but are automatically excluded from automation.
+- [x] Add bounded retention for detailed run history while retaining the small bad-infohash history needed to prevent repeat selection loops.
 
 ### Notifications and ownership
 
-- [ ] Keep automation and Previous Runs deployment-global because one shared downloader is authoritative.
-- [ ] Keep notifications profile-owned and fan automation/release outcomes out only to profiles that follow the relevant show and have enabled the corresponding notification category.
-- [ ] Ensure one global torrent action cannot produce duplicate downloads merely because multiple profiles follow the show.
+- [x] Keep automation and Previous Runs deployment-global because one shared downloader is authoritative.
+- [x] Keep release/bell notifications profile-owned and scoped through each profile's followed shows/calendar and notification preferences; do not add notification controls to global torrent automation.
+- [x] Ensure one global torrent action cannot produce duplicate downloads merely because multiple profiles follow the show.
 
 ### Quality and documentation
 
-- [ ] Add database migrations and backup/restore coverage for new durable state.
-- [ ] Add/update English and Ukrainian localization keys and increment bundled catalog versions for all user-facing text.
-- [ ] Add deterministic backend tests for release parsing, confidence vs preference, `.torrent` parsing/inspection, blocked hashes, immutable run snapshots, retries/deduplication, and capability enforcement.
+- [x] Add database migration for automation/run history state and keep it inside the normal backup/restore database path.
+- [x] Add/update English and Ukrainian localization keys and increment bundled catalog versions for all new user-facing text.
+- [ ] Complete deterministic backend coverage for release parsing, confidence vs preference, `.torrent` parsing/inspection, blocked hashes, immutable run snapshots, retries/deduplication, capability enforcement, verified automation, and magnet exclusion.
 - [ ] Add browser coverage for Search confidence, Automation, Previous Runs, bad-run feedback, responsive layouts, and disabled feature states.
 - [ ] Update `ARCHITECTURE.md`, `DEVELOPMENT.md`, `VALIDATION.md`, and `LESSONS.md` where the durable manual-only torrent contract changes.
 - [ ] Run the complete required validation suite before the branch is considered ready.
