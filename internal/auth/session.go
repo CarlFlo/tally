@@ -21,31 +21,6 @@ func (s *Service) Cookie(w http.ResponseWriter, r *http.Request, name, value str
 
 func (s *Service) Resolve(r *http.Request) (Session, error) {
 	ctx := r.Context()
-	if s.Config.AuthMode == "disabled" {
-		var session Session
-		if c, e := r.Cookie("tally_profile"); e == nil {
-			e = s.DB.QueryRowContext(ctx, `SELECT p.id,r.is_admin
-				FROM profiles p JOIN profile_roles r ON r.profile_id=p.id
-				WHERE p.id=? OR p.id=(SELECT profile_id FROM profile_id_aliases WHERE alias=?)
-				LIMIT 1`, c.Value, c.Value).Scan(&session.Profile, &session.Admin)
-			if e == nil {
-				return session, nil
-			}
-			// An explicit sign-out or a deleted profile must not auto-enter another profile.
-			return Session{}, fmt.Errorf("choose a profile")
-		}
-		var count int
-		if e := s.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM profiles").Scan(&count); e != nil {
-			return Session{}, e
-		}
-		if count == 1 {
-			if e := s.DB.QueryRowContext(ctx, `SELECT p.id,r.is_admin FROM profiles p JOIN profile_roles r ON r.profile_id=p.id LIMIT 1`).Scan(&session.Profile, &session.Admin); e != nil {
-				return Session{}, e
-			}
-			return session, nil
-		}
-		return Session{}, fmt.Errorf("choose a profile")
-	}
 	c, e := r.Cookie("tally_session")
 	if e != nil {
 		return Session{}, fmt.Errorf("sign in to continue")
