@@ -10,12 +10,12 @@ Status: torrent confidence, verified inspection, automation, and Previous Runs i
 
 ### Evaluation and search metadata
 
-- [ ] Add one backend-owned torrent evaluation model shared by manual search and future automation.
+- [x] Add one backend-owned torrent evaluation model shared by manual search and future automation.
 - [x] Keep confidence (`high`, `medium`, `low`, `rejected`) separate from user preference/ranking.
 - [x] Enrich normalized Jackett/Torznab results with useful metadata when supplied: category, infohash, external IDs, grabs, and ratio/download factors.
-- [ ] Add conservative release parsing/matching for show identity, aliases/year, season/episode forms, quality/source/codec clues, seeders, and size sanity.
+- [x] Add conservative release parsing/matching for show identity, aliases/year, season/episode forms, quality/source/codec clues, seeders, and size sanity.
 - [x] Treat specials, multi-episode releases, season packs, ambiguous identities, and malformed titles conservatively.
-- [ ] Surface compact localized confidence on manual search without exposing internal numeric scoring.
+- [ ] Surface compact localized confidence on manual search without exposing internal numeric scoring. Only show confidence when an actual episode target is known; do not infer authoritative confidence from arbitrary free-text search.
 
 ### Torrent verification
 
@@ -66,22 +66,12 @@ Status: torrent confidence, verified inspection, automation, and Previous Runs i
 - [ ] Update `ARCHITECTURE.md`, `DEVELOPMENT.md`, `VALIDATION.md`, and `LESSONS.md` where the durable manual-only torrent contract changes.
 - [ ] Run the complete required validation suite before the branch is considered ready.
 
-## Queued authentication work
-
-The following unfinished authentication work remains separate from this branch:
-
-- [ ] Replace deployment-wide local/no-auth selection with per-profile Password or No authentication.
-- [ ] Let profile creation and profile management explicitly choose and change the authentication method.
-- [ ] Show each profile's authentication method on `/settings/profiles` and clearly warn when No authentication is selected.
-- [ ] Use normal server sessions for no-auth profiles instead of a global disabled-auth path.
-- [ ] Update authentication regression coverage and run the full required validation suite.
-
 ## Current product foundations
 
 The following are established capabilities rather than active TODO items:
 
 - Shared TV metadata with profile-owned follows, preferences, favorites, and episode state.
-- Opaque profile IDs, transferable administrator roles, sessions, and actor re-authentication for sensitive administrator changes.
+- Per-profile Password or No authentication, opaque profile IDs, transferable administrator roles, sessions, and actor re-authentication for sensitive administrator changes.
 - Calendar, library, discovery, show details, episode state, favorites, responsive themes, and profile-specific localization.
 - SQLite-backed application settings, schedules, jobs, statistics, logs, bell notifications, Webhook/Discord delivery, and live updates.
 - TVmaze metadata coordination with bounded requests, caching, retries, cancellation, rate limiting, and circuit protection.
