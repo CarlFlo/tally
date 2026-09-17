@@ -25,8 +25,8 @@ func (s *Server) deleteProfile(w http.ResponseWriter, r *http.Request, session a
 			return err
 		}
 	}
-	if targetAdmin && s.Config.AuthMode == "local" {
-		if err := s.Auth.Reauthenticate(r.Context(), session.Profile, in.Password); err != nil {
+	if targetAdmin {
+		if err := s.reauthenticateIfProtected(r.Context(), session.Profile, in.Password); err != nil {
 			return apiError{401, err.Error()}
 		}
 	}
