@@ -1,6 +1,6 @@
 # Localization
 
-Tally localizes the web interface per profile. Locale catalogs are owned by the server and loaded from the persistent application data directory.
+Tally localizes the web interface per profile. Locale catalogs are loaded from the persistent application data directory.
 
 ## Location and bundled locales
 
@@ -11,7 +11,13 @@ Bundled catalogs currently include:
 - `en.json` — canonical key contract and final fallback
 - `uk.json` — bundled Ukrainian translation
 
-English may be replaced on startup when the persistent copy is missing, invalid, or older than the bundled catalog version. Bundled non-English catalogs are installed only when missing, so operator edits are not overwritten.
+Bundled filenames are managed by Tally. On startup, Tally reconciles each bundled file with the embedded catalog:
+
+- a missing, invalid, older, or same-version-modified file is replaced atomically;
+- an exact current copy is left untouched, avoiding unnecessary disk writes;
+- a valid file with a newer `catalogVersion` is preserved so temporarily running an older Tally release does not destroy a newer catalog.
+
+Do not customize a bundled filename. Custom translations must use their own unique locale filename, such as `sv.json`; Tally does not overwrite those files.
 
 ## File format
 
@@ -59,9 +65,11 @@ Keep interpolation variables unchanged, including braces:
 
 Use i18next plural keys where the canonical catalog does, and add any additional plural forms required by the target language.
 
-Tally watches the locale directory with filesystem events. Valid created/changed/renamed/removed files are reloaded and connected browsers are prompted through the existing live-update channel. There is no background polling fallback for unusual network filesystems.
+For every meaningful change to a bundled catalog — translated text, keys, placeholders, or metadata — increment that file's `_meta.catalogVersion`. Bundled catalog versions must only move forward; never reuse or decrease a version after changing its contents.
 
-Invalid locale files are logged, remain visible where practical, and are disabled for new selection with a concise UI reason. If a profile already references a locale that later becomes missing or invalid, the saved preference remains intact while the interface falls back to English. Repairing the file automatically restores that locale.
+Tally watches the locale directory with filesystem events. Valid created/changed/renamed/removed files are reloaded and connected browsers are prompted through the existing live-update channel. There is no background polling fallback for unusual network filesystems. Runtime edits to bundled filenames can therefore appear temporarily, but startup reconciliation restores the managed copy unless the on-disk catalog is from a newer version.
+
+Invalid custom locale files are logged, remain visible where practical, and are disabled for new selection with a concise UI reason. If a profile already references a custom locale that later becomes missing or invalid, the saved preference remains intact while the interface falls back to English. Repairing the file automatically restores that locale.
 
 ## Profile behavior
 
@@ -88,8 +96,8 @@ Known API errors may expose stable error codes so the frontend can show localize
 
 ## English key contract
 
-When the canonical English key set intentionally changes, increment `_meta.catalogVersion` in `internal/localization/en.json`.
+English is the canonical key set and final runtime fallback. When its keys or copy change meaningfully, increment `_meta.catalogVersion` in `internal/localization/en.json`. Bundled translations updated to match those changes must increment their own catalog version as well.
 
-English is always available as the final fallback, including when the persistent `en.json` becomes damaged at runtime. Non-English locale files are never overwritten merely because the bundled translation later changes.
+English remains available from the embedded catalog even if the persistent `en.json` becomes damaged while Tally is running.
 
 For broader state/localization lessons, see `LESSONS.md`.
