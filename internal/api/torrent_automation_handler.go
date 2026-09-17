@@ -1,7 +1,6 @@
 package api
 
 import (
-	"errors"
 	"net/http"
 	"strconv"
 
@@ -105,7 +104,7 @@ func (s *Server) updateTorrentShowPolicy(w http.ResponseWriter, r *http.Request,
 		return bad(err.Error())
 	}
 	policy, err := s.torrentAutomationStore().ShowPolicy(r.Context(), showID)
-	if err != nil && !errors.Is(err, nil) {
+	if err != nil {
 		return err
 	}
 	jsonResponse(w, 200, map[string]string{"policy": policy})
