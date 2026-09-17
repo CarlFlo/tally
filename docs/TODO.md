@@ -44,10 +44,11 @@ Status: follow-up refinement in progress after hands-on testing; final branch va
 - [ ] Add automation include-keyword and exclude-keyword filters, with useful default suggestions and an explicit reset-to-default/reset-filters action.
 - [ ] Add release-group rules: whitelist/allow selected groups and separately prioritize preferred groups when otherwise valid candidates are ranked.
 - [ ] Normalize Jackett uploader/author metadata when an indexer exposes it; uploader rules must degrade gracefully when the metadata is unavailable because Jackett/indexers do not guarantee it for every result.
-- [ ] Add uploader rules that can allow/filter and prioritize trusted uploaders/providers without treating trust as proof that the show/episode identity is correct.
+- [ ] Add uploader rules that can allow/filter and prioritize trusted uploaders without treating uploader trust as proof that the show/episode identity is correct.
+- [ ] Add an explicit preferred provider/indexer list using the existing Jackett provider/indexer name so known high-quality sources can materially influence ordering even when uploader metadata is unavailable.
 - [ ] Keep trust/preference signals separate from confidence: preferred group/uploader/provider should materially influence ordering among valid candidates but must not override wrong-show, wrong-episode, blocked-payload, or verification failures.
 - [ ] Persist these automation rules in the global settings snapshot so Previous Runs can explain exactly which filters/trust rules affected each historical decision.
-- [ ] Add deterministic tests for keyword filters, reset/default behavior, group whitelist/priorities, uploader metadata present/missing, trusted-source ranking, and the separation of trust/preference from confidence.
+- [ ] Add deterministic tests for keyword filters, reset/default behavior, group whitelist/priorities, uploader metadata present/missing, preferred-provider ranking, trusted-source ranking, and the separation of trust/preference from confidence.
 
 ### Manual search result inspection
 
