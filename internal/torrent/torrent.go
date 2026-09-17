@@ -14,17 +14,26 @@ type SearchQuery struct {
 }
 
 type SearchResult struct {
-	ID           string `json:"id"`
-	Name         string `json:"name"`
-	Size         int64  `json:"size"`
-	Seeders      int    `json:"seeders"`
-	Leechers     int    `json:"leechers"`
-	Provider     string `json:"provider"`
-	Source       string `json:"source"`
-	Magnet       string `json:"magnet"`
-	URL          string `json:"url"`
-	Published    string `json:"published"`
-	DownloadType string `json:"download_type"`
+	ID                   string   `json:"id"`
+	Name                 string   `json:"name"`
+	Size                 int64    `json:"size"`
+	Seeders              int      `json:"seeders"`
+	Leechers             int      `json:"leechers"`
+	Grabs                int      `json:"grabs,omitempty"`
+	Provider             string   `json:"provider"`
+	Source               string   `json:"source"`
+	Magnet               string   `json:"magnet"`
+	URL                  string   `json:"url"`
+	Published            string   `json:"published"`
+	DownloadType         string   `json:"download_type"`
+	InfoHash             string   `json:"info_hash,omitempty"`
+	Categories           []int    `json:"categories,omitempty"`
+	TVDBID               string   `json:"tvdb_id,omitempty"`
+	TMDBID               string   `json:"tmdb_id,omitempty"`
+	IMDBID               string   `json:"imdb_id,omitempty"`
+	TVMazeID             string   `json:"tvmaze_id,omitempty"`
+	DownloadVolumeFactor *float64 `json:"download_volume_factor,omitempty"`
+	UploadVolumeFactor   *float64 `json:"upload_volume_factor,omitempty"`
 }
 
 type Download struct {
