@@ -107,7 +107,7 @@ DROP TABLE inbox_dismissals; DROP TABLE inbox_state; DROP INDEX episode_release_
 DROP TABLE activity_log; DROP TABLE browser_preferences; DROP TABLE notification_state; DROP TABLE notification_outbox;
 DROP TABLE application_settings; DROP TABLE show_actions; ALTER TABLE profile_shows DROP COLUMN favorite;
 ALTER TABLE jobs DROP COLUMN enabled; ALTER TABLE jobs DROP COLUMN paused; ALTER TABLE jobs DROP COLUMN failures;
-ALTER TABLE jobs DROP COLUMN revision; DROP TABLE download_client_settings; ALTER TABLE profiles DROP COLUMN locale; CREATE TABLE counters (key TEXT PRIMARY KEY, value INTEGER NOT NULL); INSERT INTO counters VALUES ('profile',1); PRAGMA user_version=1;
+ALTER TABLE jobs DROP COLUMN revision; DROP TABLE download_client_settings; ALTER TABLE profiles DROP COLUMN locale; ALTER TABLE profiles DROP COLUMN auth_method; CREATE TABLE counters (key TEXT PRIMARY KEY, value INTEGER NOT NULL); INSERT INTO counters VALUES ('profile',1); PRAGMA user_version=1;
 UPDATE profiles SET display_name='Legacy profile' WHERE id='user0'`); err != nil {
 		t.Fatal(err)
 	}
