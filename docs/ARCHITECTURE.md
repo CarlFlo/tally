@@ -7,7 +7,6 @@ Tally is one Go service serving an embedded React application and a permanent SQ
 - Shared TV metadata belongs to the deployment, never to a profile.
 - Profiles own follows, favorites, preferences, localization, and episode state.
 - Authentication maps to opaque immutable profile IDs; authorization is role-based.
-- External provider IDs are mappings, not application-wide primary identifiers.
 - SQLite is the source of truth for durable application state.
 - Infrastructure configuration comes from environment variables; operator-editable application settings live in SQLite.
 - Outbound provider work goes through the provider coordinator.
@@ -20,7 +19,7 @@ Tally is one Go service serving an embedded React application and a permanent SQ
 | `main.go` | Small process entrypoint and top-level error handling |
 | `internal/commands` | Startup/shutdown, configuration wiring, deployment lock, operator commands |
 | `internal/api` | HTTP routes, authorization, validation, response handling, live events, SPA serving |
-| `internal/auth` | Passwords, sessions, recovery, OIDC, identity mapping |
+| `internal/auth` | Per-profile password/no-auth state, sessions, and recovery |
 | `internal/profiles` | Profile lifecycle, roles, names, avatars, sensitive role changes |
 | `internal/metadata` | TV metadata, persistence, follows/import queue, TVmaze integration |
 | `internal/providers` | Bounded outbound request admission, retries, rate limits, circuits, telemetry, cancellation |
@@ -41,11 +40,11 @@ Keep new code in the owning domain. Prefer narrow interfaces at boundaries and c
 
 ## Database and identity
 
-SQLite runs with foreign keys and WAL enabled. Schema changes are explicit sequential migrations; schema 7 is current. Existing databases receive a validated pre-upgrade snapshot before migration. Migration work is transactional and validated before commit; downgrades from a newer unsupported schema are refused.
+SQLite runs with foreign keys and WAL enabled. Schema changes are explicit sequential migrations; schema 8 is current. Existing databases receive a validated pre-upgrade snapshot before migration. Migration work is transactional and validated before commit; downgrades from a newer unsupported schema are refused.
 
-Profiles use generated opaque IDs. Administrator privileges live in explicit role data rather than a special account ID. Database constraints protect invariants such as retaining an administrator while profiles remain, with API and UI checks providing additional defense in depth.
+Profiles use generated opaque IDs. Each profile explicitly chooses Password or No authentication. Administrator privileges live in explicit role data rather than a special account ID. Database constraints protect invariants such as retaining an administrator while profiles remain, with API and UI checks providing additional defense in depth.
 
-Sensitive administrator demotion/deletion under local authentication re-authenticates the acting administrator using the actor's credentials. Authorization is always enforced by the backend even when matching controls are hidden in the frontend.
+Sensitive administrator demotion/deletion re-authenticates the acting administrator when that administrator uses password authentication. Authorization is always enforced by the backend even when matching controls are hidden in the frontend.
 
 ## Frontend state and navigation
 
