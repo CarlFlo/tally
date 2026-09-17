@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import {
   Archive,
   Activity,
+  Download,
   Play,
   RefreshCw,
   SlidersHorizontal,
@@ -117,13 +118,17 @@ export function JobsPage() {
                       ? "purple"
                       : job.key === "backup"
                         ? "mint"
-                        : "amber")
+                        : job.key === "torrent_automation"
+                          ? "purple"
+                          : "amber")
                   }
                 >
                   {job.key === "metadata" ? (
                     <RefreshCw size={21} />
                   ) : job.key === "backup" ? (
                     <Archive size={21} />
+                  ) : job.key === "torrent_automation" ? (
+                    <Download size={21} />
                   ) : (
                     <SlidersHorizontal size={21} />
                   )}
@@ -144,7 +149,12 @@ export function JobsPage() {
                   ? t("jobs.metadataCardHelp")
                   : job.key === "backup"
                     ? t("jobs.backupCardHelp")
-                    : t("jobs.maintenanceCardHelp")}
+                    : job.key === "torrent_automation"
+                      ? t("jobs.torrentAutomationCardHelp", {
+                          defaultValue:
+                            "Check released episodes for verified torrent candidates using your global automation settings.",
+                        })
+                      : t("jobs.maintenanceCardHelp")}
               </p>
               <dl>
                 <div>
@@ -213,6 +223,9 @@ export function JobsPage() {
             >
               <option value="all">{t("jobs.all")}</option>
               <option value="metadata">{t("jobs.metadata")}</option>
+              <option value="torrent_automation">
+                {t("jobs.torrentAutomation", { defaultValue: "Torrent automation" })}
+              </option>
               <option value="backup">{t("jobs.backup")}</option>
               <option value="maintenance">{t("jobs.maintenance")}</option>
             </select>
