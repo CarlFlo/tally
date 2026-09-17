@@ -4,16 +4,23 @@ import { i18n } from "./i18n";
 export const jobName = (key: string) =>
   key === "metadata"
     ? i18n.t("jobs.metadata")
-    : key === "backup"
-      ? i18n.t("jobs.automaticBackup")
-      : i18n.t("jobs.maintenance");
+    : key === "torrent_automation"
+      ? i18n.t("jobs.torrentAutomation", { defaultValue: "Torrent automation" })
+      : key === "backup"
+        ? i18n.t("jobs.automaticBackup")
+        : i18n.t("jobs.maintenance");
 
 export const jobDescription = (key: string) =>
   key === "metadata"
     ? i18n.t("jobs.metadataDescription")
-    : key === "backup"
-      ? i18n.t("jobs.backupDescription")
-      : i18n.t("jobs.maintenanceDescription");
+    : key === "torrent_automation"
+      ? i18n.t("jobs.torrentAutomationDescription", {
+          defaultValue:
+            "Checks released episodes for verified torrent candidates using the global automation policy.",
+        })
+      : key === "backup"
+        ? i18n.t("jobs.backupDescription")
+        : i18n.t("jobs.maintenanceDescription");
 
 export const commonSchedules: Record<string, readonly [string, string][]> = {
   metadata: [
@@ -21,6 +28,12 @@ export const commonSchedules: Record<string, readonly [string, string][]> = {
     ["schedule.everyHour", "0 * * * *"],
     ["schedule.every6", "0 */6 * * *"],
     ["schedule.daily0300", "0 3 * * *"],
+  ],
+  torrent_automation: [
+    ["schedule.every15", "*/15 * * * *"],
+    ["schedule.every30", "*/30 * * * *"],
+    ["schedule.everyHour", "0 * * * *"],
+    ["schedule.every6", "0 */6 * * *"],
   ],
   maintenance: [
     ["schedule.daily0330", "30 3 * * *"],
