@@ -45,7 +45,6 @@ func (s *Server) Handler() http.Handler {
 		{"PATCH /api/browser/preferences", s.browserPreferences, true},
 		{"DELETE /api/shows/{id}/watch-history", s.clearWatchHistory, false},
 		{"GET /api/bootstrap", s.bootstrap, true},
-		{"POST /api/auth/setup", s.setupPassword, true},
 		{"POST /api/auth/register", s.registerProfile, true},
 		{"POST /api/auth/login", s.login, true},
 		{"POST /api/auth/recover", s.recover, true},
@@ -58,6 +57,7 @@ func (s *Server) Handler() http.Handler {
 		{"POST /api/profiles/select", s.selectProfile, true},
 		{"PATCH /api/profile", s.updateProfile, false},
 		{"PATCH /api/profiles/{id}/admin", s.updateProfileAdmin, false},
+		{"PATCH /api/profiles/{id}/authentication", s.updateProfileAuthentication, false},
 		{"DELETE /api/profiles/{id}", s.deleteProfile, false},
 		{"POST /api/profile/avatar", s.uploadAvatar, false},
 		{"GET /api/avatars/{name}", s.avatar, true},
@@ -92,10 +92,6 @@ func (s *Server) Handler() http.Handler {
 	}
 	for _, r := range routes {
 		mux.HandleFunc(r.pattern, s.wrap(r.fn, r.public))
-	}
-	if s.Config.AuthMode == "oidc" {
-		mux.HandleFunc("GET /auth/oidc/start", s.oidcStart)
-		mux.HandleFunc("GET /auth/oidc/callback", s.oidcCallback)
 	}
 	mux.HandleFunc("/", s.assets)
 	return s.security(mux)
