@@ -33,7 +33,7 @@ test("200 route changes remain interactive with bounded resources and no cooldow
   });
   await selectProfileByName(page, "My profile");
   await page.goto("/settings");
-  await expect(page.locator(".schedule-editor")).toHaveCount(3);
+  await expect(page.locator(".schedule-editor")).toHaveCount(4);
   // Bootstrap/localization loading is intentionally outside this test's scope.
   // Measure only the request concurrency caused by client-side navigation.
   await expect.poll(() => page.evaluate(() => (window as any).lifecycle.requests)).toBe(0);
@@ -66,7 +66,7 @@ test("200 route changes remain interactive with bounded resources and no cooldow
     }
     await page.getByRole("button", { name: "Open profile menu" }).click();
     await page.locator('#profile-menu a[href="/settings"]').click();
-    await expect(page.locator(".schedule-editor")).toHaveCount(3);
+    await expect(page.locator(".schedule-editor")).toHaveCount(4);
     if (cycle === 0) baseline = await resources();
   }
   expect(await resources()).toBeLessThanOrEqual(baseline + 5);
