@@ -12,10 +12,9 @@ func (s *Server) createProfile(w http.ResponseWriter, r *http.Request, session a
 	if err := s.operator(session); err != nil {
 		return err
 	}
-	if s.Config.AuthMode == "oidc" {
-		return bad("OIDC profiles are created when their identity signs in")
+	var in struct {
+		Name, Avatar, Locale, Password, AuthMethod string
 	}
-	var in struct{ Name, Avatar, Locale, Password string }
 	if err := decode(r, &in); err != nil {
 		return err
 	}
@@ -31,8 +30,21 @@ func (s *Server) createProfile(w http.ResponseWriter, r *http.Request, session a
 	if s.Locales == nil || !s.Locales.Valid(in.Locale) {
 		return badCode("profile_locale_invalid", "choose an available language")
 	}
+	if in.AuthMethod == "" {
+		if in.Password == "" {
+			in.AuthMethod = auth.ProfileAuthNone
+		} else {
+			in.AuthMethod = auth.ProfileAuthPassword
+		}
+	}
+	if in.AuthMethod != auth.ProfileAuthPassword && in.AuthMethod != auth.ProfileAuthNone {
+		return bad("choose Password or No authentication")
+	}
 	hash := ""
-	if s.Config.AuthMode == "local" && in.Password != "" {
+	if in.AuthMethod == auth.ProfileAuthPassword {
+		if in.Password == "" {
+			return bad("password is required")
+		}
 		var err error
 		hash, err = s.Auth.HashPassword(r.Context(), in.Password)
 		if err != nil {
