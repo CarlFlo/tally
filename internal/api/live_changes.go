@@ -64,6 +64,14 @@ func liveChanges(r *http.Request, session auth.Session) []liveUpdate {
 		return []liveUpdate{update("", "downloader", "settings", "capabilities")}
 	}
 
+	// Sign-in happens before the request has an authenticated session, so the
+	// target profile is not available to this central mapper. Broadcasting only
+	// the session invalidation is safe: the sessions endpoint remains profile-
+	// scoped and only active security pages refetch it.
+	if path == "/api/auth/login" || path == "/api/profiles/select" {
+		return []liveUpdate{update("", "sessions")}
+	}
+
 	profile := session.Profile
 	switch {
 	case path == "/api/show-actions":
@@ -84,6 +92,8 @@ func liveChanges(r *http.Request, session auth.Session) []liveUpdate {
 		return []liveUpdate{update(profile, "inbox")}
 	case path == "/api/preferences" || path == "/api/profile" || path == "/api/profile/avatar":
 		return []liveUpdate{update(profile, "bootstrap")}
+	case path == "/api/auth/logout":
+		return []liveUpdate{update(profile, "sessions")}
 	case strings.HasPrefix(path, "/api/auth/sessions/") || path == "/api/auth/password":
 		return []liveUpdate{update(profile, "bootstrap", "sessions")}
 	case path == "/api/profiles" || strings.HasPrefix(path, "/api/profiles/"):

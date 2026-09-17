@@ -77,6 +77,27 @@ func TestLiveChangesScopesAndTargetsResources(t *testing.T) {
 			[]liveUpdate{update("", "editable-settings", "settings", "capabilities", "bootstrap", "downloads")},
 		},
 		{
+			"password sign-in refreshes sessions globally",
+			http.MethodPost,
+			"/api/auth/login",
+			"",
+			[]liveUpdate{update("", "sessions")},
+		},
+		{
+			"passwordless sign-in refreshes sessions globally",
+			http.MethodPost,
+			"/api/profiles/select",
+			"",
+			[]liveUpdate{update("", "sessions")},
+		},
+		{
+			"logout refreshes sessions for the profile",
+			http.MethodPost,
+			"/api/auth/logout",
+			"profile-member",
+			[]liveUpdate{update("profile-member", "sessions")},
+		},
+		{
 			"torrent pause keeps optimistic download state",
 			http.MethodPost,
 			"/api/torrents/downloads/abc/stop",

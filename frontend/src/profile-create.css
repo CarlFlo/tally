@@ -1,0 +1,58 @@
+.profile-create-preview {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0 10px;
+}
+
+.profile-create-form .profile-create-preview .avatar.large {
+  width: 92px;
+  height: 92px;
+  font-size: 38px;
+  border-radius: 25px;
+}
+
+.profile-create-avatar-fields {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-create-form .avatar-choices {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin: 5px 0 2px;
+}
+
+.profile-create-form .avatar-choices > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+}
+
+.profile-create-form .avatar-choices > button:hover {
+  background: var(--surface2);
+}
+
+.profile-create-form .avatar-choices > button.selected {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.profile-create-form .profile-create-avatar-fields > label {
+  margin: 15px 0;
+}
+
+.profile-create-dialog-form {
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+
+.auth-none-warning {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 55%, var(--border));
+  background: color-mix(in srgb, var(--danger) 9%, var(--surface));
+}

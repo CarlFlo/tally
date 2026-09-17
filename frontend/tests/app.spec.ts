@@ -201,8 +201,11 @@ test("library, calendar, episode state, profiles, jobs and responsive layout", a
   await page.getByRole("link", { name: "Settings", exact: true }).click();
   await page.getByRole("link", { name: "Profiles", exact: true }).click();
   await page.getByRole("button", { name: "New profile" }).click();
-  await page.getByRole("textbox", { name: "Display name" }).fill("Alex");
-  await page
+  const createDialog = page.getByRole("dialog");
+  await createDialog.getByRole("textbox", { name: "Display name" }).fill("Alex");
+  await createDialog.getByLabel("New password", { exact: true }).fill("Alex!1234");
+  await createDialog.getByLabel("Confirm password", { exact: true }).fill("Alex!1234");
+  await createDialog
     .getByRole("button", { name: "Create profile", exact: true })
     .click();
   await expect(page.getByText("Alex", { exact: true })).toBeVisible();
@@ -213,6 +216,11 @@ test("library, calendar, episode state, profiles, jobs and responsive layout", a
   await signOut(page);
   await expect(page).toHaveURL(/\/login$/);
   await page.getByRole("button", { name: "AL Alex" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Welcome back, Alex." }),
+  ).toBeVisible();
+  await page.getByLabel("Password", { exact: true }).fill("Alex!1234");
+  await page.getByRole("button", { name: "Enter your space" }).click();
   await expect(
     page.getByRole("heading", { name: "Your calendar." }),
   ).toBeVisible();

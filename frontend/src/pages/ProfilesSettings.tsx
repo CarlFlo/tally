@@ -26,6 +26,11 @@ import {
   type Profile,
 } from "../lib";
 import { PageHeader } from "../PageHeader";
+import {
+  ProfileAvatarChoices,
+  ProfileAvatarPreview,
+  isValidHexColor,
+} from "../ProfileCreateAvatar";
 import { invalidateResources } from "../queryInvalidation";
 import { queryKeys } from "../queryKeys";
 
@@ -39,11 +44,6 @@ type SensitiveAction = {
 
 function profileAuth(profile: AuthProfile): AuthMethod {
   return profile.auth_method || (profile.has_password ? "password" : "none");
-}
-
-function normalizeHexColor(value: string) {
-  if (!value || value.startsWith("#")) return value;
-  return `#${value}`;
 }
 
 function DeploymentSettingsNav() {
@@ -121,8 +121,8 @@ export function ProfilesSettingsPage() {
 
   function authLabel(profile: AuthProfile) {
     return profileAuth(profile) === "password"
-      ? t("profile.authPassword", { defaultValue: "Password" })
-      : t("profile.authNone", { defaultValue: "No authentication" });
+      ? t("profile.passwordProtected")
+      : t("profile.authNone");
   }
 
   return (
@@ -169,7 +169,7 @@ export function ProfilesSettingsPage() {
                 <span className="profile-role-actions">
                   <button className="button small" onClick={() => setAuthProfile(profile)}>
                     <KeyRound size={16} />
-                    {t("profile.authentication", { defaultValue: "Authentication" })}
+                    {t("profile.authentication")}
                   </button>
                   <button
                     className="button small"
@@ -213,7 +213,7 @@ export function ProfilesSettingsPage() {
           onSaved={async () => {
             setAuthProfile(null);
             await refresh();
-            notify(t("profile.authenticationUpdated", { defaultValue: "Authentication updated" }));
+            notify(t("profile.authenticationUpdated"));
           }}
         />
       )}
@@ -283,10 +283,7 @@ function AuthenticationDialog({
   const [busy, setBusy] = useState(false);
   return (
     <Dialog
-      title={t("profile.authenticationFor", {
-        name: profile.display_name,
-        defaultValue: `Authentication · ${profile.display_name}`,
-      })}
+      title={t("profile.authenticationFor", { name: profile.display_name })}
       onClose={onClose}
     >
       <form
@@ -307,10 +304,10 @@ function AuthenticationDialog({
         }}
       >
         <label>
-          {t("profile.authentication", { defaultValue: "Authentication" })}
+          {t("profile.authentication")}
           <select value={method} onChange={(event) => setMethod(event.target.value as AuthMethod)}>
-            <option value="password">{t("profile.authPassword", { defaultValue: "Password" })}</option>
-            <option value="none">{t("profile.authNone", { defaultValue: "No authentication" })}</option>
+            <option value="password">{t("profile.authPassword")}</option>
+            <option value="none">{t("profile.authNone")}</option>
           </select>
         </label>
         {method === "password" ? (
@@ -327,11 +324,7 @@ function AuthenticationDialog({
             />
           </label>
         ) : (
-          <p className="callout warning">
-            {t("profile.authNoneWarning", {
-              defaultValue: "Anyone who can reach Tally can enter this profile without a password.",
-            })}
-          </p>
+          <p className="callout auth-none-warning">{t("profile.authNoneWarning")}</p>
         )}
         {requireActorPassword && (
           <label>
@@ -362,25 +355,33 @@ function CreateProfileDialog({ onClose }: { onClose: () => void }) {
   const { boot, notify } = useApp();
   const cache = useQueryClient();
   const [name, setName] = useState("");
-  const [avatar] = useState(
+  const [avatar, setAvatar] = useState(
     () => ["mint", "amber", "rose", "blue", "peach"][boot.profiles.length % 5],
   );
   const [customColor, setCustomColor] = useState("");
   const [locale, setLocale] = useState("en");
   const [method, setMethod] = useState<AuthMethod>("password");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
+  const selectedAvatar = isValidHexColor(customColor) ? customColor : avatar;
+
   useEffect(() => {
     previewLocale("en");
     return () => previewLocale(null);
   }, [previewLocale]);
+
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (method === "password" && password !== confirm) {
+      notify(t("profile.passwordMismatch"), true);
+      return;
+    }
     setBusy(true);
     try {
       await api("/profiles", "POST", {
         name,
-        avatar: customColor || avatar,
+        avatar: selectedAvatar,
         locale,
         auth_method: method,
         password: method === "password" ? password : "",
@@ -393,33 +394,44 @@ function CreateProfileDialog({ onClose }: { onClose: () => void }) {
       setBusy(false);
     }
   }
+
   return (
     <Dialog title={t("profile.newSpace")} onClose={onClose}>
-      <form onSubmit={submit}>
+      <form className="login-form profile-create-form profile-create-dialog-form" onSubmit={submit}>
+        <ProfileAvatarPreview
+          name={name}
+          avatar={avatar}
+          customColor={customColor}
+          locale={locale}
+        />
         <label>
           {t("profile.displayName")}
-          <input autoFocus required maxLength={80} value={name} onChange={(event) => setName(event.target.value)} />
-        </label>
-        <label>
-          {t("profile.customAvatarColor")}
           <input
-            value={customColor}
-            pattern="#[0-9A-Fa-f]{6}"
-            maxLength={7}
-            placeholder="#4F46E5"
-            spellCheck={false}
-            onChange={(event) => setCustomColor(normalizeHexColor(event.target.value))}
+            autoFocus
+            required
+            maxLength={80}
+            autoComplete="nickname"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
           />
-          <small className="muted">{t("profile.customAvatarHelp")}</small>
         </label>
+        <ProfileAvatarChoices
+          name={name}
+          avatar={avatar}
+          customColor={customColor}
+          locale={locale}
+          onAvatarChange={setAvatar}
+          onCustomColorChange={setCustomColor}
+        />
         <label>
           {t("profile.language")}
           <select
             aria-label={t("profile.language")}
             value={locale}
             onChange={(event) => {
-              setLocale(event.target.value);
-              previewLocale(event.target.value);
+              const next = event.target.value;
+              setLocale(next);
+              previewLocale(next);
             }}
           >
             {locales.map((item) => (
@@ -428,33 +440,56 @@ function CreateProfileDialog({ onClose }: { onClose: () => void }) {
               </option>
             ))}
           </select>
+          <small className="muted">{t("profile.languageHelp")}</small>
+          {locales
+            .filter((item) => !item.valid)
+            .map((item) => (
+              <small className="muted" key={item.locale}>
+                {item.name}: {item.error_code ? t(item.error_code, { defaultValue: item.error }) : item.error || t("profile.localeUnavailable")}
+              </small>
+            ))}
         </label>
         <label>
-          {t("profile.authentication", { defaultValue: "Authentication" })}
+          {t("profile.authentication")}
           <select value={method} onChange={(event) => setMethod(event.target.value as AuthMethod)}>
-            <option value="password">{t("profile.authPassword", { defaultValue: "Password" })}</option>
-            <option value="none">{t("profile.authNone", { defaultValue: "No authentication" })}</option>
+            <option value="password">{t("profile.authPassword")}</option>
+            <option value="none">{t("profile.authNone")}</option>
           </select>
         </label>
         {method === "password" ? (
-          <label>
-            {t("profile.newPassword")}
-            <input
-              type="password"
-              autoComplete="new-password"
-              required
-              minLength={boot.password_min}
-              maxLength={boot.password_max}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-          </label>
+          <>
+            <label>
+              {t("profile.newPassword")}
+              <input
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={boot.password_min}
+                maxLength={boot.password_max}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+            </label>
+            <label>
+              {t("profile.confirmPassword")}
+              <input
+                type="password"
+                autoComplete="new-password"
+                required
+                maxLength={boot.password_max}
+                value={confirm}
+                onChange={(event) => setConfirm(event.target.value)}
+              />
+            </label>
+            <p className="small-text muted">
+              {t("profile.passwordHint", {
+                min: boot.password_min,
+                max: boot.password_max,
+              })}
+            </p>
+          </>
         ) : (
-          <p className="callout warning">
-            {t("profile.authNoneWarning", {
-              defaultValue: "Anyone who can reach Tally can enter this profile without a password.",
-            })}
-          </p>
+          <p className="callout auth-none-warning">{t("profile.authNoneWarning")}</p>
         )}
         <div className="dialog-actions">
           <button type="button" className="button" onClick={onClose}>{t("common.cancel")}</button>

@@ -1,10 +1,13 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
-import { api, Avatar, Busy, resetSession, useApp } from "./lib";
+import { api, Busy, resetSession, useApp } from "./lib";
 import { useLocalization } from "./i18n";
-
-const htmlColor = /^#[0-9A-Fa-f]{6}$/;
+import {
+  ProfileAvatarChoices,
+  ProfileAvatarPreview,
+  isValidHexColor,
+} from "./ProfileCreateAvatar";
 
 type AuthMethod = "password" | "none";
 
@@ -20,7 +23,8 @@ export function RegisterProfile() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
-  const selectedAvatar = htmlColor.test(customColor) ? customColor : avatar;
+  const selectedAvatar = isValidHexColor(customColor) ? customColor : avatar;
+
   useEffect(() => {
     previewLocale(locale);
     return () => previewLocale(null);
@@ -28,6 +32,7 @@ export function RegisterProfile() {
     // Subsequent select changes call previewLocale directly for immediate feedback.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previewLocale]);
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (authMethod === "password" && password !== confirm) {
@@ -50,6 +55,7 @@ export function RegisterProfile() {
       setBusy(false);
     }
   }
+
   return (
     <div className="picker-screen">
       <div className="picker-content">
@@ -60,7 +66,13 @@ export function RegisterProfile() {
         {boot.profiles.length >= boot.max_profiles ? (
           <p className="muted">{t("profile.spacesFull")}</p>
         ) : (
-          <form className="login-form" onSubmit={submit}>
+          <form className="login-form profile-create-form" onSubmit={submit}>
+            <ProfileAvatarPreview
+              name={name}
+              avatar={avatar}
+              customColor={customColor}
+              locale={locale}
+            />
             <label>
               {t("profile.displayName")}
               <input
@@ -72,55 +84,14 @@ export function RegisterProfile() {
                 onChange={(e) => setName(e.target.value)}
               />
             </label>
-            <div className="avatar-choices" aria-label={t("accessibility.chooseAvatar")}>
-              {["mint", "violet", "amber", "rose", "blue"].map((color) => (
-                <button
-                  className={!customColor && avatar === color ? "selected" : ""}
-                  type="button"
-                  key={color}
-                  aria-label={t("accessibility.avatar", { color })}
-                  aria-pressed={!customColor && avatar === color}
-                  onClick={() => {
-                    setAvatar(color);
-                    setCustomColor("");
-                  }}
-                >
-                  <Avatar
-                    profile={{
-                      id: "",
-                      display_name: name || t("profile.you"),
-                      avatar: color,
-                      locale,
-                    }}
-                  />
-                </button>
-              ))}
-            </div>
-            <label>
-              {t("profile.customAvatarColor")}
-              <input
-                value={customColor}
-                pattern="#[0-9A-Fa-f]{6}"
-                maxLength={7}
-                placeholder="#4F46E5"
-                spellCheck={false}
-                onChange={(e) => setCustomColor(e.target.value)}
-              />
-              <small className="muted">{t("profile.customAvatarHelp")}</small>
-            </label>
-            {customColor && htmlColor.test(customColor) && (
-              <div className="profile-editor">
-                <Avatar
-                  profile={{
-                    id: "",
-                    display_name: name || t("profile.you"),
-                    avatar: customColor,
-                    locale,
-                  }}
-                  large
-                />
-              </div>
-            )}
+            <ProfileAvatarChoices
+              name={name}
+              avatar={avatar}
+              customColor={customColor}
+              locale={locale}
+              onAvatarChange={setAvatar}
+              onCustomColorChange={setCustomColor}
+            />
             <label>
               {t("profile.language")}
               <select
@@ -162,7 +133,7 @@ export function RegisterProfile() {
               </select>
             </label>
             {authMethod === "none" ? (
-              <p className="callout warning">{t("profile.authNoneWarning")}</p>
+              <p className="callout auth-none-warning">{t("profile.authNoneWarning")}</p>
             ) : (
               <>
                 <label>

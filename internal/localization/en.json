@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 6
+    "catalogVersion": 7
   },
   "common": {
     "save": "Save",
@@ -80,7 +80,16 @@
     "localeUnavailable": "This language cannot currently be selected because its localization file is invalid.",
     "localeUnavailableReason": "{{reason}}",
     "menuLink": "Profile",
-    "you": "You"
+    "you": "You",
+    "authentication": "Authentication",
+    "authPassword": "Password",
+    "passwordProtected": "Password protected",
+    "authNone": "No authentication",
+    "authNoneWarning": "Anyone who can reach Tally can enter this profile without a password.",
+    "authNoneStatus": "This profile does not require a password. An administrator can change its authentication method from Profiles.",
+    "manageAuthentication": "Manage authentication",
+    "authenticationFor": "Authentication · {{name}}",
+    "authenticationUpdated": "Authentication updated"
   },
   "language": {
     "fallbackNotice": "The selected language is unavailable. Tally is temporarily using English.",
@@ -192,7 +201,7 @@
     "subtitle": "Your shows, your progress, your next great episode.",
     "footer": "A personal space for the shows you love.",
     "choosePassword": "Choose a password to secure your profile before continuing.",
-    "passwordOrPin": "Password or PIN",
+    "passwordOrPin": "Password",
     "setPasswordContinue": "Set password and continue",
     "enterSpace": "Enter your space",
     "forgotPassword": "Forgot password? Send recovery to server logs",
@@ -202,7 +211,7 @@
   "passwordGate": {
     "title": "Make it yours.",
     "temporary": "Replace your temporary password to continue.",
-    "newPasswordOrPin": "New password or PIN",
+    "newPasswordOrPin": "New Password",
     "setNewPassword": "Set new password"
   },
   "appearance": {
@@ -551,7 +560,7 @@
     "authentication": "Authentication",
     "passwordChangeHelp": "Changing your password signs out your other sessions.",
     "currentPassword": "Current password",
-    "newPasswordOrPin": "New password or PIN",
+    "newPasswordOrPin": "New Password",
     "changePassword": "Change password",
     "authDisabled": "Authentication is disabled. Profiles are convenient personal spaces for a trusted network. Enable local or OIDC authentication through your deployment environment.",
     "sessionsTitle": "Your sessions",

@@ -3,7 +3,7 @@
     "locale": "uk",
     "name": "Українська",
     "direction": "ltr",
-    "catalogVersion": 1
+    "catalogVersion": 2
   },
   "common": {
     "save": "Зберегти",
@@ -80,7 +80,16 @@
     "localeUnavailable": "Цю мову зараз не можна вибрати, оскільки файл локалізації недійсний.",
     "localeUnavailableReason": "{{reason}}",
     "menuLink": "Профіль",
-    "you": "Ви"
+    "you": "Ви",
+    "authentication": "Автентифікація",
+    "authPassword": "Пароль",
+    "passwordProtected": "Захищено паролем",
+    "authNone": "Без автентифікації",
+    "authNoneWarning": "Будь-хто, хто має доступ до Tally, може увійти в цей профіль без пароля.",
+    "authNoneStatus": "Для цього профілю пароль не потрібен. Адміністратор може змінити спосіб автентифікації в розділі «Профілі».",
+    "manageAuthentication": "Керувати автентифікацією",
+    "authenticationFor": "Автентифікація · {{name}}",
+    "authenticationUpdated": "Автентифікацію оновлено"
   },
   "language": {
     "fallbackNotice": "Вибрана мова недоступна. Tally тимчасово використовує англійську.",
@@ -198,7 +207,7 @@
     "subtitle": "Ваші серіали, ваш прогрес і наступний чудовий епізод.",
     "footer": "Особистий простір для серіалів, які ви любите.",
     "choosePassword": "Перш ніж продовжити, виберіть пароль для захисту профілю.",
-    "passwordOrPin": "Пароль або PIN-код",
+    "passwordOrPin": "Пароль",
     "setPasswordContinue": "Задати пароль і продовжити",
     "enterSpace": "Увійти у свій простір",
     "forgotPassword": "Забули пароль? Надіслати дані для відновлення до журналу сервера",
@@ -208,7 +217,7 @@
   "passwordGate": {
     "title": "Зробіть його своїм.",
     "temporary": "Щоб продовжити, замініть тимчасовий пароль.",
-    "newPasswordOrPin": "Новий пароль або PIN-код",
+    "newPasswordOrPin": "Новий пароль",
     "setNewPassword": "Задати новий пароль"
   },
   "appearance": {
@@ -557,7 +566,7 @@
     "authentication": "Автентифікація",
     "passwordChangeHelp": "Після зміни пароля інші ваші сеанси буде завершено.",
     "currentPassword": "Поточний пароль",
-    "newPasswordOrPin": "Новий пароль або PIN-код",
+    "newPasswordOrPin": "Новий пароль",
     "changePassword": "Змінити пароль",
     "authDisabled": "Автентифікацію вимкнено. Профілі — це зручні особисті простори для довіреної мережі. Увімкніть локальну автентифікацію або OIDC через середовище розгортання.",
     "sessionsTitle": "Ваші сеанси",
