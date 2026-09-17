@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/subtle"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -34,15 +35,32 @@ func (s *Service) Login(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	a.Last = time.Now()
 	s.attempts[profile] = a
 	s.mu.Unlock()
+
 	release, err := s.acquireHashMemory(ctx)
 	if err != nil {
 		return err
 	}
-	defer release()
 	var hash string
 	var must bool
 	e := s.DB.QueryRowContext(ctx, "SELECT hash,must_change FROM local_credentials WHERE profile_id=?", profile).Scan(&hash, &must)
 	valid := e == nil && Verify(hash, password)
+	release()
+
+	if valid && NeedsRehash(hash) {
+		release, hashErr := s.acquireHashMemory(ctx)
+		if hashErr == nil {
+			var upgraded string
+			upgraded, hashErr = Hash(password)
+			release()
+			if hashErr == nil {
+				_, hashErr = s.DB.ExecContext(ctx, "UPDATE local_credentials SET hash=? WHERE profile_id=? AND hash=?", upgraded, profile, hash)
+			}
+		}
+		if hashErr != nil {
+			slog.Warn("password hash migration failed", "profile_id", profile, "error", hashErr)
+		}
+	}
+
 	s.mu.Lock()
 	rec, ok := s.recovery[profile]
 	temporary := ok && time.Now().Before(rec.Expires) && subtle.ConstantTimeCompare([]byte(rec.Hash), []byte(Digest(password))) == 1
