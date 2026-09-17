@@ -10,21 +10,22 @@ import (
 )
 
 type Service struct {
-	DB            *database.Store
-	Config        config.Config
-	Metadata      MetadataSource
-	Control       ProviderControl
-	Backup        BackupCreator
-	OnChange      func(string, ...string)
-	ctx           context.Context
-	cancel        context.CancelFunc
-	mu            sync.Mutex
-	running       map[string]context.CancelFunc
-	sem           chan struct{}
-	wg            sync.WaitGroup
-	stopped       bool
-	notifications chan struct{}
-	scheduleWake  chan struct{}
+	DB                *database.Store
+	Config            config.Config
+	Metadata          MetadataSource
+	Control           ProviderControl
+	Backup            BackupCreator
+	TorrentAutomation TorrentAutomator
+	OnChange          func(string, ...string)
+	ctx               context.Context
+	cancel            context.CancelFunc
+	mu                sync.Mutex
+	running           map[string]context.CancelFunc
+	sem               chan struct{}
+	wg                sync.WaitGroup
+	stopped           bool
+	notifications     chan struct{}
+	scheduleWake      chan struct{}
 }
 
 func New(ctx context.Context, db *database.Store, c config.Config, m MetadataSource, p ProviderControl, b BackupCreator) *Service {
