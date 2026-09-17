@@ -14,7 +14,7 @@ Tally is a self-hosted TV show tracker for following series, seeing what is comi
 - Optional torrent downloads through qBittorrent, with download monitoring
 - Background schedules, activity logs, statistics, and configurable bell notifications
 - Manual and scheduled backups with restore validation
-- Local authentication, OIDC, or trusted-network mode
+- Per-profile Password or No authentication access
 - Per-profile localization, including English and Ukrainian, with custom locale support
 - Responsive light/dark web interface
 
@@ -68,11 +68,11 @@ Tally is intended for a trusted self-hosted environment or local network.
 - Prefer Docker Compose and keep `/config` on persistent storage.
 - Do not port-forward Tally directly to the public internet.
 - For remote access, prefer a VPN/private network or an HTTPS reverse proxy with authentication enabled.
-- Use local authentication or OIDC when access is shared beyond a fully trusted network.
+- Use Password authentication for profiles when access extends beyond a fully trusted network.
 - Configure automatic backups and occasionally verify that your backup storage is available.
 - Keep Tally, Jackett, and qBittorrent on trusted network paths where possible.
 
-When authentication is disabled, anyone who can reach Tally can use the available profiles.
+A profile configured with No authentication can be entered by anyone who can reach Tally.
 
 ## Data and backups
 
