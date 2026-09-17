@@ -9,8 +9,8 @@ Tally is a self-hosted TV-show tracking application. Keep changes focused, maint
 * Use `docs/ARCHITECTURE.md` to understand ownership, boundaries, and where code belongs.
 * Read `docs/LESSONS.md` when working in an area covered by an existing lesson, especially navigation/lifecycle, async work, migrations/backups, authorization, integrations, localization, or testing.
 * Read other relevant files in `docs/` when working in an area they cover.
-* Update `docs/TODO.md` when work changes the state, scope, or completion of planned tasks.
-* For larger, multi-step branch changes with several requirements or acceptance criteria, create a temporary `BRANCH-TODO.md` in the project root. Use it throughout the work to track planned, completed, and newly discovered tasks, and remove it before the branch is finalized. Do not create one for small or straightforward changes, even when working in a branch.
+* Use `docs/TODO.md` as the single work tracker. For larger, multi-step changes with several requirements or acceptance criteria, add a focused checklist there before implementation and keep it updated with planned, completed, and newly discovered work throughout the change. Small or straightforward changes do not need a detailed checklist.
+* Keep `docs/TODO.md` focused on current and future work. When a larger change is complete, remove its completed implementation checklist or condense it to any genuinely remaining follow-up work instead of keeping a completion diary.
 
 ## Architecture
 
@@ -68,7 +68,7 @@ Tally is a self-hosted TV-show tracking application. Keep changes focused, maint
 
 Keep documentation separated by purpose:
 
-* `docs/TODO.md` — current and future work only; not a completion diary.
+* `docs/TODO.md` — the single tracker for current and future work, including temporary detailed checklists for larger active changes; not a completion diary.
 * `docs/ARCHITECTURE.md` — durable current architecture, ownership, and boundaries; not milestone history.
 * `docs/VALIDATION.md` — current verification expectations and latest meaningful baseline; not CI transcripts.
 * `docs/LOCALIZATION.md` — locale format and localization-specific behavior.
@@ -106,7 +106,7 @@ Before ending:
 
 * Confirm the requested behavior is implemented.
 * Check for regressions in nearby functionality.
-* Remove temporary/debug code and temporary `BRANCH-TODO.md` files.
-* Update `docs/TODO.md` where applicable.
+* Remove temporary/debug code.
+* Update `docs/TODO.md`: leave only unfinished or future work, and remove completed detailed implementation checklists.
 * Update `docs/LESSONS.md` when the work produced a reusable lesson.
 * Keep documentation consistent with architecture, behavior, configuration, localization, and API changes.
