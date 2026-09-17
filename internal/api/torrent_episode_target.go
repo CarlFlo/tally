@@ -26,6 +26,31 @@ func (s *Server) torrentEpisodeTarget(ctx context.Context, profileID, episodeID 
 	if err != nil {
 		return nil, err
 	}
+	return s.buildTorrentEpisodeTarget(ctx, showID, showName, premiered, season, episode)
+}
+
+func (s *Server) torrentEpisodeTargetFromQuery(ctx context.Context, profileID, query string) (*torrent.EpisodeTarget, error) {
+	// Compatibility for the existing episode drawer: only infer context when
+	// the query exactly matches the canonical title + SxxExx of one followed
+	// episode. Arbitrary free-text searches deliberately stay unscored.
+	var episodeID string
+	err := s.DB.QueryRowContext(ctx, `SELECT e.id
+		FROM episodes e
+		JOIN shows s ON s.id=e.show_id
+		JOIN profile_shows p ON p.show_id=e.show_id AND p.profile_id=?
+		WHERE e.number>0
+		AND lower(trim(s.name || ' S' || printf('%02d',e.season) || 'E' || printf('%02d',e.number)))=lower(trim(?))
+		LIMIT 1`, profileID, query).Scan(&episodeID)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return s.torrentEpisodeTarget(ctx, profileID, episodeID)
+}
+
+func (s *Server) buildTorrentEpisodeTarget(ctx context.Context, showID, showName, premiered string, season, episode int) (*torrent.EpisodeTarget, error) {
 	target := &torrent.EpisodeTarget{ShowTitle: showName, Season: season, Episode: episode}
 	if len(premiered) >= 4 {
 		target.Year, _ = strconv.Atoi(premiered[:4])
