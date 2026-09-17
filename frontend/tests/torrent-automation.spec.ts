@@ -54,7 +54,10 @@ test("episode search shows confidence and administrators can set the global show
 
   await page.locator(".episode-row").first().click();
   await page.getByRole("button", { name: "Search torrents" }).click();
-  await expect(page).toHaveURL(/\/search\?q=Example\+Show\+S01E01/);
+  await expect(page).toHaveURL(/\/search\?q=/);
+  await expect(
+    page.getByRole("textbox", { name: "Torrent search query" }),
+  ).toHaveValue("Example Show S01E01");
   await expect(page.locator(".torrent-result")).toHaveCount(2);
   await expect(page.locator(".torrent-result").first().locator(".confidence-high")).toContainText(
     "High · Unverified",
