@@ -21,6 +21,7 @@ type SearchResult struct {
 	Leechers             int      `json:"leechers"`
 	Grabs                int      `json:"grabs,omitempty"`
 	Provider             string   `json:"provider"`
+	Uploader             string   `json:"uploader,omitempty"`
 	Source               string   `json:"source"`
 	Magnet               string   `json:"magnet"`
 	URL                  string   `json:"url"`
