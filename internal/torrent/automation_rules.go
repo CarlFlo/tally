@@ -2,6 +2,7 @@ package torrent
 
 import (
 	"strings"
+	"unicode"
 
 	"github.com/CarlFlo/tally/internal/settings"
 )
@@ -36,18 +37,37 @@ func automationPreferenceScore(result SearchResult, parsed ParsedRelease, config
 }
 
 func automationKeywordsMatch(name string, config settings.TorrentAutomation) bool {
-	name = strings.ToLower(name)
-	for _, word := range strings.Fields(strings.ToLower(config.IncludeKeywords)) {
-		if !strings.Contains(name, word) {
+	normalizedName := " " + normalizeAutomationTerm(name) + " "
+	for _, word := range strings.Fields(config.IncludeKeywords) {
+		term := normalizeAutomationTerm(word)
+		if term != "" && !strings.Contains(normalizedName, " "+term+" ") {
 			return false
 		}
 	}
-	for _, word := range strings.Fields(strings.ToLower(config.ExcludeKeywords)) {
-		if strings.Contains(name, word) {
+	for _, word := range strings.Fields(config.ExcludeKeywords) {
+		term := normalizeAutomationTerm(word)
+		if term != "" && strings.Contains(normalizedName, " "+term+" ") {
 			return false
 		}
 	}
 	return true
+}
+
+func normalizeAutomationTerm(value string) string {
+	var builder strings.Builder
+	space := true
+	for _, r := range strings.ToLower(value) {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			builder.WriteRune(r)
+			space = false
+			continue
+		}
+		if !space {
+			builder.WriteByte(' ')
+			space = true
+		}
+	}
+	return strings.TrimSpace(builder.String())
 }
 
 func automationGroupAllowed(group string, config settings.TorrentAutomation) bool {
