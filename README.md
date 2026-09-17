@@ -1,135 +1,108 @@
 # Tally
 
-Tally is a modern, self-hosted TV show tracker for keeping up with shows, upcoming episodes, watch progress, and manual torrent searches.
+**Your little TV universe.**
+
+Tally is a self-hosted TV show tracker for following series, seeing what is coming up, tracking episode progress, and optionally searching for and sending torrents to a download client.
 
 ## Features
 
-- Calendar for past and upcoming episodes
-- Personal TV show library and watch progress
-- Multiple profiles with independent interface languages
-- TV show search and metadata from TVmaze
-- Manual torrent search through Torznab providers
-- Send selected torrents to qBittorrent
-- Background jobs, statistics, notifications, and logs
-- Scheduled and manual backups
-- Local or OIDC authentication
-- Responsive web interface with light and dark themes
+- Calendar for upcoming and recently aired episodes
+- Personal show library, favorites, and episode watch state
+- Multiple profiles with role-based administration
+- TV metadata and discovery powered by TVmaze
+- Manual torrent search through Jackett/Torznab
+- Optional torrent downloads through qBittorrent, with download monitoring
+- Background schedules, activity logs, statistics, and configurable bell notifications
+- Manual and scheduled backups with restore validation
+- Local authentication, OIDC, or trusted-network mode
+- Per-profile localization, including English and Ukrainian, with custom locale support
+- Responsive light/dark web interface
 
-## Network model
+Torrent search and torrent downloading are separate features and can be enabled independently. Tally does not automatically choose or download torrents.
 
-Tally is designed for a trusted self-hosted environment or local network. The provided Compose configuration binds to loopback by default. To make Tally reachable from other devices on the LAN, set `APP_BIND=0.0.0.0` or bind it to a specific LAN address.
+## Quick start
 
-Do not port-forward Tally's application port directly to the public internet. For remote access, prefer a private-network/VPN solution or place Tally behind an HTTPS reverse proxy with local or OIDC authentication enabled. When authentication is disabled, anyone who can reach Tally can use the available profiles.
-
-## Docker Compose
-
-```yaml
-services:
-  tally:
-    build: .
-    image: tally:local
-    restart: unless-stopped
-    ports:
-      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-8080}:8080"
-    environment:
-      APP_DATA_DIR: /config
-      APP_ADDR: :8080
-      TZ: Europe/Stockholm
-    volumes:
-      - tally-config:/config
-
-volumes:
-  tally-config:
-```
-
-Start Tally:
+Docker Compose is the recommended way to run Tally.
 
 ```sh
+git clone https://github.com/CarlFlo/tally.git
+cd tally
+cp .env.example .env
 docker compose up -d --build
 ```
 
-Then open **http://localhost:8080**. For LAN access, set `APP_BIND` as described above and use the host's LAN address.
+Open **http://localhost:8080**.
+
+The included Compose setup stores persistent data in the `tally-config` volume and listens on localhost by default.
+
+For access from other devices on your LAN, change this in `.env`:
+
+```env
+APP_BIND=0.0.0.0
+```
+
+You should also set the deployment timezone, for example:
+
+```env
+TZ=Europe/Stockholm
+```
+
+Most application settings are managed from the Tally web interface rather than environment variables.
+
+## Integrations
+
+Tally works without torrent integrations. When wanted, configure them under **Settings**:
+
+- **Torrent search:** Jackett base URL and API key
+- **Torrent download:** qBittorrent connection details
+- **Notifications:** webhook or Discord destinations
+- **Scheduling:** background job schedules
+- **Backups:** schedule and retention policy
+
+TVmaze metadata does not require an API key.
+
+## Recommended deployment
+
+Tally is intended for a trusted self-hosted environment or local network.
+
+- Prefer Docker Compose and keep `/config` on persistent storage.
+- Do not port-forward Tally directly to the public internet.
+- For remote access, prefer a VPN/private network or an HTTPS reverse proxy with authentication enabled.
+- Use local authentication or OIDC when access is shared beyond a fully trusted network.
+- Configure automatic backups and occasionally verify that your backup storage is available.
+- Keep Tally, Jackett, and qBittorrent on trusted network paths where possible.
+
+When authentication is disabled, anyone who can reach Tally can use the available profiles.
+
+## Data and backups
+
+Tally stores its SQLite database, settings, locales, and backups below `/config` in the container. Application-managed credentials stored in Tally are included in protected backups; transient caches and environment-provided secrets are not.
+
+Backups can be created and restored from the web interface or CLI. Commands that directly modify Tally's data should normally be run while the main container is stopped.
 
 ## Localization
 
-Tally stores locale catalogs under `/config/locales` (or `<APP_DATA_DIR>/locales`). The bundled English catalog is installed automatically, additional locale JSON files are discovered dynamically, and valid file changes are hot-reloaded without restarting Tally.
+English and Ukrainian are bundled. Language is selected per profile, and missing translation keys fall back to English.
 
-Language is saved per profile. Partial translations are supported: missing keys fall back to English.
+Custom locale JSON files can be placed in `/config/locales` and are validated and hot-reloaded without restarting Tally.
 
-See [docs/LOCALIZATION.md](docs/LOCALIZATION.md) for the file format, versioning rules, validation behavior, pluralization/interpolation guidance, RTL metadata, and translation workflow.
-
-## Commands
-
-Tally runs the web server by default:
-
-```sh
-tally
-tally serve
-```
-
-Available commands:
-
-```text
-tally serve
-tally healthcheck
-tally backup
-tally verify-backup <archive>
-tally restore <archive>
-tally link-identity <profile-id-or-name> <issuer> <subject>
-tally reset-password <profile-id-or-name>
-tally delete-backup <filename>
-```
-
-When using Docker Compose:
-
-```sh
-docker compose run --rm tally backup
-docker compose run --rm tally verify-backup /config/backups/example.zip
-docker compose run --rm tally restore /config/backups/example.zip
-docker compose run --rm tally link-identity "My profile" https://example.com subject
-docker compose run --rm tally reset-password "My profile"
-docker compose run --rm tally delete-backup example.zip
-```
-
-For `link-identity` and `reset-password`, the profile argument may be the opaque profile ID or an exact, unique display name. Ambiguous display names are rejected rather than guessed.
-
-Commands that access the Tally data volume require exclusive access. Stop the running container first:
-
-```sh
-docker compose stop tally
-# run command
-docker compose up -d
-```
-
-`healthcheck` is intended to run while Tally is running.
+See [docs/LOCALIZATION.md](docs/LOCALIZATION.md) for the locale format and translation workflow.
 
 ## Build from source
 
 Requirements:
 
 - Go 1.27.1+
-- Node.js 24 LTS recommended
-
-Build the frontend:
+- Node.js 24+
 
 ```sh
 cd frontend
 npm ci
 npm run build
 cd ..
-```
-
-Build Tally:
-
-```sh
 go test ./...
 go build -o tally .
-```
-
-Run it:
-
-```sh
 ./tally
 ```
 
-CI additionally runs the race detector, browser regressions, Go vulnerability analysis, npm vulnerability auditing, a production container build, and a high/critical container vulnerability scan.
+For development details, see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). Architecture and validation notes are available in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/VALIDATION.md](docs/VALIDATION.md).
