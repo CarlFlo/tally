@@ -3,8 +3,15 @@ import { selectProfileByName } from "./navigation";
 
 async function ensureExampleShow(page: Page) {
   await page.goto("/shows");
-  let card = page.locator(".show-card").filter({ hasText: "Example Show" });
-  if ((await card.count()) === 0) {
+  async function followedShow() {
+    const response = await page.request.get("/api/shows");
+    if (!response.ok()) throw new Error(`Could not load followed shows (${response.status()})`);
+    const shows = (await response.json()) as Array<{ id: string; name: string }>;
+    return shows.find((show) => show.name === "Example Show");
+  }
+
+  let show = await followedShow();
+  if (!show) {
     await page.getByRole("button", { name: "Add show", exact: true }).click();
     await page
       .getByRole("textbox", { name: "Search for a TV show" })
@@ -32,18 +39,15 @@ async function ensureExampleShow(page: Page) {
         { timeout: 30_000 },
       )
       .toBe("done");
-    await page.getByRole("button", { name: "Close dialog" }).click();
-    await page.goto("/shows");
-    card = page.locator(".show-card").filter({ hasText: "Example Show" });
+    show = await followedShow();
   }
-  await expect(card).toHaveCount(1);
-  await card.click();
+  if (!show) throw new Error("Example Show was not followed after setup");
+
+  await page.goto(`/shows/${show.id}`);
   await expect(
     page.getByRole("heading", { name: "Example Show." }),
   ).toBeVisible();
-  const match = page.url().match(/\/shows\/([^/?#]+)/);
-  if (!match) throw new Error("Example Show route did not contain an ID");
-  return match[1];
+  return show.id;
 }
 
 test("episode search expands into a strengths and concerns evaluation", async ({
