@@ -1,6 +1,7 @@
 package localization
 
 import (
+	"bytes"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -26,6 +27,7 @@ var embeddedEnglish []byte
 var embeddedUkrainian []byte
 
 var bundledLocales = map[string][]byte{
+	"en.json": embeddedEnglish,
 	"uk.json": embeddedUkrainian,
 }
 
@@ -87,9 +89,6 @@ func New(dataDir string, onChange func()) (*Registry, error) {
 		return nil, fmt.Errorf("create localization directory: %w", err)
 	}
 	r := &Registry{dir: dir, entries: map[string]entry{}, english: english, done: make(chan struct{}), onChange: onChange}
-	if err = r.syncEnglish(); err != nil {
-		return nil, err
-	}
 	for filename, data := range bundledLocales {
 		item, parseErr := parse(filename, data)
 		if parseErr == nil {
@@ -98,7 +97,7 @@ func New(dataDir string, onChange func()) (*Registry, error) {
 		if parseErr != nil {
 			return nil, fmt.Errorf("embedded %s localization is invalid: %w", filename, parseErr)
 		}
-		if err = r.seedBundledLocale(filename, data); err != nil {
+		if err = r.syncBundledLocale(filename, data, item.status.CatalogVersion); err != nil {
 			return nil, err
 		}
 	}
@@ -183,71 +182,60 @@ func (r *Registry) Valid(locale string) bool {
 
 func (r *Registry) Revision() uint64 { return r.revision.Load() }
 
-func (r *Registry) syncEnglish() error {
-	path := filepath.Join(r.dir, "en.json")
+func (r *Registry) syncBundledLocale(filename string, data []byte, bundledVersion int) error {
+	path := filepath.Join(r.dir, filename)
 	info, statErr := os.Lstat(path)
 	if statErr == nil && !info.Mode().IsRegular() {
-		// Never follow symlinks or read special files at the server-owned
-		// English catalog path. Embedded English remains the runtime fallback.
-		slog.Warn("English localization path is not a regular file; using bundled catalog", "file", path, "mode", info.Mode())
+		// Never follow symlinks or replace special files at a server-owned
+		// bundled catalog path. The embedded English catalog remains the final
+		// runtime fallback if its persistent path cannot be reconciled.
+		slog.Warn("Bundled localization path is not a regular file; leaving it untouched", "file", path, "mode", info.Mode())
 		return nil
 	}
 	if statErr != nil && !errors.Is(statErr, os.ErrNotExist) {
-		slog.Warn("English localization path could not be inspected; attempting bundled catalog restore", "file", path, "error", statErr)
+		slog.Warn("Bundled localization path could not be inspected; attempting catalog restore", "file", path, "error", statErr)
 	}
 	if statErr == nil {
-		current, err := readLocaleFile(path)
-		if err == nil {
-			item, parseErr := parse("en.json", current)
+		current, readErr := readLocaleFile(path)
+		if readErr == nil {
+			item, parseErr := parse(filename, current)
 			if parseErr == nil {
 				parseErr = validatePlaceholders(item.messages, r.english.messages, "")
 			}
-			if parseErr == nil && item.status.CatalogVersion >= r.english.status.CatalogVersion {
-				return nil
+			if parseErr == nil {
+				switch {
+				case item.status.CatalogVersion > bundledVersion:
+					// Preserve a catalog written by a newer Tally release so a
+					// temporary application downgrade does not destroy it.
+					return nil
+				case item.status.CatalogVersion == bundledVersion && bytes.Equal(current, data):
+					// Avoid touching the file when the managed copy is already exact.
+					return nil
+				}
 			}
 		} else {
-			slog.Warn("English localization file could not be read; restoring bundled catalog", "file", path, "error", err)
+			slog.Warn("Bundled localization file could not be read; restoring embedded catalog", "file", path, "error", readErr)
 		}
 	}
-	tmp, err := os.CreateTemp(r.dir, ".en-*.json")
+
+	base := strings.TrimSuffix(filename, filepath.Ext(filename))
+	tmp, err := os.CreateTemp(r.dir, "."+base+"-*.json")
 	if err != nil {
-		return fmt.Errorf("prepare English localization: %w", err)
+		return fmt.Errorf("prepare bundled localization %s: %w", filename, err)
 	}
 	name := tmp.Name()
 	defer os.Remove(name)
 	if err = tmp.Chmod(0o644); err == nil {
-		_, err = tmp.Write(embeddedEnglish)
+		_, err = tmp.Write(data)
 	}
 	if closeErr := tmp.Close(); err == nil {
 		err = closeErr
 	}
 	if err != nil {
-		return fmt.Errorf("write English localization: %w", err)
+		return fmt.Errorf("write bundled localization %s: %w", filename, err)
 	}
 	if err = os.Rename(name, path); err != nil {
-		return fmt.Errorf("install English localization: %w", err)
-	}
-	return nil
-}
-
-func (r *Registry) seedBundledLocale(filename string, data []byte) error {
-	path := filepath.Join(r.dir, filename)
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
-	if errors.Is(err, os.ErrExist) {
-		return nil
-	}
-	if err != nil {
 		return fmt.Errorf("install bundled localization %s: %w", filename, err)
-	}
-	_, writeErr := file.Write(data)
-	closeErr := file.Close()
-	if writeErr != nil {
-		_ = os.Remove(path)
-		return fmt.Errorf("write bundled localization %s: %w", filename, writeErr)
-	}
-	if closeErr != nil {
-		_ = os.Remove(path)
-		return fmt.Errorf("close bundled localization %s: %w", filename, closeErr)
 	}
 	return nil
 }
@@ -272,10 +260,10 @@ func (r *Registry) reload(notify bool) error {
 			}
 			slog.Warn("localization entry is not a regular file", "file", file.Name(), "error", err)
 			next[code] = entry{status: Status{
-				Locale: code,
-				Name: code,
-				Valid: false,
-				Error: "Localization entry must be a regular file.",
+				Locale:    code,
+				Name:      code,
+				Valid:     false,
+				Error:     "Localization entry must be a regular file.",
 				ErrorCode: "language.notRegularFile",
 			}}
 			continue
@@ -285,10 +273,10 @@ func (r *Registry) reload(notify bool) error {
 			code := strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))
 			slog.Warn("localization file unavailable", "file", file.Name(), "error", readErr)
 			next[code] = entry{status: Status{
-				Locale: code,
-				Name: code,
-				Valid: false,
-				Error: "Localization file could not be read.",
+				Locale:    code,
+				Name:      code,
+				Valid:     false,
+				Error:     "Localization file could not be read.",
 				ErrorCode: "language.unreadableFile",
 			}}
 			continue
@@ -300,7 +288,9 @@ func (r *Registry) reload(notify bool) error {
 		if parseErr != nil {
 			code := strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))
 			item = entry{status: Status{Locale: code, Name: code, Valid: false, Error: publicError(parseErr), ErrorCode: publicErrorCode(parseErr)}}
-			var meta struct{ Meta Meta `json:"_meta"` }
+			var meta struct {
+				Meta Meta `json:"_meta"`
+			}
 			if json.Unmarshal(data, &meta) == nil {
 				// The filename remains authoritative for invalid files. A bad
 				// _meta.locale must never shadow a separate valid locale.
@@ -318,8 +308,9 @@ func (r *Registry) reload(notify bool) error {
 		// Embedded English is always available even if the config copy was damaged at runtime.
 		next["en"] = r.english
 	} else {
-		// A valid same/newer config English file is preserved, but embedded
-		// canonical English still supplies any missing keys in memory.
+		// A valid config English file from a newer Tally release may be
+		// preserved on disk. Embedded canonical English still supplies any
+		// missing keys in memory when that happens.
 		item.messages = mergeMessages(r.english.messages, item.messages)
 		next["en"] = item
 	}
@@ -383,8 +374,6 @@ func (r *Registry) watch() {
 		}
 	}
 }
-
-
 
 func readLocaleFile(path string) ([]byte, error) {
 	file, err := os.Open(path)
@@ -494,7 +483,6 @@ func validateNode(node map[string]any, prefix string) error {
 	}
 	return nil
 }
-
 
 func validatePlaceholders(messages, english map[string]any, prefix string) error {
 	for key, value := range messages {
