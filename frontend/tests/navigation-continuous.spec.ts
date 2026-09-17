@@ -13,7 +13,7 @@ test("continuous pointer navigation stays responsive without reloading", async (
   await selectProfileByName(page, "My profile");
   await page.setViewportSize({ width: 1100, height: 740 });
   await page.goto("/settings");
-  await expect(page.locator(".schedule-editor")).toHaveCount(3);
+  await expect(page.locator(".schedule-editor")).toHaveCount(4);
   const documentHandle = await page.evaluateHandle(() => document);
   for (let cycle = 0; cycle < 3; cycle++) {
     // Exercise both sides of the sidebar breakpoint in the same document.
