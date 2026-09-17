@@ -10,12 +10,11 @@ func (s *Service) Change(ctx context.Context, w http.ResponseWriter, r *http.Req
 	if e := s.Policy(password); e != nil {
 		return e
 	}
-	select {
-	case s.hashes <- struct{}{}:
-		defer func() { <-s.hashes }()
-	case <-ctx.Done():
-		return ctx.Err()
+	release, err := s.acquireHashMemory(ctx)
+	if err != nil {
+		return err
 	}
+	defer release()
 	if !session.Restricted {
 		var hash string
 		if e := s.DB.QueryRowContext(ctx, "SELECT hash FROM local_credentials WHERE profile_id=?", session.Profile).Scan(&hash); e != nil || !Verify(hash, current) {
