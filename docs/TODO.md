@@ -6,7 +6,7 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 `feature/torrent-search-downloads`
 
-Status: implementation complete; latest validation pending.
+Status: implementation complete and validated on 2026-09-17.
 
 - [x] Torrent search submissions use clear download actions and correct success handling.
 - [x] Recent torrent submissions refresh through the normal live-update path instead of requiring a page reload.
