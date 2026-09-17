@@ -13,8 +13,16 @@ const (
 
 func (s *Service) ProfileAuthMethod(ctx context.Context, profile string) (string, error) {
 	var method string
-	if err := s.DB.QueryRowContext(ctx, "SELECT auth_method FROM profiles WHERE id=?", profile).Scan(&method); err != nil {
+	var hasPassword bool
+	if err := s.DB.QueryRowContext(ctx, `SELECT p.auth_method,EXISTS(SELECT 1 FROM local_credentials c WHERE c.profile_id=p.id)
+		FROM profiles p WHERE p.id=?`, profile).Scan(&method, &hasPassword); err != nil {
 		return "", err
+	}
+	// A real local credential takes precedence over a stale/default `none` value.
+	// Migration 8 normalizes persisted data, while this also keeps older fixtures
+	// and recovery paths safe during the transition.
+	if hasPassword {
+		return ProfileAuthPassword, nil
 	}
 	return method, nil
 }
