@@ -106,6 +106,9 @@ func ValidateSchema(ctx context.Context, db Querier) error {
 	if version >= 7 {
 		profileQuery = "SELECT id,display_name,avatar,created_at,locale FROM profiles LIMIT 0"
 	}
+	if version >= 8 {
+		profileQuery = "SELECT id,display_name,avatar,created_at,locale,auth_method FROM profiles LIMIT 0"
+	}
 	for _, query := range []string{
 		profileQuery,
 		"SELECT profile_id,data FROM profile_preferences LIMIT 0",
