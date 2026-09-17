@@ -5,12 +5,13 @@ Tally is one Go service serving an embedded React application and a permanent SQ
 ## Core ownership rules
 
 - Shared TV metadata belongs to the deployment, never to a profile.
-- Profiles own follows, favorites, preferences, localization, and episode state.
+- Profiles own follows, favorites, preferences, localization, episode state, and notification preferences.
+- Torrent search, downloader configuration, release assessment, automation policy, run history, and bad-infohash feedback are deployment-global because one shared downloader is authoritative.
 - Authentication maps to opaque immutable profile IDs; authorization is role-based.
 - SQLite is the source of truth for durable application state.
 - Infrastructure configuration comes from environment variables; operator-editable application settings live in SQLite.
 - Outbound provider work goes through the provider coordinator.
-- Torrent search and download submission remain user-initiated/manual.
+- Manual torrent search remains user-directed. Automatic torrent submission is allowed only through the verified automation pipeline described below.
 
 ## Backend map
 
@@ -29,7 +30,7 @@ Tally is one Go service serving an embedded React application and a permanent SQ
 | `internal/activity` | Durable credential-free activity records |
 | `internal/inbox` | Profile-scoped inbox/read/dismissal state |
 | `internal/library` | Transactional library/follow changes |
-| `internal/torrent` | Jackett search, opaque selections, client adapters, qBittorrent protocol |
+| `internal/torrent` | Jackett discovery, normalized release metadata, confidence evaluation, local `.torrent` inspection, automation decisions/history/feedback, client adapters, qBittorrent protocol |
 | `internal/database` | SQLite opening, migrations, validation, snapshots |
 | `internal/backup` | Backup creation, verification, inventory, retention, restore |
 | `internal/localization` | Bundled locale catalogs, validation, registry and filesystem watching |
@@ -40,7 +41,7 @@ Keep new code in the owning domain. Prefer narrow interfaces at boundaries and c
 
 ## Database and identity
 
-SQLite runs with foreign keys and WAL enabled. Schema changes are explicit sequential migrations; schema 8 is current. Existing databases receive a validated pre-upgrade snapshot before migration. Migration work is transactional and validated before commit; downgrades from a newer unsupported schema are refused.
+SQLite runs with foreign keys and WAL enabled. Schema changes are explicit sequential migrations; schema 9 is current. Existing databases receive a validated pre-upgrade snapshot before migration. Migration work is transactional and validated before commit; downgrades from a newer unsupported schema are refused.
 
 Profiles use generated opaque IDs. Each profile explicitly chooses Password or No authentication. Administrator privileges live in explicit role data rather than a special account ID. Database constraints protect invariants such as retaining an administrator while profiles remain, with API and UI checks providing additional defense in depth.
 
@@ -82,23 +83,35 @@ All production external-provider requests use the coordinator. It centralizes ad
 
 Shared requests continue only while at least one caller still needs the result. When the last waiter leaves, downstream HTTP work and admission waits are cancelled. Queued work must be removable on cancellation, and every acquired concurrency slot must be released on all success/error paths.
 
-Background jobs are bounded and cancellable. Schedules are persisted, wake the scheduler when relevant state changes, and use deployment timezone for execution. Profile timezone affects presentation, not server execution semantics.
+Background jobs are bounded and cancellable. Schedules are persisted, wake the scheduler when relevant state changes, and use deployment timezone for execution. Profile timezone affects presentation, not server execution semantics. Torrent automation is a normal scheduler job and defaults to a 15-minute cadence; disabling automation makes the runner a safe no-op rather than creating a separate scheduler path.
 
 Prefer event-driven refresh and filesystem watchers to frequent polling. Watchers are intentionally not masked by a polling fallback on unusual network filesystems unless a future requirement explicitly adds one.
 
-## Torrent capabilities
+## Torrent capabilities and decision pipeline
 
-Torrent search and torrent downloading are independent capabilities.
+Torrent search, torrent downloading, and automatic download policy are independent backend-authoritative capabilities. Disabling any required capability prevents automatic submission, including if it changes while a run is already evaluating candidates.
 
-- Search availability is controlled by the saved search setting and configured Jackett connection.
-- Download availability is controlled by its own saved torrent-download setting and configured client.
-- When a capability is disabled, the frontend hides navigation/actions that cannot work.
-- The backend independently rejects disabled operations; hiding UI is not enforcement.
-- Capability toggles sit outside the provider/client configuration section they govern so disabling a feature does not make its own switch unreachable.
+The responsibility split is deliberate:
 
-Jackett search returns normalized results and opaque profile-bound selections. Tally does not expose provider download URLs to the browser. qBittorrent submissions and status queries use the adapter protocol; protocol success is determined by the actual client contract rather than assumptions such as requiring a JSON response.
+1. **Jackett is discovery.** It returns normalized search metadata and opaque server-side selections. Useful Torznab attributes such as category, infohash, external IDs, seed counts, grabs, and ratio factors are retained when supplied.
+2. **Tally is inspection and decision.** A shared evaluator determines release confidence from authoritative episode context and separates confidence from release preference. For shortlisted candidates with a retrievable `.torrent`, Tally fetches the metainfo through the provider coordinator, parses it locally, derives/verifies the infohash, and inspects the complete file tree before any automatic client submission.
+3. **qBittorrent is execution.** It receives only a candidate that has passed the automatic decision pipeline. Manual submissions remain available according to the download capability.
 
-The Downloads page reflects client-reported torrent state. Tally does not automatically choose torrents, scan media, rename files, or mark episodes downloaded merely because a torrent was submitted.
+Confidence expresses how likely a result is the intended release; quality/size preferences rank otherwise acceptable releases. Manual free-text searches without authoritative episode context do not receive a misleading confidence judgment. Automatic download requires **High confidence + Verified payload + no hard rejection**. Medium, Low, Rejected, unverified, season-pack/multi-episode, mismatched, suspicious, sample-only, or previously blocked candidates are not auto-submitted.
+
+A magnet-only result cannot expose its file list before metadata exchange, so it remains available for manual use but is never eligible for automatic download. Automatic inspection therefore happens before qBittorrent receives the torrent.
+
+Deep inspection is intentionally lazy. Tally does not fetch every search result. The runner makes a cheap preliminary assessment, creates a bounded shortlist, then fetches and verifies candidates sequentially until one becomes eligible or the shortlist is exhausted. A failed candidate does not prevent the next shortlisted candidate from being considered.
+
+Deployment-global per-show policy is `default`, `auto`, or `never`. `default` inherits the global automation setting, `auto` explicitly records that the show should participate when the global automation master switch is enabled, and `never` excludes the show. The global search, download, and automation switches remain authoritative kill switches; a per-show override cannot bypass them. Notification choices remain profile-owned and do not create additional download decisions.
+
+Runs are serialized/deduplicated per episode with database constraints and eligibility checks. `no verified candidate` is a normal terminal result and is retried with bounded backoff during the configured retry window rather than lowering acceptance standards. An episode already recorded as downloaded by automation is not submitted again.
+
+Immediately before a client side effect, the runner reloads capability settings. If qBittorrent returns an ambiguous error after submission, Tally reconciles against the selected infohash in the Tally category before deciding that the action failed, preventing blind duplicate retries.
+
+`Previous Runs` is the explainability surface. Each run stores immutable episode/show identity, query, settings snapshot, decision-engine version, decision steps, verification outcome, selected release/infohash, and timing. Credentials, authenticated provider URLs, cookies, and secrets are never stored there. Later `Mark as bad` feedback is appended instead of rewriting the original decision. A bad exact infohash is blocked globally from future automatic selection but remains visible in manual search with a warning. Detailed run history is pruned after the bounded retention period while the small bad-infohash set remains available to prevent repeat loops.
+
+The Downloads page reflects client-reported torrent state. Submitting or automatically selecting a torrent does not itself mark the episode as downloaded in Tally; media-import/renaming lifecycle management remains out of scope.
 
 ## Activity, logs, and notifications
 
@@ -106,11 +119,13 @@ Logs are the complete operational history appropriate to the current profile/adm
 
 Activity records must not contain credentials. Notification delivery uses durable outbox/state where required and reloads authoritative settings before sending. Ambiguous or failed external deliveries must be observable without silently duplicating sends.
 
+Torrent automation is global, but notification delivery remains profile-scoped. A shared torrent decision must not be duplicated merely because multiple profiles follow the same show.
+
 ## Backups and restore
 
 Backup creation follows a pipeline: snapshot durable state, collect durable files, write the archive, verify it, publish it, and apply retention. The backup directory is the archive inventory source of truth; valid manually copied archives can be discovered without separate registration metadata.
 
-Caches and environment-provided secrets are excluded. UI-managed credentials are durable application state and belong in protected backups.
+Caches and environment-provided secrets are excluded. UI-managed credentials, automation settings, run state, show policy, and bad-infohash feedback are durable application state and belong in protected backups.
 
 Restore extracts into staging, validates archive paths/sizes/checksums, validates and upgrades the staged database when compatible, prepares durable files, and only then applies database state transactionally. A failed restore must leave the running state usable. Relational restore tests must account for foreign-key cascades and insertion/deletion ordering.
 
@@ -118,7 +133,7 @@ Restore extracts into staging, validates archive paths/sizes/checksums, validate
 
 Infrastructure configuration remains environment-owned. User/operator-managed integrations and schedules are stored in SQLite and applied without process restart where supported.
 
-Secrets are revealed only in explicitly authorized settings views. General APIs, logs, errors, notifications, telemetry, and activity records must not echo them. When editing a connection, an intentionally blank secret field means retain the saved secret unless the operation explicitly requests removal/replacement.
+Secrets are revealed only in explicitly authorized settings views. General APIs, logs, errors, notifications, telemetry, activity records, automation history, and decision snapshots must not echo them. When editing a connection, an intentionally blank secret field means retain the saved secret unless the operation explicitly requests removal/replacement.
 
 ## Working on a change
 
