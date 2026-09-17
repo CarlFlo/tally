@@ -15,7 +15,7 @@ import (
 )
 
 const fixtureVideoTorrent = "d4:infod6:lengthi2048e4:name13:episode01.mkv12:piece lengthi16384e6:pieces20:aaaaaaaaaaaaaaaaaaaaee"
-const fixtureExecutableTorrent = "d4:infod5:filesld6:lengthi2048e4:pathl13:episode01.mkveed6:lengthi50e4:pathl9:setup.exeeee4:name4:Show12:piece lengthi16384e6:pieces20:aaaaaaaaaaaaaaaaaaaaee"
+const fixtureExecutableTorrent = "d4:infod5:filesld6:lengthi2048e4:pathl13:episode01.mkveed6:lengthi50e4:pathl9:setup.exeee4:name4:Show12:piece lengthi16384e6:pieces20:aaaaaaaaaaaaaaaaaaaaee"
 
 func TestJackettSearchNormalizesResultsWithoutLeakingURL(t *testing.T) {
 	s, handler, _ := testServer(t, "disabled")
