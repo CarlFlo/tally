@@ -25,11 +25,8 @@ func (s *Service) SetProfileAuthentication(ctx context.Context, profile, method,
 	}
 	var hash string
 	if method == ProfileAuthPassword {
-		if err := s.Policy(password); err != nil {
-			return err
-		}
 		var err error
-		hash, err = Hash(password)
+		hash, err = s.HashPassword(ctx, password)
 		if err != nil {
 			return err
 		}
