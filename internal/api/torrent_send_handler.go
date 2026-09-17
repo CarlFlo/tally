@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -36,9 +35,13 @@ func (s *Server) torrentSend(w http.ResponseWriter, r *http.Request, session aut
 	if selected.Profile != session.Profile || time.Now().After(selected.Expires) {
 		return bad("search result expired; search again")
 	}
-	var result torrent.SearchResult
-	if e := json.Unmarshal(selected.Data, &result); e != nil {
+	payload, e := decodeTorrentSelection(selected.Data)
+	if e != nil {
 		return e
+	}
+	result := payload.Result
+	if payload.Preliminary != nil && payload.Preliminary.Rejected() {
+		return bad("selected result does not match the requested episode")
 	}
 	hash := auth.Digest(result.Magnet + "\x00" + result.URL)
 	id := database.ID()
@@ -76,7 +79,11 @@ func (s *Server) torrentSend(w http.ResponseWriter, r *http.Request, session aut
 			data, e = provider.FetchTorrent(r.Context(), result.URL)
 		}
 		if e == nil {
-			_, e = torrent.VerifyTorrentBytes(torrent.ReleaseAssessment{Confidence: torrent.ConfidenceLow}, result, data)
+			base := torrent.ReleaseAssessment{Confidence: torrent.ConfidenceLow, Verification: torrent.VerificationUnverified}
+			if payload.Preliminary != nil {
+				base = *payload.Preliminary
+			}
+			_, e = torrent.VerifyTorrentForTarget(base, result, data, payload.Target)
 			inspectionRejected = e != nil
 		}
 		if e == nil {
