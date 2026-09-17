@@ -1,23 +1,36 @@
 package settings
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 const (
-	TorrentQualityBest  = "best"
-	TorrentQuality720   = "720p"
-	TorrentQuality1080  = "1080p"
-	TorrentQuality2160  = "2160p"
+	TorrentQualityBest = "best"
+	TorrentQuality720  = "720p"
+	TorrentQuality1080 = "1080p"
+	TorrentQuality2160 = "2160p"
+
+	TorrentAutomationRulesVersion = 1
 )
 
 type TorrentAutomation struct {
-	Enabled             bool   `json:"enabled"`
-	PreferredQuality    string `json:"preferred_quality"`
-	MinSeeders          int    `json:"min_seeders"`
-	HighConfidenceOnly  bool   `json:"high_confidence_only"`
-	PreferSmaller       bool   `json:"prefer_smaller"`
-	ReleaseDelayMinutes int    `json:"release_delay_minutes"`
-	RetryWindowHours    int    `json:"retry_window_hours"`
-	MaxCandidates       int    `json:"max_candidates"`
+	Enabled             bool     `json:"enabled"`
+	PreferredQuality    string   `json:"preferred_quality"`
+	MinSeeders          int      `json:"min_seeders"`
+	HighConfidenceOnly  bool     `json:"high_confidence_only"`
+	PreferSmaller       bool     `json:"prefer_smaller"`
+	ReleaseDelayMinutes int      `json:"release_delay_minutes"`
+	RetryWindowHours    int      `json:"retry_window_hours"`
+	MaxCandidates       int      `json:"max_candidates"`
+	RulesVersion        int      `json:"rules_version"`
+	IncludeKeywords     string   `json:"include_keywords"`
+	ExcludeKeywords     string   `json:"exclude_keywords"`
+	AllowedGroups       []string `json:"allowed_groups"`
+	PreferredGroups     []string `json:"preferred_groups"`
+	AllowedUploaders    []string `json:"allowed_uploaders"`
+	PreferredUploaders  []string `json:"preferred_uploaders"`
+	PreferredProviders  []string `json:"preferred_providers"`
 }
 
 func DefaultTorrentAutomation() TorrentAutomation {
@@ -28,6 +41,8 @@ func DefaultTorrentAutomation() TorrentAutomation {
 		ReleaseDelayMinutes: 20,
 		RetryWindowHours:    24,
 		MaxCandidates:       5,
+		RulesVersion:        TorrentAutomationRulesVersion,
+		ExcludeKeywords:     "cam telesync hardsub dubbed",
 	}
 }
 
@@ -45,6 +60,20 @@ func (v TorrentAutomation) Effective() TorrentAutomation {
 	if v.MaxCandidates == 0 {
 		v.MaxCandidates = defaults.MaxCandidates
 	}
+	// Existing installations predate the release-selection rules. Seed the
+	// first rule set once, then preserve intentionally empty values afterwards.
+	if v.RulesVersion == 0 {
+		v.RulesVersion = TorrentAutomationRulesVersion
+		v.IncludeKeywords = defaults.IncludeKeywords
+		v.ExcludeKeywords = defaults.ExcludeKeywords
+	}
+	v.IncludeKeywords = normalizeKeywordText(v.IncludeKeywords)
+	v.ExcludeKeywords = normalizeKeywordText(v.ExcludeKeywords)
+	v.AllowedGroups = normalizeRuleList(v.AllowedGroups)
+	v.PreferredGroups = normalizeRuleList(v.PreferredGroups)
+	v.AllowedUploaders = normalizeRuleList(v.AllowedUploaders)
+	v.PreferredUploaders = normalizeRuleList(v.PreferredUploaders)
+	v.PreferredProviders = normalizeRuleList(v.PreferredProviders)
 	return v
 }
 
@@ -67,5 +96,46 @@ func ValidateTorrentAutomation(v TorrentAutomation) error {
 	if v.MaxCandidates < 1 || v.MaxCandidates > 20 {
 		return fmt.Errorf("candidate inspection limit must be between 1 and 20")
 	}
+	if len(v.IncludeKeywords) > 500 || len(v.ExcludeKeywords) > 500 {
+		return fmt.Errorf("torrent keyword filters must be 500 characters or fewer")
+	}
+	for label, values := range map[string][]string{
+		"release group allowlist": v.AllowedGroups,
+		"preferred release groups": v.PreferredGroups,
+		"uploader allowlist": v.AllowedUploaders,
+		"preferred uploaders": v.PreferredUploaders,
+		"preferred providers": v.PreferredProviders,
+	} {
+		if len(values) > 50 {
+			return fmt.Errorf("%s may contain at most 50 entries", label)
+		}
+		for _, value := range values {
+			if len(value) > 80 {
+				return fmt.Errorf("%s entries must be 80 characters or fewer", label)
+			}
+		}
+	}
 	return nil
+}
+
+func normalizeKeywordText(value string) string {
+	return strings.Join(strings.Fields(value), " ")
+}
+
+func normalizeRuleList(values []string) []string {
+	out := make([]string, 0, len(values))
+	seen := map[string]bool{}
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		key := strings.ToLower(value)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, value)
+	}
+	return out
 }
