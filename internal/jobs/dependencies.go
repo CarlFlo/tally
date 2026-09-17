@@ -20,3 +20,7 @@ type ProviderControl interface {
 type BackupCreator interface {
 	Create(context.Context, string) (string, error)
 }
+
+type TorrentAutomator interface {
+	Run(context.Context) (int, error)
+}
