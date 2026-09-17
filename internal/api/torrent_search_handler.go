@@ -37,6 +37,12 @@ func (s *Server) torrentSearch(w http.ResponseWriter, r *http.Request, session a
 	if err != nil {
 		return err
 	}
+	if target == nil {
+		target, err = s.torrentEpisodeTargetFromQuery(r.Context(), session.Profile, in.Query)
+		if err != nil {
+			return err
+		}
+	}
 	provider := s.jackett(r.Context())
 	if provider == nil {
 		return bad("configure and enable Jackett in Settings before searching")
