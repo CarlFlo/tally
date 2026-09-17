@@ -39,7 +39,7 @@ export function LoginCredentials({ profile }: { profile: Profile }) {
         </p>
       )}
       <label>
-        {setup ? t("profile.newPassword") : t("login.passwordOrPin")}
+        {setup ? t("profile.newPassword") : t("login.password")}
         <input
           type="password"
           autoComplete={setup ? "new-password" : "current-password"}
