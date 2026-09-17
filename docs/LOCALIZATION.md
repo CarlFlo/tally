@@ -1,18 +1,17 @@
 # Localization
 
-Tally localizes the web interface per profile. Translation catalogs are owned by the server and loaded from the persistent data directory.
+Tally localizes the web interface per profile. Locale catalogs are owned by the server and loaded from the persistent application data directory.
 
-## Location
+## Location and bundled locales
 
-Locale files live in:
+Locale files live in `<APP_DATA_DIR>/locales/` (normally `/config/locales/`). Tally creates the directory when needed.
 
-```text
-/config/locales/
-```
+Bundled catalogs currently include:
 
-More generally, this is `<APP_DATA_DIR>/locales/`.
+- `en.json` — canonical key contract and final fallback
+- `uk.json` — bundled Ukrainian translation
 
-On startup Tally creates the directory when needed and installs the bundled catalogs: English as `en.json` and Ukrainian as `uk.json`. English is the canonical translation-key contract and the final fallback. Bundled non-English catalogs are seeded only when missing, so local edits are never overwritten.
+English may be replaced on startup when the persistent copy is missing, invalid, or older than the bundled catalog version. Bundled non-English catalogs are installed only when missing, so operator edits are not overwritten.
 
 ## File format
 
@@ -27,8 +26,7 @@ Each locale is one UTF-8 JSON file named after its locale code, for example `sv.
     "catalogVersion": 1
   },
   "common": {
-    "save": "Spara",
-    "cancel": "Avbryt"
+    "save": "Spara"
   },
   "calendar": {
     "today": "Idag"
@@ -36,26 +34,20 @@ Each locale is one UTF-8 JSON file named after its locale code, for example `sv.
 }
 ```
 
-Metadata fields:
+Metadata:
 
-- `locale`: stable locale ID. It must match the filename without `.json`.
-- `name`: human-readable name shown in language selectors.
-- `direction`: `ltr` or `rtl`.
-- `catalogVersion`: positive integer identifying that translation file's revision. It is independent of the Tally application version.
+- `locale` must match the filename without `.json`.
+- `name` is the human-readable language name shown in selectors.
+- `direction` is `ltr` or `rtl`.
+- `catalogVersion` is a positive translation-catalog revision, independent of the Tally application version.
 
-Translation values must be non-empty strings or nested objects containing strings. Arrays, numbers, booleans, empty strings, and empty translation groups are rejected.
+Translation values must be non-empty strings or nested objects containing strings. Arrays, numbers, booleans, empty strings, and empty groups are rejected.
 
-## Creating a translation
+## Adding or editing a locale
 
-1. Use `internal/localization/en.json` from the same Tally release as the reference key set.
-2. Create a new file in `/config/locales`.
-3. Change `_meta.locale`, `_meta.name`, `_meta.direction`, and set a translation catalog version.
-4. Translate as many keys as desired.
-5. Save the file. Tally reloads it automatically; no server restart is required.
+Use `internal/localization/en.json` from the same release as the reference key set. A translation may be partial; missing keys fall back to English.
 
-A translation does **not** need to contain every English key. Missing keys fall back to English through i18next. This makes partial translations usable and lets older translations continue working when new UI text is added.
-
-Keep interpolation variables unchanged, including their braces. For example:
+Keep interpolation variables unchanged, including braces:
 
 ```json
 {
@@ -65,54 +57,39 @@ Keep interpolation variables unchanged, including their braces. For example:
 }
 ```
 
-Use i18next plural keys where English does, such as `_one` and `_other`. Other languages may add the plural forms required by their locale.
+Use i18next plural keys where the canonical catalog does, and add any additional plural forms required by the target language.
 
-## Validation and hot reload
+Tally watches the locale directory with filesystem events. Valid created/changed/renamed/removed files are reloaded and connected browsers are prompted through the existing live-update channel. There is no background polling fallback for unusual network filesystems.
 
-Tally watches the locale directory with filesystem events. It does not continuously poll the directory.
+Invalid locale files are logged, remain visible where practical, and are disabled for new selection with a concise UI reason. If a profile already references a locale that later becomes missing or invalid, the saved preference remains intact while the interface falls back to English. Repairing the file automatically restores that locale.
 
-When a JSON file is created, changed, renamed, or removed, Tally debounces the filesystem events and reloads the locale registry. Connected browsers receive a live-update hint through the existing SSE connection and refresh their locale index/catalog automatically.
+## Profile behavior
 
-Invalid locale files:
+The profile's saved locale is authoritative. Browser language detection is intentionally not used, so different Tally profiles can use different languages on the same deployment.
 
-- are logged to the server console with the detailed validation error;
-- remain visible in language selectors where possible;
-- are disabled so users cannot newly select them;
-- include a concise reason in the UI.
+Changing the language selector edits only the profile draft. The active interface locale changes after **Save profile** succeeds. Leaving the page without saving does not apply the draft language.
 
-If a profile is already configured to use a locale that later becomes missing or invalid, Tally keeps the stored profile preference but temporarily renders the interface in English. When the locale is repaired, the profile automatically returns to it.
+When a locale becomes active, Tally updates the document `lang` and `dir` attributes.
 
-The embedded English catalog is always available as the final safety fallback, even if the config copy of `en.json` is damaged while Tally is running.
-
-## English catalog versioning
-
-The bundled English catalog has its own `catalogVersion`.
-
-On startup:
-
-- if `/config/locales/en.json` is missing, Tally installs the bundled copy;
-- if the file is invalid or has an older catalog version, Tally replaces it with the bundled copy;
-- if its catalog version is equal to or newer than the bundled version, Tally leaves it untouched.
-
-When the canonical English key set is intentionally changed for a release, increment `_meta.catalogVersion` in `internal/localization/en.json`.
-
-Non-English locale files are never overwritten by Tally. Bundled non-English locales, such as Ukrainian, are installed only when their locale file does not already exist.
+Feedback produced by an action that changes locale must resolve against the newly active locale. Do not capture a translated string before the save and display it afterward; keep semantic data such as a translation key and translate at render time when the UI object can survive a locale change.
 
 ## What is localized
 
-The localization layer is for the web interface: navigation, settings, dialogs, validation copy, frontend-generated notifications, accessibility labels, human-visible dates/numbers, and similar UI text.
+Localize navigation, settings, dialogs, validation copy, frontend notifications, accessibility labels, and user-visible formatting.
 
-The following remain original/English by design:
+The following remain original/English by design unless a stable application-level mapping exists:
 
-- TV/provider metadata such as show names, episode names, summaries, genres, networks, and provider status text;
+- provider metadata such as show names, episode names, summaries, genres, and networks;
 - database values and protocol/internal identifiers;
-- server logs and activity/log message payloads;
-- raw backend/provider errors that do not have a stable API error code.
+- server activity/log payloads;
+- unstable raw provider/backend error text.
 
 Known API errors may expose stable error codes so the frontend can show localized copy while retaining the original server message as a fallback.
 
-## Locale metadata in the browser
+## English key contract
 
-When a locale becomes active, Tally updates the document `lang` and `dir` attributes. This keeps browser accessibility behavior correct and prepares the UI for future RTL translations.
+When the canonical English key set intentionally changes, increment `_meta.catalogVersion` in `internal/localization/en.json`.
 
-Profile locale is authoritative. Browser language detection is intentionally not used, so different Tally profiles and concurrent sessions can use different languages independently.
+English is always available as the final fallback, including when the persistent `en.json` becomes damaged at runtime. Non-English locale files are never overwritten merely because the bundled translation later changes.
+
+For broader state/localization lessons, see `LESSONS.md`.
