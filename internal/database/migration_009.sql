@@ -20,6 +20,8 @@ CREATE TABLE torrent_automation_runs (
 );
 CREATE INDEX torrent_automation_runs_created ON torrent_automation_runs(started_at DESC);
 CREATE INDEX torrent_automation_runs_episode ON torrent_automation_runs(episode_id,started_at DESC);
+CREATE UNIQUE INDEX torrent_automation_one_running_episode ON torrent_automation_runs(episode_id) WHERE status='running';
+CREATE UNIQUE INDEX torrent_automation_one_downloaded_episode ON torrent_automation_runs(episode_id) WHERE status='downloaded';
 
 CREATE TABLE torrent_automation_feedback (
     run_id TEXT PRIMARY KEY REFERENCES torrent_automation_runs(id) ON DELETE CASCADE,
