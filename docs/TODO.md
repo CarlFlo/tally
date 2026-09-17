@@ -6,7 +6,7 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 `feature/torrent-automation-confidence`
 
-Status: torrent confidence, verified inspection, automation, and Previous Runs implementation in progress.
+Status: implementation complete; final branch validation in progress.
 
 ### Evaluation and search metadata
 
@@ -31,7 +31,7 @@ Status: torrent confidence, verified inspection, automation, and Previous Runs i
 
 - [x] Add an `Automation` tab inside Torrent Search; automation/download policy is deployment-global, not profile-owned.
 - [x] Add minimal global controls: enable automatic downloads, preferred quality, minimum seeders, release delay, and bounded retry behavior. High + Verified remains an invariant rather than a tunable lower threshold.
-- [ ] Add a global per-show download override UI using download-only choices: `Default`, `Auto-download`, or `Never auto-download`. Notifications remain profile-owned and are not part of this policy.
+- [x] Add a global per-show download override UI using download-only choices: `Default`, `Auto-download`, or `Never auto-download`. Notifications remain profile-owned and are not part of this policy.
 - [x] Keep existing search/download capability toggles backend-authoritative; automation stops before submission if downloading becomes disabled mid-run.
 - [x] Prevent duplicate grabs and serialize decisions per episode while keeping overall work bounded/cancellable.
 - [x] Treat `no verified candidate` as a normal outcome, not an operational error, and retry later within a bounded window rather than accepting a weak match.
@@ -62,9 +62,9 @@ Status: torrent confidence, verified inspection, automation, and Previous Runs i
 
 - [x] Add database migration for automation/run history state and keep it inside the normal backup/restore database path.
 - [x] Add/update English and Ukrainian localization keys and increment bundled catalog versions for all new user-facing text.
-- [ ] Complete deterministic backend coverage for release parsing, confidence vs preference, `.torrent` parsing/inspection, blocked hashes, immutable run snapshots, retries/deduplication, capability enforcement, verified automation, and magnet exclusion.
-- [ ] Add browser coverage for Search confidence, Automation, Previous Runs, bad-run feedback, responsive layouts, and disabled feature states.
-- [ ] Update `ARCHITECTURE.md`, `DEVELOPMENT.md`, `VALIDATION.md`, and `LESSONS.md` where the durable manual-only torrent contract changes.
+- [x] Complete deterministic backend coverage for release parsing, confidence vs preference, `.torrent` parsing/inspection, blocked hashes, immutable run snapshots, retries/deduplication, capability enforcement, verified automation, and magnet exclusion.
+- [x] Add browser coverage for Search confidence, Automation, Previous Runs, bad-run feedback, responsive layouts, and disabled feature states.
+- [x] Update `ARCHITECTURE.md`, `DEVELOPMENT.md`, `VALIDATION.md`, and `LESSONS.md` where the durable manual-only torrent contract changes.
 - [ ] Run the complete required validation suite before the branch is considered ready.
 
 ## Current product foundations
@@ -77,7 +77,7 @@ The following are established capabilities rather than active TODO items:
 - SQLite-backed application settings, schedules, jobs, statistics, logs, bell notifications, Webhook/Discord delivery, and live updates.
 - TVmaze metadata coordination with bounded requests, caching, retries, cancellation, rate limiting, and circuit protection.
 - Validated SQLite migrations, pre-upgrade snapshots, archive backups, retention, staged validation, and in-process restore.
-- Manual Jackett search and qBittorrent submission/download monitoring with operator-managed credentials.
+- Jackett discovery plus manual and verified automated qBittorrent submission/download monitoring with operator-managed credentials.
 - Version-managed English and Ukrainian bundled locales plus validated hot-loaded custom locale files.
 
 ## Deferred scope
