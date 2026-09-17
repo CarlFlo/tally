@@ -62,6 +62,7 @@ test("profile language applies on save and persists per profile", async ({
   await page.getByRole("button", { name: "Save profile", exact: true }).click();
 
   // The saved profile locale becomes authoritative after bootstrap refreshes.
+  await expect(page.getByRole("status")).toContainText("Test profile updated");
   await expect(
     page.getByRole("heading", { name: "Test profile." }),
   ).toBeVisible();
