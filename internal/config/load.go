@@ -48,7 +48,10 @@ func Load() (Config, error) {
 	}
 	c.Addr = s("APP_ADDR", ":8080")
 	c.DataDir = s("APP_DATA_DIR", "/config")
-	c.AuthMode = s("APP_AUTH_MODE", "disabled")
+	// Authentication is selected per profile. Keep AuthMode fixed to local for
+	// compatibility with older internal call sites while the legacy OIDC code
+	// remains dormant and unregistered.
+	c.AuthMode = "local"
 	c.PublicURL = s("APP_PUBLIC_URL", "")
 	c.Timezone = s("TZ", "UTC")
 	c.Theme = s("APP_THEME_DEFAULT", "system")
@@ -71,9 +74,6 @@ func Load() (Config, error) {
 	c.OIDCAutoCreate = b("OIDC_AUTO_CREATE_USERS", true)
 	c.RawRetention = i("STATS_RAW_RETENTION_DAYS", 30, 1, 365)
 	c.AggregateRetention = i("STATS_AGGREGATE_RETENTION_DAYS", 365, 30, 3650)
-	if c.AuthMode != "disabled" && c.AuthMode != "local" && c.AuthMode != "oidc" {
-		errors = append(errors, "APP_AUTH_MODE must be disabled, local, or oidc")
-	}
 	if c.Theme != "system" && c.Theme != "light" && c.Theme != "dark" {
 		errors = append(errors, "APP_THEME_DEFAULT must be system, light, or dark")
 	}
@@ -92,9 +92,6 @@ func Load() (Config, error) {
 				errors = append(errors, key+": "+err.Error())
 			}
 		}
-	}
-	if c.AuthMode == "oidc" && (c.OIDCIssuer == "" || c.OIDCClientID == "" || c.OIDCRedirect == "") {
-		errors = append(errors, "OIDC issuer, client ID, and redirect URL are required")
 	}
 	if c.OIDCRedirect != "" {
 		u, err := url.Parse(c.OIDCRedirect)
