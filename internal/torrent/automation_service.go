@@ -2,9 +2,7 @@ package torrent
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -16,32 +14,32 @@ import (
 	"github.com/CarlFlo/tally/internal/settings"
 )
 
-type AutomationProvider interface {
-	Search(context.Context, SearchQuery) ([]SearchResult, error)
-	FetchTorrent(context.Context, string) ([]byte, error)
-}
-
 type AutomationClientSource interface {
 	Current(context.Context) (DownloadClient, error)
 }
 
 type AutomationService struct {
-	DB      *database.Store
-	Control providers.Requester
-	Clients AutomationClientSource
-	Now     func() time.Time
+	DB       *database.Store
+	Control  providers.Requester
+	Clients  AutomationClientSource
+	Now      func() time.Time
 	OnChange func(profile, resource string)
 }
 
 type automationEpisode struct {
 	ID, ShowID, ShowName, Premiered, Airstamp, Policy string
-	Season, Episode                              int
+	Season, Episode                                    int
 }
 
 type automationCapabilities struct {
 	Search     settings.Search
 	Downloads  settings.Torrent
 	Automation settings.TorrentAutomation
+}
+
+type automationCandidate struct {
+	Result     SearchResult
+	Assessment ReleaseAssessment
 }
 
 func (s *AutomationService) Run(ctx context.Context) (int, error) {
@@ -80,7 +78,7 @@ func (s *AutomationService) Run(ctx context.Context) (int, error) {
 			processed++
 		}
 	}
-	_ = AutomationStore{DB: s.DB}.PruneRuns(ctx, now.AddDate(0, 0, -90))
+	_ = (AutomationStore{DB: s.DB}).PruneRuns(ctx, now.AddDate(0, 0, -90))
 	return processed, nil
 }
 
@@ -91,9 +89,9 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 	}
 	query := fmt.Sprintf("%s S%02dE%02d", episode.ShowName, episode.Season, episode.Episode)
 	snapshot, _ := json.Marshal(map[string]any{
-		"automation": caps.Automation,
-		"show_policy": episode.Policy,
-		"search_enabled": caps.Search.Enabled,
+		"automation":        caps.Automation,
+		"show_policy":       episode.Policy,
+		"search_enabled":    caps.Search.Enabled,
 		"downloads_enabled": caps.Downloads.Enabled,
 	})
 	store := AutomationStore{DB: s.DB}
@@ -103,9 +101,6 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 		SettingsSnapshot: snapshot,
 	})
 	if err != nil {
-		// The schema has partial unique indexes for running and downloaded
-		// episodes. A concurrent/manual scheduler invocation therefore loses the
-		// claim rather than creating a duplicate download.
 		if strings.Contains(strings.ToLower(err.Error()), "unique") {
 			return false, nil
 		}
@@ -129,14 +124,8 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 		Data: map[string]any{"candidate_count": len(results)}, DurationMS: elapsedMS(searchStarted, s.now()),
 	})
 
-	type scored struct {
-		Result SearchResult
-		Assessment ReleaseAssessment
-	}
-	valid := make([]scored, 0, len(results))
-	rejected := 0
-	magnetOnly := 0
-	previouslyBad := 0
+	valid := make([]automationCandidate, 0, len(results))
+	rejected, magnetOnly, previouslyBad := 0, 0, 0
 	for _, result := range results {
 		assessment := EvaluateSearchCandidate(result, target)
 		if assessment.Rejected() {
@@ -161,7 +150,7 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 		if assessment.Confidence != ConfidenceHigh {
 			continue
 		}
-		valid = append(valid, scored{Result: result, Assessment: assessment})
+		valid = append(valid, automationCandidate{Result: result, Assessment: assessment})
 	}
 	rankAutomationCandidates(valid, caps.Automation)
 	if len(valid) > caps.Automation.MaxCandidates {
@@ -177,8 +166,9 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 
 	for index, candidate := range valid {
 		if err = ctx.Err(); err != nil {
-			_ = store.AppendDecision(context.Background(), runID, DecisionStep{Stage: "decision", Status: "cancelled", Summary: "Automation run was cancelled"})
-			_ = store.FinishRun(context.Background(), runID, RunCancelled, ReleaseAssessment{}, "")
+			background := context.Background()
+			_ = store.AppendDecision(background, runID, DecisionStep{Stage: "decision", Status: "cancelled", Summary: "Automation run was cancelled"})
+			_ = store.FinishRun(background, runID, RunCancelled, ReleaseAssessment{}, "")
 			return true, err
 		}
 		verifyStarted := s.now()
@@ -244,9 +234,7 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 		downloadStarted := s.now()
 		clientErr = client.AddTorrent(ctx, data)
 		if clientErr != nil && assessment.InfoHash != "" {
-			// A network timeout does not prove qBittorrent rejected the request.
-			// Reconcile the category before ever considering a retry.
-			if snapshot, reconcileErr := client.Downloads(ctx, TallyCategory); reconcileErr == nil && snapshotHasHash(snapshot, assessment.InfoHash) {
+			if clientSnapshot, reconcileErr := client.Downloads(ctx, TallyCategory); reconcileErr == nil && snapshotHasHash(clientSnapshot, assessment.InfoHash) {
 				clientErr = nil
 			}
 		}
@@ -337,7 +325,7 @@ func (s *AutomationService) dueEpisodes(ctx context.Context, now time.Time, conf
 }
 
 func (s *AutomationService) retryReady(ctx context.Context, episodeID string, now time.Time, retryWindowHours int) (bool, error) {
-	rows, err := s.DB.QueryContext(ctx, `SELECT started_at,status FROM torrent_automation_runs
+	rows, err := s.DB.QueryContext(ctx, `SELECT started_at FROM torrent_automation_runs
 		WHERE episode_id=? AND status NOT IN ('running','downloaded') AND started_at>=?
 		ORDER BY started_at DESC`, episodeID, now.Add(-time.Duration(retryWindowHours)*time.Hour).Unix())
 	if err != nil {
@@ -348,8 +336,7 @@ func (s *AutomationService) retryReady(ctx context.Context, episodeID string, no
 	var latest int64
 	for rows.Next() {
 		var started int64
-		var status string
-		if err = rows.Scan(&started, &status); err != nil {
+		if err = rows.Scan(&started); err != nil {
 			return false, err
 		}
 		if attempts == 0 {
@@ -404,15 +391,44 @@ func (s *AutomationService) episodeTarget(ctx context.Context, episode automatio
 	return target, rows.Err()
 }
 
-func rankAutomationCandidates[T interface{ ~struct{ Result SearchResult; Assessment ReleaseAssessment } }](items []T, config settings.TorrentAutomation) {
-	// Generic form is intentionally avoided at callers by the local scored type;
-	// use reflection-free access through conversion below is not possible in Go.
+func rankAutomationCandidates(items []automationCandidate, config settings.TorrentAutomation) {
+	sort.SliceStable(items, func(i, j int) bool {
+		left, right := items[i], items[j]
+		leftQuality := automationQualityScore(left.Assessment.Parsed.Resolution, config.PreferredQuality)
+		rightQuality := automationQualityScore(right.Assessment.Parsed.Resolution, config.PreferredQuality)
+		if leftQuality != rightQuality {
+			return leftQuality > rightQuality
+		}
+		if left.Result.Seeders != right.Result.Seeders {
+			return left.Result.Seeders > right.Result.Seeders
+		}
+		if config.PreferSmaller && left.Result.Size > 0 && right.Result.Size > 0 && left.Result.Size != right.Result.Size {
+			return left.Result.Size < right.Result.Size
+		}
+		return left.Result.Name < right.Result.Name
+	})
 }
 
-func candidateAuditRows(items []struct {
-	Result SearchResult
-	Assessment ReleaseAssessment
-}) []map[string]any {
+func automationQualityScore(resolution, preferred string) int {
+	if preferred != settings.TorrentQualityBest && resolution == preferred {
+		return 100
+	}
+	if preferred != settings.TorrentQualityBest && resolution != "" {
+		return 10
+	}
+	switch resolution {
+	case settings.TorrentQuality2160:
+		return 40
+	case settings.TorrentQuality1080:
+		return 30
+	case settings.TorrentQuality720:
+		return 20
+	default:
+		return 0
+	}
+}
+
+func candidateAuditRows(items []automationCandidate) []map[string]any {
 	rows := make([]map[string]any, 0, len(items))
 	for index, item := range items {
 		rows = append(rows, map[string]any{
@@ -452,7 +468,3 @@ func (s *AutomationService) publishChange() {
 		s.OnChange("", "torrent-automation-runs")
 	}
 }
-
-var _ = sql.ErrNoRows
-var _ = errors.Is
-var _ = sort.SliceStable
