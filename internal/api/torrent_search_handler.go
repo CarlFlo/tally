@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
@@ -14,6 +13,7 @@ import (
 func (s *Server) torrentSearch(w http.ResponseWriter, r *http.Request, session auth.Session) error {
 	var in struct {
 		Query      string `json:"query"`
+		EpisodeID  string `json:"episode_id"`
 		MinSeeders int    `json:"min_seeders"`
 		MinSize    int64  `json:"min_size"`
 		MaxSize    int64  `json:"max_size"`
@@ -33,6 +33,10 @@ func (s *Server) torrentSearch(w http.ResponseWriter, r *http.Request, session a
 	if in.MinSize < 0 || in.MaxSize < 0 || in.MinSeeders < 0 {
 		return bad("filters cannot be negative")
 	}
+	target, err := s.torrentEpisodeTarget(r.Context(), session.Profile, in.EpisodeID)
+	if err != nil {
+		return err
+	}
 	provider := s.jackett(r.Context())
 	if provider == nil {
 		return bad("configure and enable Jackett in Settings before searching")
@@ -44,13 +48,44 @@ func (s *Server) torrentSearch(w http.ResponseWriter, r *http.Request, session a
 	if _, e := s.DB.ExecContext(r.Context(), "INSERT INTO torrent_search_history VALUES(?,?,?,?,?,?)", database.ID(), session.Profile, in.Query, "jackett", len(results), time.Now().Unix()); e != nil {
 		return e
 	}
-	// Browser receives an opaque selection token. Provider URLs/API keys stay server-side.
-	out := []map[string]any{}
+	// Browser receives an opaque selection token. Provider URLs/API keys and
+	// authoritative target data stay server-side inside the short-lived token.
+	out := make([]map[string]any, 0, len(results))
+	store := s.torrentAutomationStore()
 	for _, result := range results {
+		var preliminary *torrent.ReleaseAssessment
+		previouslyBad := false
+		if target != nil {
+			assessment := torrent.EvaluateSearchCandidate(result, *target)
+			preliminary = &assessment
+			if result.InfoHash != "" {
+				previouslyBad, err = store.IsBadInfoHash(r.Context(), result.InfoHash)
+				if err != nil {
+					return err
+				}
+			}
+		}
 		token := auth.Token()
-		encoded, _ := json.Marshal(result)
+		encoded, err := encodeTorrentSelection(torrentSelection{Result: result, Target: target, Preliminary: preliminary})
+		if err != nil {
+			return err
+		}
 		s.selections.Store(token, selection{Profile: session.Profile, Data: encoded, Expires: time.Now().Add(30 * time.Minute)})
-		out = append(out, map[string]any{"id": token, "name": result.Name, "size": result.Size, "seeders": result.Seeders, "leechers": result.Leechers, "provider": result.Provider, "magnet": result.Magnet, "published": result.Published, "download_type": result.DownloadType, "sendable": result.Magnet != "" || result.URL != ""})
+		row := map[string]any{
+			"id": token, "name": result.Name, "size": result.Size, "seeders": result.Seeders,
+			"leechers": result.Leechers, "provider": result.Provider, "magnet": result.Magnet,
+			"published": result.Published, "download_type": result.DownloadType,
+			"sendable": result.Magnet != "" || result.URL != "",
+		}
+		if preliminary != nil {
+			row["confidence"] = preliminary.Confidence
+			row["verification"] = preliminary.Verification
+			row["reasons"] = preliminary.Reasons
+			row["hard_rejections"] = preliminary.HardRejections
+			row["parsed"] = preliminary.Parsed
+			row["previously_bad"] = previouslyBad
+		}
+		out = append(out, row)
 	}
 	s.selections.prune()
 	jsonResponse(w, 200, map[string]any{"results": out, "warnings": []string{}})
