@@ -37,23 +37,28 @@ func New(ctx context.Context, db *database.Store, c config.Config, m MetadataSou
 	if c.JobConcurrency < 1 {
 		c.JobConcurrency = 1
 	}
-	automation := &torrent.AutomationService{
+	service := &Service{
+		DB:            db,
+		Config:        c,
+		Metadata:      m,
+		Control:       p,
+		Backup:        b,
+		ctx:           ctx,
+		cancel:        cancel,
+		running:       map[string]context.CancelFunc{},
+		sem:           make(chan struct{}, c.JobConcurrency),
+		notifications: make(chan struct{}, 1),
+		scheduleWake:  make(chan struct{}, 1),
+	}
+	service.TorrentAutomation = &torrent.AutomationService{
 		DB:      db,
 		Control: p,
 		Clients: &torrent.ClientStore{DB: db, Control: p},
+		OnChange: func(profile, resource string) {
+			if service.OnChange != nil {
+				service.OnChange(profile, resource)
+			}
+		},
 	}
-	return &Service{
-		DB:                db,
-		Config:            c,
-		Metadata:          m,
-		Control:           p,
-		Backup:            b,
-		TorrentAutomation: automation,
-		ctx:               ctx,
-		cancel:            cancel,
-		running:           map[string]context.CancelFunc{},
-		sem:               make(chan struct{}, c.JobConcurrency),
-		notifications:     make(chan struct{}, 1),
-		scheduleWake:      make(chan struct{}, 1),
-	}
+	return service
 }
