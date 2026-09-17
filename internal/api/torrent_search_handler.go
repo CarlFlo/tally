@@ -7,6 +7,7 @@ import (
 
 	"github.com/CarlFlo/tally/internal/auth"
 	"github.com/CarlFlo/tally/internal/database"
+	"github.com/CarlFlo/tally/internal/settings"
 	"github.com/CarlFlo/tally/internal/torrent"
 )
 
@@ -54,11 +55,19 @@ func (s *Server) torrentSearch(w http.ResponseWriter, r *http.Request, session a
 	if _, e := s.DB.ExecContext(r.Context(), "INSERT INTO torrent_search_history VALUES(?,?,?,?,?,?)", database.ID(), session.Profile, in.Query, "jackett", len(results), time.Now().Unix()); e != nil {
 		return e
 	}
+
+	automationConfig := settings.DefaultTorrentAutomation()
+	var storedAutomation settings.TorrentAutomation
+	if _, loadErr := s.settingsStore().Load(r.Context(), "torrent_automation", &storedAutomation); loadErr == nil {
+		automationConfig = storedAutomation.Effective()
+	}
+
 	// Browser receives an opaque selection token. Provider URLs/API keys and
 	// authoritative target data stay server-side inside the short-lived token.
 	out := make([]map[string]any, 0, len(results))
 	store := s.torrentAutomationStore()
 	for _, result := range results {
+		parsed := torrent.ParseReleaseName(result.Name)
 		var preliminary *torrent.ReleaseAssessment
 		previouslyBad := false
 		if target != nil {
@@ -79,16 +88,16 @@ func (s *Server) torrentSearch(w http.ResponseWriter, r *http.Request, session a
 		s.selections.Store(token, selection{Profile: session.Profile, Data: encoded, Expires: time.Now().Add(30 * time.Minute)})
 		row := map[string]any{
 			"id": token, "name": result.Name, "size": result.Size, "seeders": result.Seeders,
-			"leechers": result.Leechers, "provider": result.Provider, "magnet": result.Magnet,
-			"published": result.Published, "download_type": result.DownloadType,
-			"sendable": result.Magnet != "" || result.URL != "",
+			"leechers": result.Leechers, "provider": result.Provider, "uploader": result.Uploader,
+			"magnet": result.Magnet, "published": result.Published, "download_type": result.DownloadType,
+			"sendable": result.Magnet != "" || result.URL != "", "parsed": parsed,
+			"preferences": torrent.AutomationPreferenceSignals(result, parsed, automationConfig),
 		}
 		if preliminary != nil {
 			row["confidence"] = preliminary.Confidence
 			row["verification"] = preliminary.Verification
 			row["reasons"] = preliminary.Reasons
 			row["hard_rejections"] = preliminary.HardRejections
-			row["parsed"] = preliminary.Parsed
 			row["previously_bad"] = previouslyBad
 		}
 		out = append(out, row)
