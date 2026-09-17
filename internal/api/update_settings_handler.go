@@ -14,6 +14,7 @@ func (s *Server) updateSettings(w http.ResponseWriter, r *http.Request, session 
 		return e
 	}
 	section := r.PathValue("section")
+	key := section
 	var value any
 	var revision int64
 	switch section {
@@ -64,6 +65,20 @@ func (s *Server) updateSettings(w http.ResponseWriter, r *http.Request, session 
 			return e
 		}
 		value, revision = in.Data, in.Revision
+	case "torrent-automation":
+		var in struct {
+			Data     settings.TorrentAutomation `json:"data"`
+			Revision int64                      `json:"revision"`
+		}
+		if e := decode(r, &in); e != nil {
+			return e
+		}
+		in.Data = in.Data.Effective()
+		if e := settings.ValidateTorrentAutomation(in.Data); e != nil {
+			return bad(e.Error())
+		}
+		value, revision = in.Data, in.Revision
+		key = "torrent_automation"
 	case "scheduling":
 		var in jobs.Schedule
 		if e := decode(r, &in); e != nil {
@@ -84,7 +99,7 @@ func (s *Server) updateSettings(w http.ResponseWriter, r *http.Request, session 
 	default:
 		return apiError{404, "unknown settings section"}
 	}
-	rev, e := s.settingsStore().Save(r.Context(), section, value, revision, session.Profile)
+	rev, e := s.settingsStore().Save(r.Context(), key, value, revision, session.Profile)
 	if e != nil {
 		if errors.Is(e, settings.ErrConflict) {
 			return apiError{409, e.Error()}
