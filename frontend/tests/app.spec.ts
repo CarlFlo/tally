@@ -1,9 +1,10 @@
-import { openProfile, signOut, openProfileMenu } from "./navigation";
+import { openProfile, signOut, openProfileMenu, selectProfileByName } from "./navigation";
 import { test, expect } from "@playwright/test";
 
 test("profile settings use browser history and signing out stays signed out with one profile", async ({
   page,
 }) => {
+  await selectProfileByName(page, "My profile");
   await page.goto("/calendar");
   await expect(
     page.getByRole("heading", { name: "Your calendar." }),
@@ -87,6 +88,7 @@ test("library, calendar, episode state, profiles, jobs and responsive layout", a
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  await selectProfileByName(page, "My profile");
   await page.goto("/calendar");
   await expect(
     page.getByRole("heading", { name: "Your calendar." }),
