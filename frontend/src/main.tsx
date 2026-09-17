@@ -50,6 +50,16 @@ const SettingsPage = lazy(() =>
     default: module.SettingsPage,
   })),
 );
+const ProfilesSettingsPage = lazy(() =>
+  import("./pages/ProfilesSettings").then((module) => ({
+    default: module.ProfilesSettingsPage,
+  })),
+);
+const ProfileSecurityPage = lazy(() =>
+  import("./pages/ProfileSecurity").then((module) => ({
+    default: module.ProfileSecurityPage,
+  })),
+);
 const SystemPage = lazy(() =>
   import("./pages/System").then((module) => ({ default: module.SystemPage })),
 );
@@ -357,7 +367,7 @@ function App() {
                       />
                       <Route
                         path="/settings/profiles"
-                        element={<SettingsPage tab="profiles" />}
+                        element={<ProfilesSettingsPage />}
                       />
                     </Route>
                     <Route
@@ -370,7 +380,7 @@ function App() {
                     />
                     <Route
                       path="/profile/security"
-                      element={<SettingsPage tab="security" />}
+                      element={<ProfileSecurityPage />}
                     />
                     <Route
                       path="/login/*"
