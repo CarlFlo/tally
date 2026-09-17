@@ -39,7 +39,7 @@ func (f *fakeTV) GetEpisodes(context.Context, string) ([]metadata.Episode, error
 	return []metadata.Episode{{ID: 10, Season: 1, Number: 1, Name: "Pilot", Airdate: "2026-01-02", Airstamp: "2026-01-02T20:00:00Z"}, {ID: 11, Season: 1, Number: 0, Name: "Special", Type: "significant_special", Airdate: "2026-01-03"}}, nil
 }
 
-func testServer(t *testing.T, mode string) (*Server, http.Handler, *fakeTV) {
+func testServer(t *testing.T, _ string) (*Server, http.Handler, *fakeTV) {
 	t.Helper()
 	dir := t.TempDir()
 	db, e := database.Open(context.Background(), dir)
@@ -49,10 +49,10 @@ func testServer(t *testing.T, mode string) (*Server, http.Handler, *fakeTV) {
 	t.Cleanup(func() { db.Close() })
 	// Production databases start empty. API tests seed an explicit administrator
 	// with a neutral ID so authorization tests cannot depend on legacy identity names.
-	if _, e = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-admin','My profile','violet',?)", time.Now().Unix()); e != nil {
+	if _, e = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at,auth_method) VALUES('profile-admin','My profile','violet',?,'none')", time.Now().Unix()); e != nil {
 		t.Fatal(e)
 	}
-	c := config.Config{DataDir: dir, AuthMode: mode, MaxProfiles: 3, PasswordMin: 4, PasswordMax: 128, Timezone: "UTC", Theme: "system", SessionIdle: 30 * 24 * time.Hour, SessionAbsolute: 180 * 24 * time.Hour, ResetCooldown: time.Minute}
+	c := config.Config{DataDir: dir, AuthMode: "local", MaxProfiles: 3, PasswordMin: 4, PasswordMax: 128, Timezone: "UTC", Theme: "system", SessionIdle: 30 * 24 * time.Hour, SessionAbsolute: 180 * 24 * time.Hour, ResetCooldown: time.Minute}
 	p, e := providers.New(context.Background(), db, dir, 2, 0)
 	if e != nil {
 		t.Fatal(e)
@@ -69,7 +69,30 @@ func testServer(t *testing.T, mode string) (*Server, http.Handler, *fakeTV) {
 	s := &Server{DB: db, Backup: b, Config: c, Auth: auth.New(db, c), Metadata: &metadata.Service{DB: db, Provider: tv}, Control: p, Events: hub, Locales: locales}
 	s.Metadata.OnChange = hub.Publish
 	s.Clients = &torrent.ClientStore{DB: db, Control: p}
-	return s, s.Handler(), tv
+	return s, testLegacyProfileCookies(s, s.Handler()), tv
+}
+
+// Most API tests predate normal sessions for no-auth profiles and use a
+// tally_profile cookie as a compact fixture. Translate that test-only cookie
+// into a real server session so unrelated tests keep exercising production
+// authorization without preserving the removed runtime behavior.
+func testLegacyProfileCookies(s *Server, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, err := r.Cookie("tally_session"); err != nil {
+			if legacy, legacyErr := r.Cookie("tally_profile"); legacyErr == nil && legacy.Value != "" {
+				token := auth.Token()
+				now := time.Now()
+				result, execErr := s.DB.ExecContext(r.Context(), `INSERT INTO sessions(id,profile_id,created_at,last_seen,expires_at,restricted,user_agent)
+					SELECT ?,id,?,?,?,?,? FROM profiles WHERE id=?`, auth.Digest(token), now.Unix(), now.Unix(), now.Add(s.Config.SessionAbsolute).Unix(), false, "test fixture", legacy.Value)
+				if execErr == nil {
+					if affected, rowsErr := result.RowsAffected(); rowsErr == nil && affected == 1 {
+						r.AddCookie(&http.Cookie{Name: "tally_session", Value: token})
+					}
+				}
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func request(t *testing.T, h http.Handler, method, path string, body any, cookies ...*http.Cookie) *httptest.ResponseRecorder {
