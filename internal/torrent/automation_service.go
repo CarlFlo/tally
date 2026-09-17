@@ -113,7 +113,9 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 
 	provider := &Jackett{Control: s.Control, BaseURL: caps.Search.BaseURL, APIKey: caps.Search.APIKey}
 	searchStarted := s.now()
-	results, err := provider.Search(ctx, SearchQuery{Query: query, MinSeeders: caps.Automation.MinSeeders})
+	// Keep discovery broad here. Automation-specific rejection happens below so
+	// Previous Runs can explain exactly why Jackett candidates were removed.
+	results, err := provider.Search(ctx, SearchQuery{Query: query})
 	if err != nil {
 		_ = store.AppendDecision(ctx, runID, DecisionStep{Stage: "search", Status: "failed", Summary: "Jackett search failed", DurationMS: elapsedMS(searchStarted, s.now())})
 		_ = finish(RunFailed, ReleaseAssessment{}, "")
@@ -126,10 +128,27 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 
 	valid := make([]automationCandidate, 0, len(results))
 	rejected, magnetOnly, previouslyBad := 0, 0, 0
+	belowSeeders, keywordFiltered, groupFiltered, uploaderFiltered, nonHigh := 0, 0, 0, 0, 0
 	for _, result := range results {
+		if result.Seeders < caps.Automation.MinSeeders {
+			belowSeeders++
+			continue
+		}
+		if !automationKeywordsMatch(result.Name, caps.Automation) {
+			keywordFiltered++
+			continue
+		}
 		assessment := EvaluateSearchCandidate(result, target)
 		if assessment.Rejected() {
 			rejected++
+			continue
+		}
+		if !automationGroupAllowed(assessment.Parsed.Group, caps.Automation) {
+			groupFiltered++
+			continue
+		}
+		if !automationUploaderAllowed(result.Uploader, caps.Automation) {
+			uploaderFiltered++
 			continue
 		}
 		if result.InfoHash != "" {
@@ -148,6 +167,7 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 			continue
 		}
 		if assessment.Confidence != ConfidenceHigh {
+			nonHigh++
 			continue
 		}
 		valid = append(valid, automationCandidate{Result: result, Assessment: assessment})
@@ -159,8 +179,10 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 	_ = store.AppendDecision(ctx, runID, DecisionStep{
 		Stage: "filter", Status: "success", Summary: fmt.Sprintf("%d candidates remained for verification", len(valid)),
 		Data: map[string]any{
-			"rejected": rejected, "magnet_only": magnetOnly, "previously_bad": previouslyBad,
-			"shortlisted": len(valid), "candidates": candidateAuditRows(valid),
+			"rejected": rejected, "below_min_seeders": belowSeeders, "keyword_filtered": keywordFiltered,
+			"group_filtered": groupFiltered, "uploader_filtered": uploaderFiltered, "non_high_confidence": nonHigh,
+			"magnet_only": magnetOnly, "previously_bad": previouslyBad,
+			"shortlisted": len(valid), "candidates": candidateAuditRows(valid, caps.Automation),
 		},
 	})
 
@@ -249,7 +271,10 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 		}
 		_ = store.AppendDecision(ctx, runID, DecisionStep{
 			Stage: "decision", Status: "selected", Summary: "Best verified candidate selected",
-			Data: map[string]any{"name": candidate.Result.Name, "confidence": assessment.Confidence, "verification": assessment.Verification},
+			Data: map[string]any{
+				"name": candidate.Result.Name, "confidence": assessment.Confidence, "verification": assessment.Verification,
+				"preferences": AutomationPreferenceSignals(candidate.Result, candidate.Assessment.Parsed, caps.Automation),
+			},
 		})
 		_ = store.AppendDecision(ctx, runID, DecisionStep{
 			Stage: "download", Status: "success", Summary: "Sent to qBittorrent successfully",
@@ -394,6 +419,11 @@ func (s *AutomationService) episodeTarget(ctx context.Context, episode automatio
 func rankAutomationCandidates(items []automationCandidate, config settings.TorrentAutomation) {
 	sort.SliceStable(items, func(i, j int) bool {
 		left, right := items[i], items[j]
+		leftTrust := automationPreferenceScore(left.Result, left.Assessment.Parsed, config)
+		rightTrust := automationPreferenceScore(right.Result, right.Assessment.Parsed, config)
+		if leftTrust != rightTrust {
+			return leftTrust > rightTrust
+		}
 		leftQuality := automationQualityScore(left.Assessment.Parsed.Resolution, config.PreferredQuality)
 		rightQuality := automationQualityScore(right.Assessment.Parsed.Resolution, config.PreferredQuality)
 		if leftQuality != rightQuality {
@@ -428,13 +458,14 @@ func automationQualityScore(resolution, preferred string) int {
 	}
 }
 
-func candidateAuditRows(items []automationCandidate) []map[string]any {
+func candidateAuditRows(items []automationCandidate, config settings.TorrentAutomation) []map[string]any {
 	rows := make([]map[string]any, 0, len(items))
 	for index, item := range items {
 		rows = append(rows, map[string]any{
 			"rank": index + 1, "name": item.Result.Name, "provider": item.Result.Provider,
-			"seeders": item.Result.Seeders, "size": item.Result.Size,
+			"uploader": item.Result.Uploader, "seeders": item.Result.Seeders, "size": item.Result.Size,
 			"confidence": item.Assessment.Confidence, "parsed": item.Assessment.Parsed,
+			"preferences": AutomationPreferenceSignals(item.Result, item.Assessment.Parsed, config),
 		})
 	}
 	return rows
