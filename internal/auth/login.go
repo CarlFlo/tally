@@ -15,11 +15,11 @@ type throttle struct {
 
 func (s *Service) Login(ctx context.Context, w http.ResponseWriter, r *http.Request, profile, password string) error {
 	if len(profile) > 64 {
-		return fmt.Errorf("incorrect password or PIN")
+		return fmt.Errorf("incorrect password")
 	}
 	var exists int
 	if s.DB.QueryRowContext(ctx, "SELECT 1 FROM profiles WHERE id=?", profile).Scan(&exists) != nil {
-		return fmt.Errorf("incorrect password or PIN")
+		return fmt.Errorf("incorrect password")
 	}
 	if len(password) > 4096 {
 		return fmt.Errorf("password is too long")
@@ -34,12 +34,11 @@ func (s *Service) Login(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	a.Last = time.Now()
 	s.attempts[profile] = a
 	s.mu.Unlock()
-	select {
-	case s.hashes <- struct{}{}:
-		defer func() { <-s.hashes }()
-	case <-ctx.Done():
-		return ctx.Err()
+	release, err := s.acquireHashMemory(ctx)
+	if err != nil {
+		return err
 	}
+	defer release()
 	var hash string
 	var must bool
 	e := s.DB.QueryRowContext(ctx, "SELECT hash,must_change FROM local_credentials WHERE profile_id=?", profile).Scan(&hash, &must)
@@ -57,7 +56,7 @@ func (s *Service) Login(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		a.Next = time.Now().Add(time.Duration(delay) * time.Second)
 		s.attempts[profile] = a
 		s.mu.Unlock()
-		return fmt.Errorf("incorrect password or PIN")
+		return fmt.Errorf("incorrect password")
 	}
 	delete(s.attempts, profile)
 	if temporary {
