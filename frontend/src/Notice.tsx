@@ -10,7 +10,7 @@ export function Notice({
   toast: Toast;
   dismiss: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [host, setHost] = useState<HTMLElement>(document.body);
   const [leaving, setLeaving] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -63,6 +63,18 @@ export function Notice({
     setLeaving(true);
   };
 
+  // Profile save is the one success toast that can straddle a locale change.
+  // If its text came from any loaded catalog, resolve the key again using the
+  // locale that is active when the toast renders.
+  const message =
+    !toast.error &&
+    Object.keys(i18n.store.data).some(
+      (locale) =>
+        i18n.getFixedT(locale)("settings.profileUpdated") === toast.message,
+    )
+      ? t("settings.profileUpdated")
+      : toast.message;
+
   // A modal makes everything outside it inert. Keep the notification inside the
   // active dialog, then use the popover top layer for its fixed screen position.
   return createPortal(
@@ -77,7 +89,7 @@ export function Notice({
       role={toast.error ? "alert" : "status"}
     >
       {toast.error ? <AlertCircle size={19} /> : <CheckCircle2 size={19} />}
-      <span>{toast.message}</span>
+      <span>{message}</span>
       {toast.retry && (
         <button
           className="button small"
