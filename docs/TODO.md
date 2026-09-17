@@ -4,26 +4,76 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 ## Current branch
 
-`feature/torrent-search-downloads`
+`feature/torrent-automation-confidence`
 
-Status: per-profile authentication rework in progress.
+Status: torrent confidence, verified inspection, automation, and Previous Runs implementation in progress.
 
-- [x] Torrent search submissions use clear download actions and correct success handling.
-- [x] Recent torrent submissions refresh through the normal live-update path instead of requiring a page reload.
-- [x] Add a Downloads page backed by the configured torrent client.
-- [x] Keep torrent search and torrent downloading as independent capabilities with separate settings toggles.
-- [x] Keep feature toggles outside the provider/client configuration they gate.
-- [x] Hide Torrent search navigation when search is disabled and Downloads navigation/actions when downloading is disabled.
-- [x] Enforce disabled capabilities on the backend as well as hiding unavailable UI.
-- [x] Browser Back closes a Calendar show overlay before navigating away from the page.
-- [x] Saving a profile language applies only on Save profile, and the resulting success toast renders in the newly active locale.
-- [x] Reconcile bundled localization files on startup while leaving uniquely named custom locales untouched.
-- [x] Add backend and browser regression coverage for changed behavior.
+### Evaluation and search metadata
+
+- [ ] Add one backend-owned torrent evaluation model shared by manual search and future automation.
+- [ ] Keep confidence (`high`, `medium`, `low`, `rejected`) separate from user preference/ranking.
+- [ ] Enrich normalized Jackett/Torznab results with useful metadata when supplied: category, infohash, external IDs, grabs, and ratio/download factors.
+- [ ] Add conservative release parsing/matching for show identity, aliases/year, season/episode forms, quality/source/codec clues, seeders, and size sanity.
+- [ ] Treat specials, multi-episode releases, season packs, ambiguous identities, and malformed titles conservatively.
+- [ ] Surface compact localized confidence on manual search without exposing internal numeric scoring.
+
+### Torrent verification
+
+- [ ] Deep-inspect only shortlisted/selected candidates rather than every Jackett result.
+- [ ] Fetch retrievable `.torrent` files through the provider coordination boundary without exposing provider URLs to the browser.
+- [ ] Parse bencoded torrent metadata locally, derive/validate infohash as appropriate, and inspect the complete file tree before qBittorrent submission.
+- [ ] Reject clearly unsuitable payloads such as missing meaningful video, executable/script content, suspicious archive-only payloads, sample-only payloads, episode mismatch, or previously blocked infohashes.
+- [ ] Record verification as `verified` or `unverified`; automatic download requires a verified candidate.
+- [ ] Magnet-only results remain available for manual download but are never eligible for automatic download because their payload cannot be inspected first.
+- [ ] If the best candidate fails verification, continue through the next bounded shortlist candidate rather than immediately failing the run.
+
+### Global automation
+
+- [ ] Add an `Automation` tab inside Torrent Search; automation/download policy is deployment-global, not profile-owned.
+- [ ] Add minimal global controls: enable automatic downloads, preferred quality, minimum seeders, high-confidence-only default, and a sensible built-in release delay/retry policy.
+- [ ] Add global per-show download policy: use default/manual, notify only where applicable, auto-download, or never download without creating contradictory per-profile downloader behavior.
+- [ ] Keep existing search/download capability toggles backend-authoritative; automation must stop before submission if downloading becomes disabled mid-run.
+- [ ] Prevent duplicate grabs and serialize decisions per episode while keeping overall work bounded/cancellable.
+- [ ] Treat `no verified candidate` as a normal outcome, not an operational error, and retry later within a bounded window rather than accepting a weak match.
+- [ ] Avoid duplicate qBittorrent submissions after ambiguous/time-out responses by reconciling against the selected infohash where possible.
+
+### Previous Runs
+
+- [ ] Add a `Previous Runs` tab inside Torrent Search; this is the user-facing explainability/history surface rather than an "Audit" page.
+- [ ] Persist immutable global run records containing episode/show IDs, query, settings snapshot, candidate/filter/ranking decisions, verification result, selected infohash, submission result, timestamps/durations, and decision-engine version.
+- [ ] Never persist credentials, authenticated URLs, cookies, API keys, or other connection secrets in run history.
+- [ ] Render desktop runs/timeline/details layout and responsive tablet/mobile variants in the existing Tally visual language.
+- [ ] Show a chronological decision timeline: search, filtering, candidate ranking, torrent inspection, decision, qBittorrent submission, and later feedback.
+- [ ] Allow verified torrent inspection details to expand into the parsed file tree.
+- [ ] Add `Mark as bad` feedback with reasons such as wrong show/episode/language, poor quality, corrupt, suspicious files, or other.
+- [ ] Preserve original decisions and append later feedback instead of rewriting history.
+- [ ] Block the exact bad infohash globally while avoiding automatic whole-indexer/release-group blacklisting from a single report.
+- [ ] Previously bad hashes remain visible in manual search with a warning but are automatically excluded from automation.
+- [ ] Add bounded retention for detailed run history while retaining the small bad-infohash history needed to prevent repeat selection loops.
+
+### Notifications and ownership
+
+- [ ] Keep automation and Previous Runs deployment-global because one shared downloader is authoritative.
+- [ ] Keep notifications profile-owned and fan automation/release outcomes out only to profiles that follow the relevant show and have enabled the corresponding notification category.
+- [ ] Ensure one global torrent action cannot produce duplicate downloads merely because multiple profiles follow the show.
+
+### Quality and documentation
+
+- [ ] Add database migrations and backup/restore coverage for new durable state.
+- [ ] Add/update English and Ukrainian localization keys and increment bundled catalog versions for all user-facing text.
+- [ ] Add deterministic backend tests for release parsing, confidence vs preference, `.torrent` parsing/inspection, blocked hashes, immutable run snapshots, retries/deduplication, and capability enforcement.
+- [ ] Add browser coverage for Search confidence, Automation, Previous Runs, bad-run feedback, responsive layouts, and disabled feature states.
+- [ ] Update `ARCHITECTURE.md`, `DEVELOPMENT.md`, `VALIDATION.md`, and `LESSONS.md` where the durable manual-only torrent contract changes.
+- [ ] Run the complete required validation suite before the branch is considered ready.
+
+## Queued authentication work
+
+The following unfinished authentication work remains separate from this branch:
+
 - [ ] Replace deployment-wide local/no-auth selection with per-profile Password or No authentication.
 - [ ] Let profile creation and profile management explicitly choose and change the authentication method.
 - [ ] Show each profile's authentication method on `/settings/profiles` and clearly warn when No authentication is selected.
 - [ ] Use normal server sessions for no-auth profiles instead of a global disabled-auth path.
-- [x] Remove the unused OIDC implementation, configuration, dependencies, identity table, and related UI/docs remnants.
 - [ ] Update authentication regression coverage and run the full required validation suite.
 
 ## Current product foundations
@@ -35,7 +85,7 @@ The following are established capabilities rather than active TODO items:
 - Calendar, library, discovery, show details, episode state, favorites, responsive themes, and profile-specific localization.
 - SQLite-backed application settings, schedules, jobs, statistics, logs, bell notifications, Webhook/Discord delivery, and live updates.
 - TVmaze metadata coordination with bounded requests, caching, retries, cancellation, rate limiting, and circuit protection.
-- Validated SQLite migrations through schema 8, pre-upgrade snapshots, archive backups, retention, staged validation, and in-process restore.
+- Validated SQLite migrations, pre-upgrade snapshots, archive backups, retention, staged validation, and in-process restore.
 - Manual Jackett search and qBittorrent submission/download monitoring with operator-managed credentials.
 - Version-managed English and Ukrainian bundled locales plus validated hot-loaded custom locale files.
 
@@ -43,8 +93,7 @@ The following are established capabilities rather than active TODO items:
 
 These remain intentionally outside the current product unless a future task explicitly changes the scope:
 
-- Automatic torrent selection or automatic downloading.
-- Torrent scanning, renaming, importing, or media-library lifecycle management.
+- Torrent renaming/importing or media-library lifecycle management.
 - Additional downloader adapters beyond the currently supported client.
 - Movies or non-TV media tracking.
 - Playback or media streaming.
