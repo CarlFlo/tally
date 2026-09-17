@@ -17,11 +17,12 @@ var (
 )
 
 type Profile struct {
-	ID     string `json:"id"`
-	Name   string `json:"display_name"`
-	Avatar string `json:"avatar"`
-	Locale string `json:"locale"`
-	Admin  bool   `json:"is_admin"`
+	ID         string `json:"id"`
+	Name       string `json:"display_name"`
+	Avatar     string `json:"avatar"`
+	Locale     string `json:"locale"`
+	Admin      bool   `json:"is_admin"`
+	AuthMethod string `json:"auth_method"`
 }
 
 type Repository struct {
@@ -54,8 +55,12 @@ func (r Repository) Create(ctx context.Context, name, avatar, locale, hash, acto
 	if locale == "" {
 		locale = "en"
 	}
-	profile := Profile{ID: database.ID(), Name: name, Avatar: avatar, Locale: locale}
-	if _, err = tx.ExecContext(ctx, "INSERT INTO profiles(id,display_name,avatar,created_at,locale) VALUES(?,?,?,?,?)", profile.ID, name, avatar, time.Now().Unix(), locale); err != nil {
+	authMethod := "none"
+	if hash != "" {
+		authMethod = "password"
+	}
+	profile := Profile{ID: database.ID(), Name: name, Avatar: avatar, Locale: locale, AuthMethod: authMethod}
+	if _, err = tx.ExecContext(ctx, "INSERT INTO profiles(id,display_name,avatar,created_at,locale,auth_method) VALUES(?,?,?,?,?,?)", profile.ID, name, avatar, time.Now().Unix(), locale, authMethod); err != nil {
 		return Profile{}, err
 	}
 	if hash != "" {
