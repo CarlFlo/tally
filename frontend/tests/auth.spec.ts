@@ -59,7 +59,9 @@ test("local sign-in follows browser history and switching requires sign-out", as
   const createDialog = page.getByRole("dialog");
   await expect(createDialog.locator(".profile-create-preview .avatar.large")).toBeVisible();
   await expect(createDialog.locator(".avatar-choices button")).toHaveCount(6);
-  await expect(createDialog.getByLabel("Authentication", { exact: true })).toBeVisible();
+  await expect(
+    createDialog.getByRole("combobox", { name: "Authentication", exact: true }),
+  ).toBeVisible();
   await createDialog.getByRole("button", { name: "Cancel", exact: true }).click();
 
   const otherTab = await page.context().newPage();
@@ -101,7 +103,10 @@ test("new profile form has localized authentication copy and avatar preview", as
   await page.goto("/login/new");
   await expect(page.locator(".profile-create-preview .avatar.large")).toBeVisible();
   await expect(page.locator(".avatar-choices button")).toHaveCount(6);
-  const authentication = page.getByLabel("Authentication", { exact: true });
+  const authentication = page.getByRole("combobox", {
+    name: "Authentication",
+    exact: true,
+  });
   await expect(authentication).toBeVisible();
   await expect(authentication.locator("option")).toHaveText([
     "Password",
