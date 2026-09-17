@@ -46,7 +46,8 @@ func TestParseReleaseName(t *testing.T) {
 		{
 			name:       "season pack",
 			release:    "Show.S01.1080p.BluRay.x265-GROUP",
-			title:      "show s01 1080p bluray x265 group",
+			title:      "show",
+			season:     1,
 			seasonPack: true,
 		},
 	}
