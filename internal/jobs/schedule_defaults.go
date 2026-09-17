@@ -8,6 +8,7 @@ func (s *Service) initializeSchedules() error {
 		enabled             bool
 	}{
 		{"metadata", "0 * * * *", "0 * * * *", true},
+		{"torrent_automation", "*/15 * * * *", "*/15 * * * *", true},
 		{"maintenance", "30 3 * * *", "30 3 * * *", true},
 		{"backup", "0 3 * * *", "0 3 * * *", true},
 	} {
