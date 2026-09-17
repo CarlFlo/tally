@@ -6,7 +6,7 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 `feature/torrent-automation-confidence`
 
-Status: follow-up refinement in progress after hands-on testing; final branch validation remains pending.
+Status: implementation and follow-up refinement complete; exact branch-head validation remains pending before merge readiness.
 
 ### Evaluation and search metadata
 
@@ -40,27 +40,27 @@ Status: follow-up refinement in progress after hands-on testing; final branch va
 
 ### Follow-up automation controls
 
-- [ ] Expand `/search/automation` into a practical release-selection dashboard rather than relying only on quality and minimum seeders.
-- [ ] Add automation include-keyword and exclude-keyword filters, with useful default suggestions and an explicit reset-to-default/reset-filters action.
-- [ ] Add release-group rules: whitelist/allow selected groups and separately prioritize preferred groups when otherwise valid candidates are ranked.
-- [ ] Normalize Jackett uploader/author metadata when an indexer exposes it; uploader rules must degrade gracefully when the metadata is unavailable because Jackett/indexers do not guarantee it for every result.
-- [ ] Add uploader rules that can allow/filter and prioritize trusted uploaders without treating uploader trust as proof that the show/episode identity is correct.
-- [ ] Add an explicit preferred provider/indexer list using the existing Jackett provider/indexer name so known high-quality sources can materially influence ordering even when uploader metadata is unavailable.
-- [ ] Keep trust/preference signals separate from confidence: preferred group/uploader/provider should materially influence ordering among valid candidates but must not override wrong-show, wrong-episode, blocked-payload, or verification failures.
-- [ ] Persist these automation rules in the global settings snapshot so Previous Runs can explain exactly which filters/trust rules affected each historical decision.
-- [ ] Add deterministic tests for keyword filters, reset/default behavior, group whitelist/priorities, uploader metadata present/missing, preferred-provider ranking, trusted-source ranking, and the separation of trust/preference from confidence.
+- [x] Expand `/search/automation` into a practical release-selection dashboard rather than relying only on quality and minimum seeders.
+- [x] Add automation include-keyword and exclude-keyword filters, with useful default suggestions and an explicit reset-to-default/reset-filters action.
+- [x] Add release-group rules: whitelist/allow selected groups and separately prioritize preferred groups when otherwise valid candidates are ranked.
+- [x] Normalize Jackett uploader/author metadata when an indexer exposes it; uploader rules must degrade gracefully when the metadata is unavailable because Jackett/indexers do not guarantee it for every result.
+- [x] Add uploader rules that can allow/filter and prioritize trusted uploaders without treating uploader trust as proof that the show/episode identity is correct.
+- [x] Add an explicit preferred provider/indexer list using the existing Jackett provider/indexer name so known high-quality sources can materially influence ordering even when uploader metadata is unavailable.
+- [x] Keep trust/preference signals separate from confidence: preferred group/uploader/provider should materially influence ordering among valid candidates but must not override wrong-show, wrong-episode, blocked-payload, or verification failures.
+- [x] Persist these automation rules in the global settings snapshot so Previous Runs can explain exactly which filters/trust rules affected each historical decision.
+- [x] Add deterministic tests for keyword filters, reset/default behavior, group whitelist/priorities, uploader metadata present/missing, preferred-provider ranking, trusted-source ranking, and the separation of trust/preference from confidence.
 
 ### Manual search result inspection
 
-- [ ] Replace the current inline `Why` details disclosure with a click-to-expand panel attached directly beneath the selected `.torrent-result`; expansion must push later results down naturally rather than overlaying them.
-- [ ] Make the whole result row the primary expansion target while preserving normal Download/copy/action button behavior without accidental toggles.
-- [ ] Show a clear final evaluation in the expanded panel plus side-by-side strengths/pros and concerns/cons.
-- [ ] Collapse redundant identity reasons such as `Show matches` + `Episode matches` into a concise human-readable statement such as `Correct show and episode`.
-- [ ] Classify positive evidence such as healthy seeders, matching identity, useful metadata, preferred release group/uploader/provider, and verified payload under strengths.
-- [ ] Classify negative/limiting evidence such as magnet payload being uninspectable, ambiguous metadata, low swarm health, non-preferred source, previous bad history, or hard rejection reasons under concerns.
-- [ ] Show useful parsed metadata in the expanded panel (quality, source, codec, release group, uploader when available, provider/indexer, size, seeders, verification state) without exposing the internal numeric score.
-- [ ] Keep the compact collapsed result row readable and consistent with the existing Tally visual language.
-- [ ] Add browser coverage for result expansion/collapse, button interactions, strengths/concerns rendering, and layout behavior with multiple adjacent results.
+- [x] Replace the current inline `Why` details disclosure with a click-to-expand panel attached directly beneath the selected `.torrent-result`; expansion must push later results down naturally rather than overlaying them.
+- [x] Make the whole result row the primary expansion target while preserving normal Download/copy/action button behavior without accidental toggles.
+- [x] Show a clear final evaluation in the expanded panel plus side-by-side strengths/pros and concerns/cons.
+- [x] Collapse redundant identity reasons such as `Show matches` + `Episode matches` into a concise human-readable statement such as `Correct show and episode`.
+- [x] Classify positive evidence such as healthy seeders, matching identity, useful metadata, preferred release group/uploader/provider, and verified payload under strengths.
+- [x] Classify actual negative/limiting evidence such as an uninspectable magnet payload, ambiguous or missing metadata, low swarm health, previous bad history, or hard rejection reasons under concerns. The absence of a preferred group/uploader/provider is neutral rather than evidence against a release.
+- [x] Show useful parsed metadata in the expanded panel (quality, source, codec, release group, uploader when available, provider/indexer, size, seeders, verification state) without exposing the internal numeric score.
+- [x] Keep the compact collapsed result row readable and consistent with the existing Tally visual language.
+- [x] Add browser coverage for result expansion/collapse, button interactions, strengths/concerns rendering, and layout behavior with multiple adjacent results.
 
 ### Previous Runs
 
@@ -84,10 +84,10 @@ Status: follow-up refinement in progress after hands-on testing; final branch va
 
 ### Navigation and responsiveness
 
-- [ ] Re-check `/search`, `/search/automation`, and `/search/runs` navigation for the intermittent unresponsive behavior observed during testing.
-- [ ] Stress-cycle the three Torrent Search tabs in one browser document and verify navigation remains responsive, inputs/buttons remain interactive, and no stale searches/listeners/subscriptions block the tab.
-- [ ] Confirm active Search requests are cancelled cleanly on route changes without delaying navigation or leaving stale callbacks.
-- [ ] Add or refine browser regression coverage for rapid repeated Torrent Search tab navigation rather than masking any problem with cooldowns or forced reloads.
+- [x] Re-check `/search`, `/search/automation`, and `/search/runs` navigation for the intermittent unresponsive behavior observed during testing and fix the clean-settings synchronization loop that could starve a route commit.
+- [x] Stress-cycle the three Torrent Search tabs in one browser document and verify navigation remains responsive, inputs/buttons remain interactive, and no stale searches/listeners/subscriptions block the tab.
+- [x] Confirm active Search requests are cancelled cleanly on route changes without delaying navigation or leaving stale callbacks.
+- [x] Add or refine browser regression coverage for rapid repeated Torrent Search tab navigation rather than masking any problem with cooldowns or forced reloads.
 
 ### Quality and documentation
 
@@ -96,8 +96,8 @@ Status: follow-up refinement in progress after hands-on testing; final branch va
 - [x] Complete deterministic backend coverage for the initial release parsing, confidence vs preference, `.torrent` parsing/inspection, blocked hashes, immutable run snapshots, retries/deduplication, capability enforcement, verified automation, and magnet exclusion.
 - [x] Add initial browser coverage for Search confidence, Automation, Previous Runs, bad-run feedback, responsive layouts, and disabled feature states.
 - [x] Update `ARCHITECTURE.md`, `DEVELOPMENT.md`, `VALIDATION.md`, and `LESSONS.md` where the durable manual-only torrent contract changes.
-- [ ] Update English and Ukrainian localization for all follow-up filter/trust/result-evaluation UI.
-- [ ] Update durable documentation if the new automation filtering/trust model introduces additional long-lived architecture or validation rules.
+- [x] Update English and Ukrainian localization for all follow-up filter/trust/result-evaluation UI.
+- [x] Update durable documentation for the automation filtering/trust model and its validation rules.
 - [ ] Run the complete required validation suite on the final branch head before the branch is considered ready.
 
 ## Current product foundations
