@@ -65,7 +65,7 @@ func TestBrowserServer(t *testing.T) {
 	s, _, _ := testServer(t, mode)
 	browserLocale := []byte(`{
 		"_meta":{"locale":"zz-Test","name":"Test locale","direction":"ltr","catalogVersion":1},
-		"settings":{"myProfile":"Test profile"},
+		"settings":{"myProfile":"Test profile","profileUpdated":"Test profile updated"},
 		"profile":{"newSpace":"Test personal space","create":"Create test profile"},
 		"calendar":{"yourCalendar":"Test calendar"},
 		"nav":{"calendar":"Test calendar"},
