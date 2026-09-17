@@ -99,7 +99,10 @@ func TestBrowserServer(t *testing.T) {
 		if _, err = s.DB.Exec("INSERT INTO local_credentials VALUES(?,?,0)", adminID, hash); err != nil {
 			t.Fatal(err)
 		}
-		if _, err = s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES(?,?,?,?)", userID, "Alex", "mint", time.Now().Unix()); err != nil {
+		if _, err = s.DB.Exec("UPDATE profiles SET auth_method='password' WHERE id=?", adminID); err != nil {
+			t.Fatal(err)
+		}
+		if _, err = s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at,auth_method) VALUES(?,?,?,?,?)", userID, "Alex", "mint", time.Now().Unix(), auth.ProfileAuthPassword); err != nil {
 			t.Fatal(err)
 		}
 		if _, err = s.DB.Exec("INSERT INTO local_credentials VALUES(?,?,0)", userID, hash); err != nil {
