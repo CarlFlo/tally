@@ -35,7 +35,7 @@ func TestJackettSearchConnectionAndFilters(t *testing.T) {
 			w.Write([]byte(`<caps><searching><search available="yes"/></searching></caps>`))
 			return
 		}
-		w.Write([]byte(`<rss xmlns:torznab="http://torznab.com/schemas/2015/feed"><channel><item><title>Linux 1080p HEVC</title><guid>one</guid><jackettindexer>Example Indexer</jackettindexer><pubDate>Sun, 13 Sep 2026 10:00:00 +0000</pubDate><enclosure url="magnet:?xt=urn:btih:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" length="2048"/><torznab:attr name="seeders" value="50"/><torznab:attr name="peers" value="62"/></item><item><title>Other release</title><guid>two</guid><size>1024</size><torznab:attr name="seeders" value="5"/></item></channel></rss>`))
+		w.Write([]byte(`<rss xmlns:torznab="http://torznab.com/schemas/2015/feed"><channel><item><title>Linux 1080p HEVC</title><guid>one</guid><jackettindexer>Example Indexer</jackettindexer><pubDate>Sun, 13 Sep 2026 10:00:00 +0000</pubDate><enclosure url="magnet:?xt=urn:btih:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" length="2048"/><torznab:attr name="seeders" value="50"/><torznab:attr name="peers" value="62"/><torznab:attr name="grabs" value="87"/><torznab:attr name="infohash" value="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"/><torznab:attr name="category" value="5000"/><torznab:attr name="category" value="5030"/><torznab:attr name="tvdbid" value="123"/><torznab:attr name="tmdbid" value="456"/><torznab:attr name="imdbid" value="tt7654321"/><torznab:attr name="tvmazeid" value="789"/><torznab:attr name="downloadvolumefactor" value="0"/><torznab:attr name="uploadvolumefactor" value="2"/></item><item><title>Other release</title><guid>two</guid><size>1024</size><torznab:attr name="seeders" value="5"/></item></channel></rss>`))
 	}))
 	defer server.Close()
 	p := Jackett{Control: control, BaseURL: server.URL, APIKey: "secret"}
@@ -43,8 +43,21 @@ func TestJackettSearchConnectionAndFilters(t *testing.T) {
 		t.Fatal(e)
 	}
 	results, e := p.Search(ctx, SearchQuery{Query: "Linux", Include: "HEVC", MinSeeders: 10})
-	if e != nil || len(results) != 1 || results[0].Seeders != 50 || results[0].Leechers != 12 || results[0].Provider != "Example Indexer" || results[0].DownloadType != "Magnet" {
+	if e != nil || len(results) != 1 {
 		t.Fatalf("parse/filter failure: %+v %v", results, e)
+	}
+	result := results[0]
+	if result.Seeders != 50 || result.Leechers != 12 || result.Grabs != 87 || result.Provider != "Example Indexer" || result.DownloadType != "Magnet" {
+		t.Fatalf("basic metadata parse failure: %+v", result)
+	}
+	if result.InfoHash != strings.Repeat("a", 40) || result.TVDBID != "123" || result.TMDBID != "456" || result.IMDBID != "tt7654321" || result.TVMazeID != "789" {
+		t.Fatalf("identity metadata parse failure: %+v", result)
+	}
+	if len(result.Categories) != 2 || result.Categories[0] != 5000 || result.Categories[1] != 5030 {
+		t.Fatalf("category metadata parse failure: %+v", result.Categories)
+	}
+	if result.DownloadVolumeFactor == nil || *result.DownloadVolumeFactor != 0 || result.UploadVolumeFactor == nil || *result.UploadVolumeFactor != 2 {
+		t.Fatalf("ratio metadata parse failure: download=%v upload=%v", result.DownloadVolumeFactor, result.UploadVolumeFactor)
 	}
 	if p.validTorrentURL("https://evil.example/secret.torrent") {
 		t.Fatal("foreign torrent URL accepted")
