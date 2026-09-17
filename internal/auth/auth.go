@@ -26,9 +26,9 @@ func (s *Service) acquireHashMemory(ctx context.Context) (func(), error) {
 	select {
 	case s.hashes <- struct{}{}:
 		return func() {
-			// Argon2id intentionally uses a 64 MiB working set. Authentication is
-			// infrequent, so return those temporary heap pages to the OS promptly
-			// instead of letting one sign-in raise the process RSS high-water mark.
+			// Password hashing is intentionally memory-hard. Authentication is
+			// infrequent, so return the temporary Argon2 heap pages to the OS
+			// promptly instead of retaining the process RSS high-water mark.
 			debug.FreeOSMemory()
 			<-s.hashes
 		}, nil
