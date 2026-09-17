@@ -23,7 +23,7 @@ test("rapid view switching stays interactive while live data changes", async ({
   await selectProfileByName(page, "My profile");
 
   await page.goto("/settings");
-  await expect(page.locator(".schedule-editor")).toHaveCount(3);
+  await expect(page.locator(".schedule-editor")).toHaveCount(4);
   const originalDocument = await page.evaluateHandle(() => document);
   const liveChanges = (async () => {
     for (let index = 0; index < 10; index++) {
