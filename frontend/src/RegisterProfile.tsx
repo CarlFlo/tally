@@ -6,6 +6,8 @@ import { useLocalization } from "./i18n";
 
 const htmlColor = /^#[0-9A-Fa-f]{6}$/;
 
+type AuthMethod = "password" | "none";
+
 export function RegisterProfile() {
   const { t } = useTranslation();
   const { locales, previewLocale } = useLocalization();
@@ -14,6 +16,7 @@ export function RegisterProfile() {
   const [avatar, setAvatar] = useState("mint");
   const [customColor, setCustomColor] = useState("");
   const [locale, setLocale] = useState("en");
+  const [authMethod, setAuthMethod] = useState<AuthMethod>("password");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
@@ -27,7 +30,7 @@ export function RegisterProfile() {
   }, [previewLocale]);
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (password !== confirm) {
+    if (authMethod === "password" && password !== confirm) {
       notify(t("profile.passwordMismatch"), true);
       return;
     }
@@ -36,7 +39,8 @@ export function RegisterProfile() {
       await api("/auth/register", "POST", {
         name,
         avatar: selectedAvatar,
-        password,
+        auth_method: authMethod,
+        password: authMethod === "password" ? password : "",
         locale,
       });
       resetSession();
@@ -55,10 +59,6 @@ export function RegisterProfile() {
         </h1>
         {boot.profiles.length >= boot.max_profiles ? (
           <p className="muted">{t("profile.spacesFull")}</p>
-        ) : boot.auth_mode === "oidc" ? (
-          <a className="button primary" href="/auth/oidc/start">
-            {t("profile.continueSSO")}
-          </a>
         ) : (
           <form className="login-form" onSubmit={submit}>
             <label>
@@ -151,7 +151,19 @@ export function RegisterProfile() {
                   </small>
                 ))}
             </label>
-            {boot.auth_mode === "local" && (
+            <label>
+              {t("profile.authentication")}
+              <select
+                value={authMethod}
+                onChange={(event) => setAuthMethod(event.target.value as AuthMethod)}
+              >
+                <option value="password">{t("profile.authPassword")}</option>
+                <option value="none">{t("profile.authNone")}</option>
+              </select>
+            </label>
+            {authMethod === "none" ? (
+              <p className="callout warning">{t("profile.authNoneWarning")}</p>
+            ) : (
               <>
                 <label>
                   {t("profile.newPassword")}
@@ -177,7 +189,7 @@ export function RegisterProfile() {
                   />
                 </label>
                 <p className="small-text muted">
-{t("profile.passwordHint", {
+                  {t("profile.passwordHint", {
                     min: boot.password_min,
                     max: boot.password_max,
                   })}
