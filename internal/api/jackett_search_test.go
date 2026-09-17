@@ -7,11 +7,15 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/CarlFlo/tally/internal/settings"
 	"github.com/CarlFlo/tally/internal/torrent"
 )
+
+const fixtureVideoTorrent = "d4:infod6:lengthi2048e4:name13:episode01.mkv12:piece lengthi16384e6:pieces20:aaaaaaaaaaaaaaaaaaaaee"
+const fixtureExecutableTorrent = "d4:infod5:filesld6:lengthi2048e4:pathl13:episode01.mkveed6:lengthi50e4:pathl9:setup.exeeee4:name4:Show12:piece lengthi16384e6:pieces20:aaaaaaaaaaaaaaaaaaaaee"
 
 func TestJackettSearchNormalizesResultsWithoutLeakingURL(t *testing.T) {
 	s, handler, _ := testServer(t, "disabled")
@@ -58,11 +62,11 @@ func TestJackettConnectionTestUsesSavedSearchProtocol(t *testing.T) {
 	expect(t, request(t, handler, "POST", "/api/settings/search/test", body), 400)
 }
 
-func TestJackettTorrentFileSelectionIsFetchedAndSent(t *testing.T) {
+func TestJackettTorrentFileSelectionIsFetchedInspectedAndSent(t *testing.T) {
 	s, handler, _ := testServer(t, "disabled")
 	jackett := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/download" {
-			w.Write([]byte("de"))
+			w.Write([]byte(fixtureVideoTorrent))
 			return
 		}
 		fmt.Fprintf(w, `<rss><channel><item><title>Torrent file result</title><guid>two</guid><enclosure url="http://%s/download?apikey=PRIVATE-KEY" length="2048"/></item></channel></rss>`, r.Host)
@@ -114,4 +118,48 @@ func TestJackettTorrentFileSelectionIsFetchedAndSent(t *testing.T) {
 	}
 	sent := request(t, handler, "POST", "/api/torrents/send", map[string]string{"selection": output.Results[0].ID, "idempotency_key": "0123456789abcdef"})
 	expect(t, sent, 200)
+}
+
+func TestJackettTorrentInspectionRejectsExecutableBeforeClient(t *testing.T) {
+	s, handler, _ := testServer(t, "disabled")
+	jackett := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/download" {
+			w.Write([]byte(fixtureExecutableTorrent))
+			return
+		}
+		fmt.Fprintf(w, `<rss><channel><item><title>Unsafe result</title><guid>unsafe</guid><enclosure url="http://%s/download?apikey=PRIVATE-KEY" length="2098"/></item></channel></rss>`, r.Host)
+	}))
+	defer jackett.Close()
+	var clientRequests atomic.Int32
+	client := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		clientRequests.Add(1)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer client.Close()
+	ctx := context.Background()
+	if err := s.settingsStore().Ensure(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.settingsStore().Save(ctx, "search", settings.Search{BaseURL: jackett.URL, APIKey: "PRIVATE-KEY", Enabled: true}, 1); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Clients.Save(ctx, torrent.ClientUpdate{Adapter: "qbittorrent", Fields: map[string]string{"url": client.URL, "api_key": fixtureClientKey}}); err != nil {
+		t.Fatal(err)
+	}
+	search := request(t, handler, "POST", "/api/torrents/search", map[string]any{"query": "Unsafe"})
+	expect(t, search, 200)
+	var output struct {
+		Results []struct{ ID string `json:"id"` } `json:"results"`
+	}
+	if err := json.Unmarshal(search.Body.Bytes(), &output); err != nil || len(output.Results) != 1 {
+		t.Fatalf("unexpected search response: %s", search.Body.String())
+	}
+	response := request(t, handler, "POST", "/api/torrents/send", map[string]string{"selection": output.Results[0].ID, "idempotency_key": "fedcba9876543210"})
+	expect(t, response, 400)
+	if !strings.Contains(response.Body.String(), "executable or script") {
+		t.Fatalf("inspection failure was not explained: %s", response.Body.String())
+	}
+	if clientRequests.Load() != 0 {
+		t.Fatal("rejected torrent reached qBittorrent")
+	}
 }
