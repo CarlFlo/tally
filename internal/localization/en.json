@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 9
+    "catalogVersion": 10
   },
   "common": {
     "save": "Save",
@@ -246,7 +246,11 @@
     "clearTitle": "Clear watch history for {{name}}?",
     "removeTitle": "Remove {{name}}?",
     "clearMessage": "All episodes of this show will become unwatched for your profile. Downloaded markers are kept.",
-    "removeMessage": "This show will leave your library and calendar. Your progress is kept if you follow it again. Hold Shift when removing to skip this prompt."
+    "removeMessage": "This show will leave your library and calendar. Your progress is kept if you follow it again. Hold Shift when removing to skip this prompt.",
+    "automationPolicy_default": "Automatic downloads · Use global default",
+    "automationPolicy_auto": "Automatic downloads · Always for this show",
+    "automationPolicy_never": "Automatic downloads · Never for this show",
+    "automationPolicySaved": "Show automation policy saved"
   },
   "backups": {
     "versionUnavailable": "Version unavailable",
