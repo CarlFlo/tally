@@ -99,3 +99,23 @@ func TestApplyPayloadVerificationRejectsInfoHashMismatch(t *testing.T) {
 		t.Fatalf("infohash mismatch was not rejected: %+v", assessment)
 	}
 }
+
+func TestResolvedFileVerificationPreservesKnownMagnetInfoHash(t *testing.T) {
+	hash := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	base := ReleaseAssessment{
+		Confidence: ConfidenceHigh,
+		Verification: VerificationUnverified,
+		InfoHash: hash,
+		Parsed: ParsedRelease{Title: "example show", Season: 1, Episode: 2},
+	}
+	files := []TorrentFile{{Path: "Example.Show.S01E02.mkv", Size: 2 * 1024 * 1024 * 1024}}
+	assessment, err := VerifyResolvedFilesForTarget(base, hash, "Example.Show.S01E02", files, EpisodeTarget{
+		ShowTitle: "Example Show", Season: 1, Episode: 2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if assessment.InfoHash != hash {
+		t.Fatalf("resolved verification lost known magnet infohash: %q", assessment.InfoHash)
+	}
+}

@@ -144,7 +144,7 @@ func ApplyPayloadVerification(base ReleaseAssessment, candidate SearchResult, me
 	base.Payload = &inspection
 	if metadata.InfoHashV1 != "" {
 		base.InfoHash = metadata.InfoHashV1
-	} else {
+	} else if metadata.InfoHashV2 != "" {
 		base.InfoHash = metadata.InfoHashV2
 	}
 
