@@ -46,7 +46,7 @@ func TestLocaleEndpointsArePublic(t *testing.T) {
 	if err := json.Unmarshal(catalog.Body.Bytes(), &body); err != nil {
 		t.Fatal(err)
 	}
-	if body.Meta.Locale != "en" || body.Meta.CatalogVersion != 17 || body.Messages["common"] == nil {
+	if body.Meta.Locale != "en" || body.Meta.CatalogVersion != 18 || body.Messages["common"] == nil {
 		t.Fatalf("unexpected English catalog: %+v", body.Meta)
 	}
 
