@@ -262,9 +262,9 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 							"size_profile": candidate.SizeProfile,
 						}, DurationMS: elapsedMS(inspectionStarted, s.now()),
 					})
-				} else if !ValidMagnet(candidate.Result.Magnet) {
+				} else if !hasReason(assessment.Reasons, ReasonTorrentMetadataFailed) || !ValidMagnet(candidate.Result.Magnet) {
 					_ = store.AppendDecision(ctx, runID, DecisionStep{
-						Stage: "inspection", Status: "rejected", Summary: "Candidate failed verified inspection and has no magnet fallback",
+						Stage: "inspection", Status: "rejected", Summary: "Candidate failed torrent payload inspection",
 						Data: map[string]any{
 							"rank": index + 1, "name": candidate.Result.Name, "confidence": assessment.Confidence,
 							"verification": assessment.Verification, "hard_rejections": assessment.HardRejections, "payload": assessment.Payload,

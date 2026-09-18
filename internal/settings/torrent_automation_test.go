@@ -35,3 +35,19 @@ func TestTorrentAutomationRuleListsAreNormalized(t *testing.T) {
 		t.Fatalf("unexpected normalized providers: %#v", effective.PreferredProviders)
 	}
 }
+
+func TestTorrentAutomationValidatesSizeProfileRanges(t *testing.T) {
+	config := DefaultTorrentAutomation()
+	if err := ValidateTorrentAutomation(config); err != nil {
+		t.Fatalf("defaults should be valid: %v", err)
+	}
+	config.LiveMinMBPerMinute = config.LiveMaxMBPerMinute
+	if err := ValidateTorrentAutomation(config); err == nil {
+		t.Fatal("equal live-action bounds were accepted")
+	}
+	config = DefaultTorrentAutomation()
+	config.AnimatedMaxMBPerMinute = 501
+	if err := ValidateTorrentAutomation(config); err == nil {
+		t.Fatal("animated range above safety maximum was accepted")
+	}
+}

@@ -123,3 +123,34 @@ func TestShowAutomationPolicyIsGlobalAndDefaultsCleanly(t *testing.T) {
 		t.Fatalf("default policy did not remove override: %q %v", policy, err)
 	}
 }
+
+func TestShowMediaProfileDetectsAnimationAndSupportsOverride(t *testing.T) {
+	ctx := context.Background()
+	db, err := database.Open(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err = db.ExecContext(ctx, "INSERT INTO shows(id,name,show_type,genres) VALUES('show-animated','Example','Scripted','[\"Anime\"]')"); err != nil {
+		t.Fatal(err)
+	}
+	store := AutomationStore{DB: db}
+	profile, err := store.ShowMediaProfile(ctx, "show-animated")
+	if err != nil || profile.Mode != MediaProfileAuto || profile.Detected != MediaProfileAnimated || profile.Effective != MediaProfileAnimated {
+		t.Fatalf("unexpected detected profile: %+v err=%v", profile, err)
+	}
+	if err = store.SetShowMediaProfile(ctx, "show-animated", MediaProfileLive); err != nil {
+		t.Fatal(err)
+	}
+	profile, err = store.ShowMediaProfile(ctx, "show-animated")
+	if err != nil || profile.Mode != MediaProfileLive || profile.Detected != MediaProfileAnimated || profile.Effective != MediaProfileLive {
+		t.Fatalf("override was not applied: %+v err=%v", profile, err)
+	}
+	if err = store.SetShowMediaProfile(ctx, "show-animated", MediaProfileAuto); err != nil {
+		t.Fatal(err)
+	}
+	profile, err = store.ShowMediaProfile(ctx, "show-animated")
+	if err != nil || profile.Mode != MediaProfileAuto || profile.Effective != MediaProfileAnimated {
+		t.Fatalf("auto mode was not restored: %+v err=%v", profile, err)
+	}
+}

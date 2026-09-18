@@ -16,6 +16,8 @@ import (
 
 type automationRequester struct {
 	magnetOnly    bool
+	withMagnet    bool
+	reportedSize  int64
 	searchCalls   *int
 	torrentCalls  *int
 	beforeTorrent func() error
@@ -44,13 +46,20 @@ func (r automationRequester) Do(_ context.Context, request providers.Request) (p
 	if r.searchCalls != nil {
 		(*r.searchCalls)++
 	}
-	var enclosure string
-	if r.magnetOnly {
+	var enclosure, itemLink string
+	if r.magnetOnly || r.withMagnet {
 		enclosure = `magnet:?xt=urn:btih:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`
 	} else {
 		enclosure = `http://jackett.test/download`
 	}
-	feed := fmt.Sprintf(`<rss xmlns:torznab="http://torznab.com/schemas/2015/feed"><channel><item><title>Example.Show.S01E02.1080p.WEB-DL.H264-GROUP</title><guid>one</guid><enclosure url="%s" length="2048"/><torznab:attr name="seeders" value="50"/></item></channel></rss>`, enclosure)
+	if r.withMagnet {
+		itemLink = "<link>http://jackett.test/download</link>"
+	}
+	size := r.reportedSize
+	if size == 0 {
+		size = 2048
+	}
+	feed := fmt.Sprintf(`<rss xmlns:torznab="http://torznab.com/schemas/2015/feed"><channel><item><title>Example.Show.S01E02.1080p.WEB-DL.H264-GROUP</title><guid>one</guid>%s<enclosure url="%s" length="%d"/><torznab:attr name="seeders" value="50"/></item></channel></rss>`, itemLink, enclosure, size)
 	return providers.Response{Body: []byte(feed), Status: 200}, nil
 }
 
@@ -62,6 +71,8 @@ func (s automationClientSource) Current(context.Context) (DownloadClient, error)
 
 type automationClient struct {
 	added          int
+	magnetAdded    int
+	magnet         string
 	data           []byte
 	addErr         error
 	reconcile      bool
@@ -69,9 +80,14 @@ type automationClient struct {
 	downloadsCalls int
 }
 
-func (c *automationClient) Name() string                             { return "test" }
-func (c *automationClient) TestConnection(context.Context) error    { return nil }
-func (c *automationClient) AddMagnet(context.Context, string) error { return fmt.Errorf("automation must not submit magnets") }
+func (c *automationClient) Name() string                          { return "test" }
+func (c *automationClient) TestConnection(context.Context) error { return nil }
+func (c *automationClient) AddMagnet(_ context.Context, magnet string) error {
+	c.magnetAdded++
+	c.magnet = magnet
+	c.lastHash = MagnetInfoHash(magnet)
+	return c.addErr
+}
 func (c *automationClient) AddTorrent(_ context.Context, data []byte) error {
 	c.added++
 	c.data = append([]byte(nil), data...)
@@ -192,7 +208,7 @@ func TestAutomationDownloadsOnlyAfterVerifiedTorrentInspection(t *testing.T) {
 	}
 }
 
-func TestAutomationNeverDownloadsMagnetOnlyCandidate(t *testing.T) {
+func TestAutomationAllowsHighConfidenceMagnetFallback(t *testing.T) {
 	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
 	db := automationTestStore(t, now)
 	client := &automationClient{}
@@ -200,26 +216,88 @@ func TestAutomationNeverDownloadsMagnetOnlyCandidate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if processed != 1 || client.added != 0 {
-		t.Fatalf("magnet-only candidate reached automatic download, processed=%d added=%d", processed, client.added)
+	if processed != 1 || client.added != 0 || client.magnetAdded != 1 {
+		t.Fatalf("expected one magnet fallback, processed=%d torrents=%d magnets=%d", processed, client.added, client.magnetAdded)
+	}
+	runs, err := (AutomationStore{DB: db}).ListRuns(context.Background(), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runs) != 1 || runs[0].Status != RunDownloaded || runs[0].Confidence != ConfidenceHigh || runs[0].Verification != VerificationUnverified {
+		t.Fatalf("unexpected magnet fallback outcome: %+v", runs)
+	}
+	if runs[0].SelectedInfoHash != "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" {
+		t.Fatalf("magnet infohash was not preserved: %+v", runs[0])
+	}
+	foundMetadataOnly := false
+	for _, step := range runs[0].DecisionLog {
+		if step.Stage == "inspection" && step.Status == "metadata_only" {
+			foundMetadataOnly = true
+		}
+	}
+	if !foundMetadataOnly {
+		t.Fatalf("metadata-only fallback was not explicit: %+v", runs[0].DecisionLog)
+	}
+}
+
+func TestAutomationPrefersInspectableTorrentWhenMagnetAlsoExists(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	client := &automationClient{}
+	processed, err := automationService(db, automationRequester{withMagnet: true}, client, now).Run(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if processed != 1 || client.added != 1 || client.magnetAdded != 0 {
+		t.Fatalf("inspectable torrent was not preferred: processed=%d torrents=%d magnets=%d", processed, client.added, client.magnetAdded)
+	}
+}
+
+func TestAutomationFallsBackToMagnetWhenTorrentCannotBeFetched(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	client := &automationClient{}
+	requester := automationRequester{withMagnet: true, beforeTorrent: func() error { return errors.New("torrent unavailable") }}
+	processed, err := automationService(db, requester, client, now).Run(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if processed != 1 || client.added != 0 || client.magnetAdded != 1 {
+		t.Fatalf("torrent fetch failure did not use magnet fallback: processed=%d torrents=%d magnets=%d", processed, client.added, client.magnetAdded)
+	}
+}
+
+func TestAutomationFiltersImplausibleKnownSizeRate(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	if _, err := db.Exec("UPDATE episodes SET runtime=40 WHERE id='episode-a'"); err != nil {
+		t.Fatal(err)
+	}
+	client := &automationClient{}
+	processed, err := automationService(db, automationRequester{magnetOnly: true, reportedSize: 20 * 1024 * 1024}, client, now).Run(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if processed != 1 || client.added != 0 || client.magnetAdded != 0 {
+		t.Fatalf("size outlier reached client: processed=%d torrents=%d magnets=%d", processed, client.added, client.magnetAdded)
 	}
 	runs, err := (AutomationStore{DB: db}).ListRuns(context.Background(), 10)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(runs) != 1 || runs[0].Status != RunNoVerifiedCandidate {
-		t.Fatalf("unexpected magnet-only outcome: %+v", runs)
+		t.Fatalf("unexpected size-filter outcome: %+v", runs)
 	}
-	foundMagnetReason := false
+	found := false
 	for _, step := range runs[0].DecisionLog {
 		if step.Stage == "filter" {
-			if count, ok := step.Data["magnet_only"].(float64); ok && count == 1 {
-				foundMagnetReason = true
+			if count, ok := step.Data["size_rate_filtered"].(float64); ok && count == 1 {
+				found = true
 			}
 		}
 	}
-	if !foundMagnetReason {
-		t.Fatalf("magnet exclusion was not recorded in decision flow: %+v", runs[0].DecisionLog)
+	if !found {
+		t.Fatalf("size-rate rejection was not recorded: %+v", runs[0].DecisionLog)
 	}
 }
 
