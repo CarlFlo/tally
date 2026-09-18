@@ -177,6 +177,12 @@ test("torrent search navigation and filters follow the saved Jackett state", asy
       ),
     ).toBe(true);
 
+    await page.getByLabel("Minimum seeders").fill("15");
+    await page.getByLabel("Min size (GB)").fill("1.5");
+    await page.getByLabel("Max size (GB)").fill("10");
+    await page.getByLabel("Include keywords").fill("Example");
+    await page.getByLabel("Exclude keywords").fill("CAM");
+
     expect(searchRequests).toBe(1);
     await sidebar.getByRole("link", { name: "Calendar", exact: true }).click();
     await expect(page).toHaveURL(/\/calendar$/);
@@ -189,6 +195,23 @@ test("torrent search navigation and filters follow the saved Jackett state", asy
     await expect(
       page.getByText("Example S01 1080p WEB-DL x264", { exact: true }),
     ).toBeVisible();
+    await expect(page.getByLabel("Minimum seeders")).toHaveValue("15");
+    await expect(page.getByLabel("Min size (GB)")).toHaveValue("1.5");
+    await expect(page.getByLabel("Max size (GB)")).toHaveValue("10");
+    await expect(page.getByLabel("Include keywords")).toHaveValue("Example");
+    await expect(page.getByLabel("Exclude keywords")).toHaveValue("CAM");
+    await expect(
+      page.getByRole("button", { name: "1080p", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(
+      page.getByRole("button", { name: "2160p", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(
+      page.getByRole("button", { name: "x264", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(
+      page.getByRole("button", { name: "x265", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
     expect(searchRequests).toBe(1);
 
     await page
