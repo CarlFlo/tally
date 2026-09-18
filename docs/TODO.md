@@ -6,7 +6,7 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 `feature/torrent-automation-confidence`
 
-Status: runtime-aware size profiling and automatic magnet fallback are in progress; final validation is pending.
+Status: free-text episode metadata resolution is implemented; final validation is pending.
 
 ### Evaluation and search metadata
 
@@ -77,6 +77,8 @@ Status: runtime-aware size profiling and automatic magnet fallback are in progre
 - [x] Classify actual negative/limiting evidence such as an uninspectable magnet payload, ambiguous or missing metadata, low swarm health, previous bad history, or hard rejection reasons under concerns. The absence of a preferred group/uploader/provider is neutral rather than evidence against a release.
 - [x] Show useful parsed metadata in the expanded panel (quality, source, codec, release group, uploader when available, provider/indexer, size, seeders, verification state) without exposing the internal numeric score.
 - [x] When manual search has authoritative episode context and runtime, show the release's runtime-normalized MB/min ratio in the expanded metadata; omit it for arbitrary free-text searches without runtime context.
+- [x] For manual free-text queries that clearly contain one season/episode, resolve episode context from shared local metadata first and cached TVmaze metadata second; require a unique exact title/year match, never auto-follow/persist a remotely resolved show, and leave ambiguous queries unscored.
+- [x] Add deterministic coverage for local unfollowed resolution, read-only TVmaze resolution, MB/min from remotely resolved runtime, and ambiguous-TVmaze fallback to ordinary free-text behavior.
 - [x] Keep the compact collapsed result row readable and consistent with the existing Tally visual language.
 - [x] Add browser coverage for result expansion/collapse, button interactions, strengths/concerns rendering, and layout behavior with multiple adjacent results.
 
