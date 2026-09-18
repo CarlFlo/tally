@@ -26,6 +26,9 @@ func TestSchedulesPersistPauseAfterFailuresAndResume(t *testing.T) {
 	if e = s.SaveSchedule(ctx, Schedule{Key: "metadata", Schedule: "15 8 * * 1-5", Enabled: false, Revision: 1}); e != nil {
 		t.Fatal(e)
 	}
+	if e = s.SaveSchedule(ctx, Schedule{Key: "torrent_automation", Schedule: "*/30 * * * *", Enabled: true, Revision: 1}); e != nil {
+		t.Fatal("torrent automation schedule was rejected", e)
+	}
 	if e = s.SaveSchedule(ctx, Schedule{Key: "metadata", Schedule: "15 8 * * 1-5", Enabled: false, Revision: 2}); e != nil {
 		t.Fatal("unchanged schedule save failed", e)
 	}
