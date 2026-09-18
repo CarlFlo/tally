@@ -133,6 +133,33 @@ export function DownloadsPage() {
   }
 
   const data = downloads.data;
+  const stats = data?.stats;
+  const metrics = [
+    {
+      label: t("downloads.total"),
+      value: stats ? stats.total.toLocaleString() : "—",
+      icon: <Download size={20} />,
+      cls: "purple",
+    },
+    {
+      label: t("downloads.active"),
+      value: stats ? stats.active.toLocaleString() : "—",
+      icon: <Activity size={20} />,
+      cls: "mint",
+    },
+    {
+      label: t("downloads.downloadSpeed"),
+      value: stats ? bytes(stats.download_speed) + "/s" : "—",
+      icon: <ArrowDown size={20} />,
+      cls: "amber",
+    },
+    {
+      label: t("downloads.uploadSpeed"),
+      value: stats ? bytes(stats.upload_speed) + "/s" : "—",
+      icon: <ArrowUp size={20} />,
+      cls: "rose",
+    },
+  ];
   return (
     <div className="page">
       <div className="page-heading">
@@ -149,51 +176,30 @@ export function DownloadsPage() {
         <ErrorState error={downloads.error} retry={() => downloads.refetch()} />
       )}
 
-      {data && (
-        <>
-          <div className="stats-grid downloads-stats">
-            {[
-              {
-                label: t("downloads.total"),
-                value: data.stats.total.toLocaleString(),
-                icon: <Download size={20} />,
-                cls: "purple",
-              },
-              {
-                label: t("downloads.active"),
-                value: data.stats.active.toLocaleString(),
-                icon: <Activity size={20} />,
-                cls: "mint",
-              },
-              {
-                label: t("downloads.downloadSpeed"),
-                value: bytes(data.stats.download_speed) + "/s",
-                icon: <ArrowDown size={20} />,
-                cls: "amber",
-              },
-              {
-                label: t("downloads.uploadSpeed"),
-                value: bytes(data.stats.upload_speed) + "/s",
-                icon: <ArrowUp size={20} />,
-                cls: "rose",
-              },
-            ].map((metric) => (
-              <div className="panel stat-card" key={metric.label}>
-                <span className={"metric-icon " + metric.cls}>{metric.icon}</span>
-                <strong>{metric.value}</strong>
-                <span>{metric.label}</span>
-              </div>
-            ))}
+      <div className="stats-grid downloads-stats" aria-busy={!data && !downloads.error}>
+        {metrics.map((metric) => (
+          <div className="panel stat-card" key={metric.label}>
+            <span className={"metric-icon " + metric.cls}>{metric.icon}</span>
+            <strong>{metric.value}</strong>
+            <span>{metric.label}</span>
           </div>
+        ))}
+      </div>
 
-          <section className="panel downloads-panel">
-            {!data.torrents.length ? (
-              <Empty icon={<Download size={31} />} title={t("downloads.emptyTitle")}>
-                {t("downloads.emptyHelp")}
-              </Empty>
-            ) : (
-              <div className="downloads-list">
-                {data.torrents.map((item) => {
+      <section className="panel downloads-panel" aria-busy={!data && !downloads.error}>
+        {!data ? (
+          <p className="muted downloads-status-placeholder">
+            {downloads.error
+              ? t("downloads.unavailable")
+              : t("downloads.connecting")}
+          </p>
+        ) : !data.torrents.length ? (
+          <Empty icon={<Download size={31} />} title={t("downloads.emptyTitle")}>
+            {t("downloads.emptyHelp")}
+          </Empty>
+        ) : (
+          <div className="downloads-list">
+            {data.torrents.map((item) => {
                   const isStopped = stopped(item.state);
                   const progress = Math.max(0, Math.min(100, item.progress * 100));
                   const toggleAction = isStopped ? "start" : "stop";
@@ -254,13 +260,11 @@ export function DownloadsPage() {
                       </div>
                     </div>
                   );
-                })}
-              </div>
-            )}
-          </section>
-          <p className="search-footnote">{t("downloads.pollingNote")}</p>
-        </>
-      )}
+            })}
+          </div>
+        )}
+      </section>
+      <p className="search-footnote">{t("downloads.pollingNote")}</p>
       {removing && (
         <Dialog
           title={t("downloads.removeTitle")}
@@ -299,7 +303,6 @@ export function DownloadsPage() {
           </div>
         </Dialog>
       )}
-      {downloads.isPending && !data && <Busy />}
     </div>
   );
 }
