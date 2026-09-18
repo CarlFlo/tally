@@ -21,7 +21,7 @@ func (s *Service) SaveSchedule(ctx context.Context, in Schedule, actors ...strin
 	if len(actors) > 0 {
 		actor = actors[0]
 	}
-	if in.Key != "metadata" && in.Key != "maintenance" && in.Key != "backup" {
+	if in.Key != "metadata" && in.Key != "torrent_automation" && in.Key != "maintenance" && in.Key != "backup" {
 		return fmt.Errorf("unknown job")
 	}
 	if len(in.Schedule) > 100 {
