@@ -9,7 +9,6 @@ import { AutomationShowEnrollmentList } from "../AutomationShowEnrollmentList";
 import "../torrent-selection.css";
 
 type AutomationConfig = {
-  enabled: boolean;
   preferred_quality: "best" | "720p" | "1080p" | "2160p";
   min_seeders: number;
   high_confidence_only: boolean;
@@ -261,26 +260,6 @@ export function TorrentAutomationPage() {
       <TorrentTabs />
 
       <form onSubmit={save} className="torrent-automation-settings">
-        <section className="panel settings-card feature-toggle-setting">
-          <label className="toggle-setting">
-            <input
-              type="checkbox"
-              checked={data.enabled}
-              disabled={busy}
-              onChange={(event) => change({ enabled: event.target.checked })}
-            />
-            {t("torrentAutomation.enable", {
-              defaultValue: "Enable automatic torrent downloads",
-            })}
-          </label>
-          <p className="muted small-text">
-            {t("torrentAutomation.enableHelp", {
-              defaultValue:
-                "This is global for the server. The scheduler can check for releases while this is enabled.",
-            })}
-          </p>
-        </section>
-
         <AutomationShowEnrollmentList />
 
         <section className="panel settings-card">
