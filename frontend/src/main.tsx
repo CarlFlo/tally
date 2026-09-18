@@ -164,6 +164,11 @@ function App() {
       (boot?.profile ? boot.preferences?.theme : boot?.browser_theme) ||
       "system";
     document.documentElement.dataset.theme = theme;
+    try {
+      localStorage.setItem("tally-theme", theme);
+    } catch {
+      // Theme application must still work when browser storage is unavailable.
+    }
   }, [boot?.preferences?.theme, boot?.browser_theme, boot?.profile?.id]);
   useEffect(() => {
     if (boot?.profile && !boot.restricted && !boot.preferences_initialized) {
