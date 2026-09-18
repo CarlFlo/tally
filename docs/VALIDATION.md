@@ -58,14 +58,15 @@ Global torrent automation configuration and per-show enrollment are administrati
 
 ### External providers and torrent features
 
-Use deterministic local fixtures. Verify exact request semantics, authentication headers, redirect/error behavior, bounded responses, cancellation, and secret redaction. Feature toggles must be tested at both API and UI boundaries.
+Use deterministic local fixtures. Verify exact request semantics, authentication headers, redirect/error behavior, bounded responses, cancellation, and secret redaction. Feature toggles must be tested at both API and UI boundaries. Torrent automation has one scheduler-owned enabled state shared by Settings and System → Jobs; it defaults off while experimental and enabling it from either surface requires the experimental-feature confirmation.
 
-For manual search, verify confidence appears only with authoritative episode context. Free-text queries containing one conservatively parsed season/episode may resolve against shared local metadata first and the cached TVmaze provider path second; exact unique matches may receive confidence and MB/min metadata, while ambiguous/unresolved queries remain unscored. Remote lookup must not add/follow or persist the show. Confidence must remain separate from quality/size/source ranking. Clicking a result should expand its inline evaluation without activating row actions, show a concise combined identity signal such as `Correct show and episode`, and present strengths and concerns without exposing the internal numeric score.
+For manual search, verify confidence appears only with authoritative episode context. Free-text queries containing one conservatively parsed season/episode may resolve against shared local metadata first and the cached TVmaze provider path second; exact unique matches may receive confidence and MB/min metadata, while ambiguous/unresolved queries remain unscored. Remote lookup must not add/follow or persist the show. Confidence must remain separate from quality/size/source ranking. Clicking a result should expand its inline evaluation without activating row actions, show a concise combined identity signal such as `Correct show and episode`, and present strengths and concerns without exposing the internal numeric score. Manual confidence is advisory: an inspected result must remain manually downloadable when the transport is otherwise usable, and a preliminary rejected classification is presented as neutral review/concern evidence rather than a disabled action. Actual fetched torrent payload safety and show/episode identity checks remain authoritative before submission.
 
 Jackett uploader/author metadata is optional. Tests must cover uploader supplied through normalized Torznab metadata and the missing-uploader case. Provider/indexer identity is a separate preference signal and should remain usable even when uploader data is absent.
 
 For automatic downloads, prove all of the following as applicable:
 
+- the Torrent automation scheduler job must be enabled before scheduled automation runs, with no separate automation-settings master toggle;
 - every automatic candidate must be High confidence and non-rejected;
 - when Jackett exposes a retrievable `.torrent`, inspect it before submission and reject meaningful payload/identity failures rather than bypassing them with a magnet;
 - when no usable `.torrent` is available, High-confidence magnets may use the metadata-only fallback path and the original decision must remain explicitly Unverified;
