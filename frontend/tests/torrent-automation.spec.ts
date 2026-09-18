@@ -457,7 +457,7 @@ test("previous runs explains verified decisions, accepts bad feedback and stays 
   await expect(page.locator(".size-score-pair .active").first()).toContainText("Live 92");
   await expect(page.locator(".size-score-pair .inactive").first()).toContainText("Animated 64");
   await expect(page.getByText("Auto · detected Live", { exact: true })).toBeVisible();
-  await page.getByText("Files (1)", { exact: true }).click();
+  await page.getByText("Files (1)", { exact: true }).first().click();
   await expect(
     page.getByText("Example.Show.S01E02.1080p.WEB-DL.mkv", { exact: true }).last(),
   ).toBeVisible();
