@@ -6,7 +6,7 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 `feature/torrent-automation-confidence`
 
-Status: final torrent automation usability/performance follow-up is implemented; final validation is pending.
+Status: torrent automation request-restraint and final usability follow-ups are implemented; final validation is pending.
 
 ### Evaluation and search metadata
 
@@ -152,15 +152,15 @@ Status: final torrent automation usability/performance follow-up is implemented;
 
 ### External request restraint
 
-- [ ] Add a hard per-run Jackett discovery budget so one 15-minute automation tick cannot fan out across a large backlog; process only a small bounded number of due episodes per run and leave the rest queued for later ticks.
-- [ ] Persist each episode's next eligible automation-search time explicitly, preserving the existing approximately 30 minute → 2 hour → 6 hour backoff within the retry window instead of relying only on historical-run reconstruction.
-- [ ] Make automated Jackett discovery deliberately conservative about retries: do not repeatedly retry transient failures inside one background run; prefer deferring the episode to a later scheduled run.
-- [ ] Ensure the automation worker selects only episodes whose persisted next-search time is due, ordered predictably, so backlog processing is gradual rather than bursty.
-- [ ] Prioritize current/recently aired episodes ahead of older backlog items when multiple episodes are due, so a show releasing today gets serviced before stale historical work while still respecting retry eligibility and the per-run discovery budget.
-- [ ] Make the relevant request-restraint and prioritization controls configurable at the deployment-global Torrent Automation level, with safe defaults and validated upper/lower bounds. At minimum this should cover the per-run discovery budget and retry/backoff policy; expose recency/prioritization controls only where they are useful without turning the page into an expert-only tuning panel.
-- [ ] Keep deep candidate inspection bounded separately from discovery and ensure a single episode cannot cause unbounded Jackett torrent-file fetches; retain the existing shortlist cap and no-retry behavior for individual torrent metadata fetches.
-- [ ] Add deterministic tests proving a large backlog cannot exceed the per-run discovery budget, deferred episodes remain queued, retry timing survives restart, provider failures do not create request storms, and later scheduled runs resume work safely.
-- [ ] Document the background-network policy: automation should prefer postponing work over aggressively retrying external services, while keeping the existing shared provider rate limiting, Retry-After handling, circuit breaker, and request coalescing protections.
+- [x] Add a hard per-run Jackett discovery budget so one 15-minute automation tick cannot fan out across a large backlog; process only a small bounded number of due episodes per run and leave the rest queued for later ticks.
+- [x] Persist each episode's next eligible automation-search time explicitly, preserving the existing approximately 30 minute → 2 hour → 6 hour backoff within the retry window instead of relying only on historical-run reconstruction.
+- [x] Make automated Jackett discovery deliberately conservative about retries: do not repeatedly retry transient failures inside one background run; prefer deferring the episode to a later scheduled run.
+- [x] Ensure the automation worker selects only episodes whose persisted next-search time is due, ordered predictably, so backlog processing is gradual rather than bursty.
+- [x] Prioritize current/recently aired episodes ahead of older backlog items when multiple episodes are due, so a show releasing today gets serviced before stale historical work while still respecting retry eligibility and the per-run discovery budget.
+- [x] Make the relevant request-restraint and prioritization controls configurable at the deployment-global Torrent Automation level, with safe defaults and validated upper/lower bounds. At minimum this should cover the per-run discovery budget and retry/backoff policy; expose recency/prioritization controls only where they are useful without turning the page into an expert-only tuning panel.
+- [x] Keep deep candidate inspection bounded separately from discovery and ensure a single episode cannot cause unbounded Jackett torrent-file fetches; retain the existing shortlist cap and no-retry behavior for individual torrent metadata fetches.
+- [x] Add deterministic tests proving a large backlog cannot exceed the per-run discovery budget, deferred episodes remain queued, retry timing survives restart, provider failures do not create request storms, and later scheduled runs resume work safely.
+- [x] Document the background-network policy: automation should prefer postponing work over aggressively retrying external services, while keeping the existing shared provider rate limiting, Retry-After handling, circuit breaker, and request coalescing protections.
 
 ### Quality and documentation
 
