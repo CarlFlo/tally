@@ -6,7 +6,7 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 `feature/torrent-automation-confidence`
 
-Status: implementation, follow-up refinement, and required full validation are complete; branch is ready for review or merge.
+Status: runtime-aware size profiling and automatic magnet fallback are in progress; final validation is pending.
 
 ### Evaluation and search metadata
 
@@ -49,6 +49,17 @@ Status: implementation, follow-up refinement, and required full validation are c
 - [x] Keep trust/preference signals separate from confidence: preferred group/uploader/provider should materially influence ordering among valid candidates but must not override wrong-show, wrong-episode, blocked-payload, or verification failures.
 - [x] Persist these automation rules in the global settings snapshot so Previous Runs can explain exactly which filters/trust rules affected each historical decision.
 - [x] Add deterministic tests for keyword filters, reset/default behavior, group whitelist/priorities, uploader metadata present/missing, preferred-provider ranking, trusted-source ranking, and the separation of trust/preference from confidence.
+
+### Runtime-aware size profiles and magnet automation
+
+- [ ] Add configurable MB/minute ranges for live-action and animated shows, surfaced as compact dual range sliders in Torrent Automation.
+- [ ] Use episode runtime when available and show runtime as fallback; treat missing runtime/size as neutral rather than guessing.
+- [ ] Persist TV metadata needed to classify animation where available, auto-detect animated vs live-action from show type/genres, and add a per-show admin override on the show page.
+- [ ] Apply the active media profile as both a hard size-per-minute filter and a bounded ranking/debug signal without changing show/episode confidence semantics.
+- [ ] Record both live-action and animated size-fit scores in Previous Runs; visually de-emphasize the inactive profile while keeping it available for debugging.
+- [ ] Prefer a retrievable Jackett `.torrent` for local payload inspection, but allow High-confidence automatic magnet submission when no usable `.torrent` is available and all metadata-level rules pass.
+- [ ] Keep magnet fallback explicit in run history as metadata-only/unverified, preserve bad-infohash checks when an infohash can be derived, and never claim payload verification for a magnet.
+- [ ] Add migration, backend/frontend tests, English/Ukrainian localization, and durable documentation for the new media-profile and magnet-selection rules.
 
 ### Manual search result inspection
 
@@ -98,7 +109,7 @@ Status: implementation, follow-up refinement, and required full validation are c
 - [x] Update `ARCHITECTURE.md`, `DEVELOPMENT.md`, `VALIDATION.md`, and `LESSONS.md` where the durable manual-only torrent contract changes.
 - [x] Update English and Ukrainian localization for all follow-up filter/trust/result-evaluation UI.
 - [x] Update durable documentation for the automation filtering/trust model and its validation rules.
-- [x] Run the complete required validation suite on the final branch head before the branch is considered ready.
+- [ ] Run the complete required validation suite on the final branch head before the branch is considered ready.
 
 ## Current product foundations
 
