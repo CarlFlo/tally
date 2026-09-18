@@ -619,6 +619,34 @@ func (s *AutomationService) dueEpisodes(ctx context.Context, now time.Time, conf
 	return out, rows.Err()
 }
 
+func (s *AutomationService) episodeTarget(ctx context.Context, episode automationEpisode) (EpisodeTarget, error) {
+	target := EpisodeTarget{ShowTitle: episode.ShowName, Season: episode.Season, Episode: episode.Episode}
+	if len(episode.Premiered) >= 4 {
+		target.Year, _ = strconv.Atoi(episode.Premiered[:4])
+	}
+	rows, err := s.DB.QueryContext(ctx, "SELECT provider,external_id FROM external_ids WHERE kind='show' AND internal_id=?", episode.ShowID)
+	if err != nil {
+		return target, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var provider, id string
+		if err = rows.Scan(&provider, &id); err != nil {
+			return target, err
+		}
+		switch strings.ToLower(provider) {
+		case "tvmaze":
+			target.TVMazeID = id
+		case "tvdb":
+			target.TVDBID = id
+		case "tmdb":
+			target.TMDBID = id
+		case "imdb":
+			target.IMDBID = id
+		}
+	}
+	return target, rows.Err()
+}
 func candidateReleaseAges(items []automationCandidate) []ReleaseAgeEvaluation {
 	ages := make([]ReleaseAgeEvaluation, 0, len(items))
 	for _, item := range items {
