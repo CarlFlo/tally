@@ -21,6 +21,8 @@ type automationRequester struct {
 	reportedSize  int64
 	published     string
 	searchCalls   *int
+	searchNoRetry *bool
+	queries       *[]string
 	torrentCalls  *int
 	beforeTorrent func() error
 }
@@ -47,6 +49,12 @@ func (r automationRequester) Do(_ context.Context, request providers.Request) (p
 	}
 	if r.searchCalls != nil {
 		(*r.searchCalls)++
+	}
+	if r.searchNoRetry != nil {
+		*r.searchNoRetry = request.NoRetry
+	}
+	if r.queries != nil {
+		*r.queries = append(*r.queries, u.Query().Get("q"))
 	}
 	var enclosure, itemLink string
 	if r.magnetOnly || r.withMagnet {
