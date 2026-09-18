@@ -39,15 +39,26 @@ func TestTorrentAutomationIsIndependentScheduledJob(t *testing.T) {
 	if err = db.QueryRow("SELECT schedule,enabled FROM jobs WHERE key='torrent_automation'").Scan(&schedule, &enabled); err != nil {
 		t.Fatal(err)
 	}
-	if schedule != "*/15 * * * *" || enabled != 1 {
+	if schedule != "*/15 * * * *" || enabled != 0 {
 		t.Fatalf("unexpected torrent automation schedule: %q enabled=%d", schedule, enabled)
 	}
 
-	result, err := service.run(ctx, "run-id", "torrent_automation", "manual", "")
-	if err != nil {
+	if _, err = service.TriggerAndWait(ctx, "torrent_automation", "scheduled_refresh", ""); err == nil {
+		t.Fatal("disabled experimental torrent automation job accepted a scheduled run")
+	}
+	var revision int64
+	if err = db.QueryRow("SELECT revision FROM jobs WHERE key='torrent_automation'").Scan(&revision); err != nil {
 		t.Fatal(err)
 	}
-	if automator.runs != 1 || result.Processed != 2 || result.Changes != 2 {
-		t.Fatalf("scheduler did not execute automation independently: runs=%d result=%+v", automator.runs, result)
+	if err = service.SaveSchedule(ctx, Schedule{
+		Key: "torrent_automation", Schedule: schedule, Enabled: true, Revision: revision,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = service.TriggerAndWait(ctx, "torrent_automation", "scheduled_refresh", ""); err != nil {
+		t.Fatal(err)
+	}
+	if automator.runs != 1 {
+		t.Fatalf("enabled scheduler did not execute torrent automation: runs=%d", automator.runs)
 	}
 }
