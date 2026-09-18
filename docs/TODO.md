@@ -6,7 +6,19 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 `feature/torrent-automation-confidence`
 
-Status: downloads initial-render, released-only episode-state, and manual-search refine persistence follow-ups are implemented and fully validated; branch is ready for review.
+Status: implementing manual-inspection and torrent-automation job-control follow-ups.
+
+### Manual inspection and automation job controls
+
+- [ ] Keep the manual torrent Download action available even when inspection/evaluation rejects or lowers confidence; manual inspection is advisory while server-side submission safety remains authoritative.
+- [ ] In manual result inspection, do not present a candidate as "Rejected". Show positive confidence messaging only when warranted; otherwise surface useful neutral/concern evidence without a rejected verdict.
+- [ ] Fix false-positive "Different show" concern/rejection matching so valid releases are not marked as another show.
+- [ ] Remove the separate "Enable automatic torrent downloads" toggle from `/search/automation`; the Torrent automation scheduler job enabled state becomes the single master on/off control for automatic torrent downloads.
+- [ ] Make the Torrent automation scheduler job disabled by default because it is experimental.
+- [ ] When enabling an experimental scheduler job, require a confirmation dialog before saving, with cancel and an explicit "Yes, I understand, enable anyway" action.
+- [ ] Add an enable/disable toggle beside "Run now" on `/system/jobs`, wired to the same scheduler enabled state used by Settings so both surfaces stay synchronized.
+- [ ] Update localization, backend/frontend regression coverage, and durable documentation for the unified job-control behavior.
+- [ ] Run all validation required by `docs/VALIDATION.md` and investigate any failures.
 
 ### Evaluation and search metadata
 
