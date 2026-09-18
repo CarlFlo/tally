@@ -173,8 +173,8 @@ func TestRegistryUpdatesOlderEnglishCatalog(t *testing.T) {
 	if !ok {
 		t.Fatal("English locale was not available")
 	}
-	if catalog.Meta.CatalogVersion != 16 {
-		t.Fatalf("catalog version=%d, want 16", catalog.Meta.CatalogVersion)
+	if catalog.Meta.CatalogVersion != 17 {
+		t.Fatalf("catalog version=%d, want 17", catalog.Meta.CatalogVersion)
 	}
 	common, ok := catalog.Messages["common"].(map[string]any)
 	if !ok || common["save"] != "Save" {
@@ -388,8 +388,8 @@ func TestRegistryDoesNotFollowEnglishSymlinkOnStartup(t *testing.T) {
 	if !ok {
 		t.Fatal("embedded English fallback was not available")
 	}
-	if catalog.Meta.CatalogVersion != 16 {
-		t.Fatalf("catalog version=%d, want bundled version 16", catalog.Meta.CatalogVersion)
+	if catalog.Meta.CatalogVersion != 17 {
+		t.Fatalf("catalog version=%d, want bundled version 17", catalog.Meta.CatalogVersion)
 	}
 	common := catalog.Messages["common"].(map[string]any)
 	if common["save"] != "Save" {

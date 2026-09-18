@@ -87,27 +87,29 @@ test("episode search expands into a strengths and concerns evaluation", async ({
   await expect(page.locator(".torrent-result-inspection")).toHaveCount(0);
 
   await page.goto(`/shows/${showID}`);
-  await page.getByRole("button", { name: "Show actions: Example Show" }).click();
-  await expect(
-    page.getByRole("menuitem", {
-      name: "Automatic downloads · Use global default",
-    }),
-  ).toBeVisible();
-  await page
-    .getByRole("menuitem", {
-      name: "Automatic downloads · Never for this show",
-    })
-    .click();
+  const resetEnrollment = await page.request.put(
+    `/api/torrents/automation/shows/${showID}`,
+    {
+      headers: { "X-Tally-CSRF": "1" },
+      data: { enabled: false },
+    },
+  );
+  expect(resetEnrollment.ok()).toBe(true);
+  await page.reload();
 
+  const enrollmentButton = page.getByRole("button", {
+    name: "Automation off",
+    exact: true,
+  });
+  await expect(enrollmentButton).toBeVisible();
+  await enrollmentButton.click();
   const policy = await page.request.get(`/api/torrents/automation/shows/${showID}`);
   expect(policy.ok()).toBe(true);
-  expect((await policy.json()).policy).toBe("never");
-
-  const reset = await page.request.put(`/api/torrents/automation/shows/${showID}`, {
-    headers: { "X-Tally-CSRF": "1" },
-    data: { policy: "default" },
-  });
-  expect(reset.ok()).toBe(true);
+  expect(await policy.json()).toMatchObject({ policy: "auto", enabled: true });
+  await expect(
+    page.getByRole("button", { name: "Automation on", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Automation on", exact: true }).click();
 
   await page.getByRole("button", { name: "Show actions: Example Show" }).click();
   await expect(
@@ -135,6 +137,15 @@ test("automation page exposes release filters trust rules and disabled capabilit
   page,
 }) => {
   await selectProfileByName(page, "My profile");
+  const showID = await ensureExampleShow(page);
+  const resetEnrollment = await page.request.put(
+    `/api/torrents/automation/shows/${showID}`,
+    {
+      headers: { "X-Tally-CSRF": "1" },
+      data: { enabled: false },
+    },
+  );
+  expect(resetEnrollment.ok()).toBe(true);
   await page.goto("/search/automation");
   await expect(
     page.getByRole("link", { name: "Automation", exact: true }),
@@ -142,6 +153,29 @@ test("automation page exposes release filters trust rules and disabled capabilit
   await expect(
     page.getByText("Enable automatic torrent downloads", { exact: true }),
   ).toBeVisible();
+  await expect(page.getByText("Shows in automation", { exact: true })).toBeVisible();
+
+  const exampleRow = page.locator(".automation-show-row").filter({ hasText: "Example Show" });
+  await expect(exampleRow).toHaveCount(0);
+  const showSearch = page.getByRole("textbox", { name: "Search My Shows" });
+  await showSearch.fill("Example Show");
+  await expect(exampleRow).toBeVisible();
+  await expect(exampleRow.getByText("No upcoming episode", { exact: true })).toBeVisible();
+  const enrollmentToggle = exampleRow.getByRole("checkbox");
+  await expect(enrollmentToggle).not.toBeChecked();
+  await enrollmentToggle.check();
+  await expect(enrollmentToggle).toBeChecked();
+  const enrolledPolicy = await page.request.get(
+    `/api/torrents/automation/shows/${showID}`,
+  );
+  expect(await enrolledPolicy.json()).toMatchObject({ policy: "auto", enabled: true });
+
+  await page.goto(`/shows/${showID}`);
+  await expect(
+    page.getByRole("button", { name: "Automation on", exact: true }),
+  ).toBeVisible();
+  await page.goto("/search/automation");
+  await showSearch.fill("Example Show");
   await expect(page.getByText("Release filters", { exact: true })).toBeVisible();
   await expect(page.getByText("Release groups", { exact: true })).toBeVisible();
   await expect(page.getByText("Source trust", { exact: true })).toBeVisible();
@@ -231,7 +265,7 @@ test("previous runs explains verified decisions, accepts bad feedback and stays 
     selected_name: "Example.Show.S01E02.1080p.WEB-DL.mkv",
     selected_infohash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     settings_snapshot: {
-      show_policy: "default",
+      show_policy: "auto",
       show_media_profile: {
         mode: "auto",
         detected: "live",

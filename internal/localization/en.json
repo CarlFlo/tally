@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 16
+    "catalogVersion": 17
   },
   "common": {
     "save": "Save",
@@ -668,7 +668,7 @@
     "eyebrow": "STRONG SIGNALS BEFORE IT MOVES",
     "description": "Control how Tally matches, sizes, verifies, and selects releases before handing them to your torrent client.",
     "enable": "Enable automatic torrent downloads",
-    "enableHelp": "This is global for the server. The scheduler can check for releases while this is enabled.",
+    "enableHelp": "This is the server-wide master switch. Only shows enrolled below are searched automatically.",
     "saved": "Torrent automation settings saved",
     "selection": "Release selection",
     "selectionHelp": "Quality is a preference between valid releases; it does not increase or reduce confidence.",
@@ -709,7 +709,23 @@
     "animatedProfile": "Animated / anime",
     "animatedMin": "Animated minimum MB per minute",
     "animatedMax": "Animated maximum MB per minute",
-    "sizeProfilesHint": "Auto-detected animated shows use the animated range. You can override a show's media type from its Show actions menu."
+    "sizeProfilesHint": "Auto-detected animated shows use the animated range. You can override a show's media type from its Show actions menu.",
+    "showsTitle": "Shows in automation",
+    "showsHelp": "Only enrolled shows are searched automatically. With no search, this list shows My Shows that currently have an upcoming episode.",
+    "enrolledCount_one": "{{count}} enrolled",
+    "enrolledCount_other": "{{count}} enrolled",
+    "searchShows": "Search My Shows",
+    "searchShowsPlaceholder": "Search all My Shows…",
+    "nextEpisode": "Next episode {{date}}",
+    "noUpcomingEpisode": "No upcoming episode",
+    "enrolled": "Automated",
+    "notEnrolled": "Off",
+    "noShowMatches": "No My Shows match this search.",
+    "noActiveShows": "No My Shows currently have a known upcoming episode. Search above to find any show in your library.",
+    "showEnabled": "Automation enabled for {{name}}",
+    "showDisabled": "Automation disabled for {{name}}",
+    "showAutomationOn": "Automation on",
+    "showAutomationOff": "Automation off"
   },
   "torrentRuns": {
     "eyebrow": "EVERY DECISION, EXPLAINED",
