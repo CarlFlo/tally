@@ -115,7 +115,10 @@ func TestFavoritesEpisodeResetAndPersistentViewPreferences(t *testing.T) {
 
 
 func TestTorrentAutomationRequestRestraintSettingsPersist(t *testing.T) {
-	_, h, _ := testServer(t, "disabled")
+	s, h, _ := testServer(t, "disabled")
+	if err := s.settingsStore().Ensure(context.Background()); err != nil {
+		t.Fatal(err)
+	}
 
 	response := request(t, h, "GET", "/api/settings/torrent-automation", nil)
 	expect(t, response, http.StatusOK)
