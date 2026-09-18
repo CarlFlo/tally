@@ -67,6 +67,68 @@ type AutomationFeedback struct {
 
 type AutomationStore struct{ DB *database.Store }
 
+const (
+	MediaProfileAuto     = "auto"
+	MediaProfileLive     = "live"
+	MediaProfileAnimated = "animated"
+)
+
+type ShowMediaProfile struct {
+	Mode      string `json:"mode"`
+	Detected  string `json:"detected"`
+	Effective string `json:"effective"`
+}
+
+func detectShowMediaProfile(showType, genresJSON string) string {
+	animated := func(value string) bool {
+		value = strings.ToLower(strings.TrimSpace(value))
+		return strings.Contains(value, "animation") || strings.Contains(value, "anime") || strings.Contains(value, "cartoon")
+	}
+	if animated(showType) {
+		return MediaProfileAnimated
+	}
+	var genres []string
+	if json.Unmarshal([]byte(genresJSON), &genres) == nil {
+		for _, genre := range genres {
+			if animated(genre) {
+				return MediaProfileAnimated
+			}
+		}
+	}
+	return MediaProfileLive
+}
+
+func (s AutomationStore) ShowMediaProfile(ctx context.Context, showID string) (ShowMediaProfile, error) {
+	var showType, genres, override string
+	err := s.DB.QueryRowContext(ctx, `SELECT s.show_type,s.genres,COALESCE(p.profile,'')
+		FROM shows s LEFT JOIN torrent_show_media_profile p ON p.show_id=s.id WHERE s.id=?`, showID).Scan(&showType, &genres, &override)
+	if err != nil {
+		return ShowMediaProfile{}, err
+	}
+	detected := detectShowMediaProfile(showType, genres)
+	mode := MediaProfileAuto
+	effective := detected
+	if override == MediaProfileLive || override == MediaProfileAnimated {
+		mode = override
+		effective = override
+	}
+	return ShowMediaProfile{Mode: mode, Detected: detected, Effective: effective}, nil
+}
+
+func (s AutomationStore) SetShowMediaProfile(ctx context.Context, showID, mode string) error {
+	switch mode {
+	case MediaProfileAuto:
+		_, err := s.DB.ExecContext(ctx, "DELETE FROM torrent_show_media_profile WHERE show_id=?", showID)
+		return err
+	case MediaProfileLive, MediaProfileAnimated:
+	default:
+		return fmt.Errorf("invalid show media profile")
+	}
+	_, err := s.DB.ExecContext(ctx, `INSERT INTO torrent_show_media_profile(show_id,profile,updated_at) VALUES(?,?,?)
+		ON CONFLICT(show_id) DO UPDATE SET profile=excluded.profile,updated_at=excluded.updated_at`, showID, mode, time.Now().Unix())
+	return err
+}
+
 func (s AutomationStore) StartRun(ctx context.Context, run AutomationRun) (string, error) {
 	if run.ID == "" {
 		run.ID = database.ID()

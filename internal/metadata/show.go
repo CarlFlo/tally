@@ -5,6 +5,7 @@ type Show struct {
 	Name      string   `json:"name"`
 	Summary   string   `json:"summary"`
 	Status    string   `json:"status"`
+	Type      string   `json:"type"`
 	Premiered string   `json:"premiered"`
 	Genres    []string `json:"genres"`
 	Runtime   int      `json:"runtime"`
