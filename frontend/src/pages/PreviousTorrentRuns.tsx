@@ -371,6 +371,7 @@ function DecisionData({ step }: { step: DecisionStep }) {
           {metric("uploader_filtered", t("torrentRuns.filterUploaders", { defaultValue: "removed by uploader allowlist" }))}
           {metric("non_high_confidence", t("torrentRuns.filterConfidence", { defaultValue: "not High confidence" }))}
           {metric("size_rate_filtered", t("torrentRuns.filterSizeRate", { defaultValue: "outside MB/min range" }))}
+          {metric("release_delay_filtered", t("torrentRuns.filterReleaseDelay", { defaultValue: "younger than minimum release age" }))}
           {metric("magnet_only", t("torrentRuns.filterMagnets", { defaultValue: "magnet fallback" }))}
           {metric("unusable", t("torrentRuns.filterUnusable", { defaultValue: "no usable torrent or magnet" }))}
           {metric("previously_bad", t("torrentRuns.filterBad", { defaultValue: "previously marked bad" }))}

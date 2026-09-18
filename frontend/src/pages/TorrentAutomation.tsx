@@ -534,7 +534,7 @@ export function TorrentAutomationPage() {
           <div className="settings-grid two-fields">
             <label>
               {t("torrentAutomation.releaseDelay", {
-                defaultValue: "Release delay (minutes)",
+                defaultValue: "Minimum release age (minutes)",
               })}
               <input
                 type="number"
