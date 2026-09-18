@@ -225,7 +225,11 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 		if candidate.Result.URL != "" {
 			data, fetchErr := provider.FetchTorrent(ctx, candidate.Result.URL)
 			if fetchErr == nil {
-				verified, verifyErr := VerifyTorrentForTarget(candidate.Assessment, candidate.Result, data, &target)
+				verificationCandidate := candidate.Result
+				if verificationCandidate.InfoHash == "" {
+					verificationCandidate.InfoHash = MagnetInfoHash(verificationCandidate.Magnet)
+				}
+				verified, verifyErr := VerifyTorrentForTarget(candidate.Assessment, verificationCandidate, data, &target)
 				assessment = verified
 				if verifyErr == nil && assessment.InfoHash != "" {
 					bad, checkErr := store.IsBadInfoHash(ctx, assessment.InfoHash)

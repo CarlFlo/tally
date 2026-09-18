@@ -17,6 +17,7 @@ import (
 type automationRequester struct {
 	magnetOnly    bool
 	withMagnet    bool
+	magnetHash    string
 	reportedSize  int64
 	searchCalls   *int
 	torrentCalls  *int
@@ -48,7 +49,16 @@ func (r automationRequester) Do(_ context.Context, request providers.Request) (p
 	}
 	var enclosure, itemLink string
 	if r.magnetOnly || r.withMagnet {
-		enclosure = `magnet:?xt=urn:btih:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`
+		hash := r.magnetHash
+		if hash == "" {
+			hash = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+			if r.withMagnet {
+				if metadata, parseErr := ParseTorrentMetadata([]byte(automationTorrentFixture("Example.Show.S01E02.1080p.WEB-DL.mkv"))); parseErr == nil {
+					hash = metadata.InfoHashV1
+				}
+			}
+		}
+		enclosure = "magnet:?xt=urn:btih:" + hash
 	} else {
 		enclosure = `http://jackett.test/download`
 	}
@@ -250,6 +260,36 @@ func TestAutomationPrefersInspectableTorrentWhenMagnetAlsoExists(t *testing.T) {
 	}
 	if processed != 1 || client.added != 1 || client.magnetAdded != 0 {
 		t.Fatalf("inspectable torrent was not preferred: processed=%d torrents=%d magnets=%d", processed, client.added, client.magnetAdded)
+	}
+}
+
+func TestAutomationRejectsMismatchedTorrentAndMagnetIdentity(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	client := &automationClient{}
+	requester := automationRequester{withMagnet: true, magnetHash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+	processed, err := automationService(db, requester, client, now).Run(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if processed != 1 || client.added != 0 || client.magnetAdded != 0 {
+		t.Fatalf("mismatched transports reached client: processed=%d torrents=%d magnets=%d", processed, client.added, client.magnetAdded)
+	}
+	runs, err := (AutomationStore{DB: db}).ListRuns(context.Background(), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runs) != 1 || runs[0].Status != RunNoVerifiedCandidate {
+		t.Fatalf("unexpected transport mismatch outcome: %+v", runs)
+	}
+	found := false
+	for _, step := range runs[0].DecisionLog {
+		if step.Stage == "inspection" && step.Status == "rejected" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("transport mismatch was not recorded: %+v", runs[0].DecisionLog)
 	}
 }
 
