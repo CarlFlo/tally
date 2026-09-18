@@ -281,6 +281,70 @@ test("torrent search navigation and filters follow the saved Jackett state", asy
 });
 
 
+test("downloads layout is present before the torrent client responds", async ({ page }) => {
+  await selectProfileByName(page, "My profile");
+
+  const savedResponse = await page.request.get("/api/settings/torrent");
+  expect(savedResponse.ok()).toBe(true);
+  const saved = await savedResponse.json();
+  let revision = saved.revision;
+  if (!saved.data.enabled) {
+    const enabled = await page.request.put("/api/settings/torrent", {
+      headers,
+      data: { data: { enabled: true }, revision },
+    });
+    expect(enabled.ok()).toBe(true);
+    revision = (await enabled.json()).revision;
+    await page.reload();
+  }
+
+  let releaseResponse: (() => void) | undefined;
+  const responseGate = new Promise<void>((resolve) => {
+    releaseResponse = resolve;
+  });
+  await page.route("**/api/torrents/downloads", async (route) => {
+    if (route.request().method() !== "GET") return route.continue();
+    await responseGate;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        torrents: [],
+        stats: { total: 0, active: 0, download_speed: 0, upload_speed: 0 },
+      }),
+    });
+  });
+
+  try {
+    await page.goto("/downloads");
+    await expect(page.locator(".downloads-stats .stat-card")).toHaveCount(4);
+    await expect(page.locator(".downloads-panel")).toBeVisible();
+    await expect(page.getByText("Connecting to torrent client…", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("Loading")).toHaveCount(0);
+    await expect(page.locator(".downloads-stats .stat-card strong")).toHaveText([
+      "—",
+      "—",
+      "—",
+      "—",
+    ]);
+
+    releaseResponse?.();
+    await expect(page.getByText("No Tally downloads", { exact: true })).toBeVisible();
+    await expect(page.getByText("Connecting to torrent client…", { exact: true })).toHaveCount(0);
+    await expect(page.locator(".downloads-stats .stat-card").first().locator("strong")).toHaveText("0");
+  } finally {
+    releaseResponse?.();
+    if (saved.data.enabled !== true) {
+      const restore = await page.request.put("/api/settings/torrent", {
+        headers,
+        data: { data: saved.data, revision },
+      });
+      expect(restore.ok()).toBe(true);
+    }
+  }
+});
+
+
 test("downloads update controls immediately and confirm file deletion", async ({
   page,
 }) => {
