@@ -19,6 +19,7 @@ type automationRequester struct {
 	withMagnet    bool
 	magnetHash    string
 	reportedSize  int64
+	published     string
 	searchCalls   *int
 	torrentCalls  *int
 	beforeTorrent func() error
@@ -69,7 +70,11 @@ func (r automationRequester) Do(_ context.Context, request providers.Request) (p
 	if size == 0 {
 		size = 2048
 	}
-	feed := fmt.Sprintf(`<rss xmlns:torznab="http://torznab.com/schemas/2015/feed"><channel><item><title>Example.Show.S01E02.1080p.WEB-DL.H264-GROUP</title><guid>one</guid>%s<enclosure url="%s" length="%d"/><torznab:attr name="seeders" value="50"/></item></channel></rss>`, itemLink, enclosure, size)
+	pubDate := ""
+	if r.published != "" {
+		pubDate = "<pubDate>" + r.published + "</pubDate>"
+	}
+	feed := fmt.Sprintf(`<rss xmlns:torznab="http://torznab.com/schemas/2015/feed"><channel><item><title>Example.Show.S01E02.1080p.WEB-DL.H264-GROUP</title><guid>one</guid>%s%s<enclosure url="%s" length="%d"/><torznab:attr name="seeders" value="50"/></item></channel></rss>`, itemLink, pubDate, enclosure, size)
 	return providers.Response{Body: []byte(feed), Status: 200}, nil
 }
 
@@ -338,6 +343,68 @@ func TestAutomationFiltersImplausibleKnownSizeRate(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("size-rate rejection was not recorded: %+v", runs[0].DecisionLog)
+	}
+}
+
+func TestAutomationWaitsForMinimumReleaseAgeWhenJackettReportsUploadTime(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	client := &automationClient{}
+	requester := automationRequester{
+		magnetOnly: true,
+		published:  now.Add(-5 * time.Minute).Format(time.RFC1123Z),
+	}
+	processed, err := automationService(db, requester, client, now).Run(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if processed != 1 || client.added != 0 || client.magnetAdded != 0 {
+		t.Fatalf("too-new release reached client: processed=%d torrents=%d magnets=%d", processed, client.added, client.magnetAdded)
+	}
+	runs, err := (AutomationStore{DB: db}).ListRuns(context.Background(), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runs) != 1 || runs[0].Status != RunNoVerifiedCandidate {
+		t.Fatalf("unexpected release-delay outcome: %+v", runs)
+	}
+	found := false
+	for _, step := range runs[0].DecisionLog {
+		if step.Stage == "filter" {
+			if count, ok := step.Data["release_delay_filtered"].(float64); ok && count == 1 {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("release-age delay was not recorded: %+v", runs[0].DecisionLog)
+	}
+}
+
+func TestAutomationAllowsReleasePastMinimumUploadAge(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	client := &automationClient{}
+	requester := automationRequester{
+		magnetOnly: true,
+		published:  now.Add(-25 * time.Minute).Format(time.RFC1123Z),
+	}
+	processed, err := automationService(db, requester, client, now).Run(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if processed != 1 || client.magnetAdded != 1 {
+		t.Fatalf("old-enough release was not submitted: processed=%d magnets=%d", processed, client.magnetAdded)
+	}
+}
+
+func TestReleaseAgeMissingOrMalformedTimestampIsNeutral(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	for _, published := range []string{"", "not-a-date"} {
+		result := EvaluateReleaseAge(published, now, 20*time.Minute)
+		if result.Known || !result.Ready {
+			t.Fatalf("timestamp %q should be neutral: %+v", published, result)
+		}
 	}
 }
 
