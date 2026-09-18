@@ -385,6 +385,35 @@ func (s AutomationStore) AppendDecision(ctx context.Context, runID string, step 
 	return tx.Commit()
 }
 
+
+func (s AutomationStore) FinishMagnetRun(ctx context.Context, runID string, assessment ReleaseAssessment, selectedName string) error {
+	infohash := normalizeInfoHash(assessment.InfoHash)
+	if infohash == "" {
+		return fmt.Errorf("magnet run has no valid infohash")
+	}
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	ended := time.Now().Unix()
+	res, err := tx.ExecContext(ctx, `UPDATE torrent_automation_runs
+		SET status=?,confidence=?,verification=?,selected_name=?,selected_infohash=?,ended_at=?,duration_ms=MAX(0,(?-started_at)*1000)
+		WHERE id=? AND status='running'`, RunDownloaded, assessment.Confidence, assessment.Verification, selectedName, infohash, ended, ended, runID)
+	if err != nil {
+		return err
+	}
+	changed, _ := res.RowsAffected()
+	if changed != 1 {
+		return fmt.Errorf("automation run is not running")
+	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO torrent_magnet_verifications(run_id,infohash,status)
+		VALUES(?,?,'pending')`, runID, infohash); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
 func (s AutomationStore) FinishRun(ctx context.Context, runID string, status AutomationRunStatus, assessment ReleaseAssessment, selectedName string) error {
 	if status == RunRunning || !validTerminalRunStatus(status) {
 		return fmt.Errorf("invalid terminal automation status")

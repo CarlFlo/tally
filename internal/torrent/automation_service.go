@@ -509,14 +509,6 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 			_ = finish(RunFailed, assessment, candidate.Result.Name)
 			return true, clientErr
 		}
-		if !useTorrent {
-			if queueErr := store.QueueMagnetVerification(ctx, runID, assessment.InfoHash); queueErr != nil {
-				_ = client.Stop(ctx, assessment.InfoHash)
-				_ = client.Remove(ctx, assessment.InfoHash, true)
-				_ = finish(RunFailed, assessment, candidate.Result.Name)
-				return true, queueErr
-			}
-		}
 		_ = store.AppendDecision(ctx, runID, DecisionStep{
 			Stage: "decision", Status: "selected", Summary: "Best suitable candidate selected",
 			Data: map[string]any{
@@ -529,7 +521,16 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 			Stage: "download", Status: "success", Summary: "Sent to torrent client successfully",
 			Data: map[string]any{"infohash": assessment.InfoHash, "submission_type": submissionType}, DurationMS: elapsedMS(downloadStarted, s.now()),
 		})
-		if err = finish(RunDownloaded, assessment, candidate.Result.Name); err != nil {
+		if useTorrent {
+			err = finish(RunDownloaded, assessment, candidate.Result.Name)
+		} else {
+			err = store.FinishMagnetRun(ctx, runID, assessment, candidate.Result.Name)
+		}
+		if err != nil {
+			if !useTorrent {
+				_ = client.Stop(ctx, assessment.InfoHash)
+				_ = client.Remove(ctx, assessment.InfoHash, true)
+			}
 			return true, err
 		}
 		s.publishChange()
