@@ -305,8 +305,15 @@ func TestManualTorrentSubmissionCanOverridePreliminaryMetadataRejection(t *testi
 	defer jackett.Close()
 	var clientRequests atomic.Int32
 	client := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		clientRequests.Add(1)
-		w.WriteHeader(http.StatusOK)
+		switch r.URL.Path {
+		case "/api/v2/torrents/categories":
+			fmt.Fprint(w, `{"tally":{}}`)
+		case "/api/v2/torrents/add":
+			clientRequests.Add(1)
+			w.WriteHeader(http.StatusOK)
+		default:
+			http.NotFound(w, r)
+		}
 	}))
 	defer client.Close()
 	ctx := context.Background()
