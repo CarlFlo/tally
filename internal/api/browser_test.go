@@ -32,10 +32,16 @@ func (f *browserTV) GetShow(ctx context.Context, external string) (*metadata.Sho
 	if external == "7" {
 		return f.fakeTV.GetShow(ctx, external)
 	}
+	if external == "8" {
+		return &metadata.Show{ID: 8, Name: "Archived Show", Summary: "A completed show used to verify inactive-show browser behavior.", Status: "Ended", Premiered: "2020-01-01"}, nil
+	}
 	n, _ := strconv.Atoi(external)
 	return &metadata.Show{ID: n, Name: "Fixture show " + external, Status: "Running", Premiered: "2026-01-01"}, nil
 }
-func (f *browserTV) SearchShows(context.Context, string) ([]metadata.SearchResult, error) {
+func (f *browserTV) SearchShows(_ context.Context, query string) ([]metadata.SearchResult, error) {
+	if strings.Contains(strings.ToLower(query), "archived") {
+		return []metadata.SearchResult{{Score: 1, Show: metadata.Show{ID: 8, Name: "Archived Show", Summary: "A completed show used to verify inactive-show browser behavior.", Status: "Ended", Premiered: "2020-01-01"}}}, nil
+	}
 	return []metadata.SearchResult{{Score: 1, Show: metadata.Show{ID: 7, Name: "Example Show", Summary: "An original story for the browser test fixture.", Status: "Running", Premiered: "2026-01-01"}}}, nil
 }
 func (f *browserTV) GetEpisodes(_ context.Context, external string) ([]metadata.Episode, error) {
@@ -47,7 +53,11 @@ func (f *browserTV) GetEpisodes(_ context.Context, external string) ([]metadata.
 	}
 	now := time.Now().UTC()
 	for i := 0; i < 8; i++ {
-		date := now.AddDate(0, 0, i-2)
+		dayOffset := i - 2
+		if external == "8" {
+			dayOffset = i - 12
+		}
+		date := now.AddDate(0, 0, dayOffset)
 		episodes = append(episodes, metadata.Episode{ID: offset + 100 + i, Season: 1, Number: i + 1, Name: "Chapter " + string(rune('A'+i)), Airdate: date.Format("2006-01-02"), Airstamp: date.Format("2006-01-02") + "T20:00:00Z", Runtime: 45, Summary: "A deterministic episode used only in automated browser tests."})
 	}
 	return episodes, nil

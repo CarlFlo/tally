@@ -50,6 +50,50 @@ async function ensureExampleShow(page: Page) {
   return show.id;
 }
 
+async function ensureArchivedShow(page: Page) {
+  await page.goto("/shows");
+  async function followedShow() {
+    const response = await page.request.get("/api/shows");
+    if (!response.ok()) throw new Error(`Could not load followed shows (${response.status()})`);
+    const shows = (await response.json()) as Array<{ id: string; name: string }>;
+    return shows.find((show) => show.name === "Archived Show");
+  }
+
+  let show = await followedShow();
+  if (!show) {
+    await page.getByRole("button", { name: "Add show", exact: true }).click();
+    await page
+      .getByRole("textbox", { name: "Search for a TV show" })
+      .fill("Archived");
+    await expect(
+      page.getByRole("heading", { name: "Archived Show 2020" }),
+    ).toBeVisible();
+    await page.locator(".search-show-card").first().hover();
+    await page.getByRole("button", { name: "Add", exact: true }).click();
+    await expect
+      .poll(
+        async () => {
+          const response = await page.request.get("/api/show-actions");
+          if (!response.ok()) return "http";
+          const actions = (await response.json()) as Array<{
+            name: string;
+            status: string;
+            followed: boolean | number;
+          }>;
+          const action = actions.find((item) => item.name === "Archived Show");
+          return action?.status === "done" && !!action.followed
+            ? "done"
+            : action?.status || "missing";
+        },
+        { timeout: 30_000 },
+      )
+      .toBe("done");
+    show = await followedShow();
+  }
+  if (!show) throw new Error("Archived Show was not followed after setup");
+  return show.id;
+}
+
 test("episode search expands into a strengths and concerns evaluation", async ({
   page,
 }) => {
@@ -137,7 +181,8 @@ test("automation page exposes release filters trust rules and disabled capabilit
   page,
 }) => {
   await selectProfileByName(page, "My profile");
-  const showID = await ensureExampleShow(page);
+  await ensureExampleShow(page);
+  const showID = await ensureArchivedShow(page);
   const resetEnrollment = await page.request.put(
     `/api/torrents/automation/shows/${showID}`,
     {
@@ -156,12 +201,16 @@ test("automation page exposes release filters trust rules and disabled capabilit
   await expect(page.getByText("Shows in automation", { exact: true })).toBeVisible();
 
   const exampleRow = page.locator(".automation-show-row").filter({ hasText: "Example Show" });
-  await expect(exampleRow).toHaveCount(0);
-  const showSearch = page.getByRole("textbox", { name: "Search My Shows" });
-  await showSearch.fill("Example Show");
   await expect(exampleRow).toBeVisible();
-  await expect(exampleRow.getByText("No upcoming episode", { exact: true })).toBeVisible();
-  const enrollmentToggle = exampleRow.getByRole("checkbox");
+  await expect(exampleRow).toContainText("Next episode");
+
+  const archivedRow = page.locator(".automation-show-row").filter({ hasText: "Archived Show" });
+  await expect(archivedRow).toHaveCount(0);
+  const showSearch = page.getByRole("textbox", { name: "Search My Shows" });
+  await showSearch.fill("Archived Show");
+  await expect(archivedRow).toBeVisible();
+  await expect(archivedRow.getByText("No upcoming episode", { exact: true })).toBeVisible();
+  const enrollmentToggle = archivedRow.getByRole("checkbox");
   await expect(enrollmentToggle).not.toBeChecked();
   await enrollmentToggle.check();
   await expect(enrollmentToggle).toBeChecked();
@@ -175,7 +224,7 @@ test("automation page exposes release filters trust rules and disabled capabilit
     page.getByRole("button", { name: "Automation on", exact: true }),
   ).toBeVisible();
   await page.goto("/search/automation");
-  await showSearch.fill("Example Show");
+  await showSearch.fill("Archived Show");
   await expect(page.getByText("Release filters", { exact: true })).toBeVisible();
   await expect(page.getByText("Release groups", { exact: true })).toBeVisible();
   await expect(page.getByText("Source trust", { exact: true })).toBeVisible();
@@ -457,9 +506,11 @@ test("previous runs explains verified decisions, accepts bad feedback and stays 
   await expect(page.locator(".size-score-pair .active").first()).toContainText("Live 92");
   await expect(page.locator(".size-score-pair .inactive").first()).toContainText("Animated 64");
   await expect(page.getByText("Auto · detected Live", { exact: true })).toBeVisible();
-  await page.getByText("Files (1)", { exact: true }).first().click();
+  const inspectionFiles = page.locator(".torrent-payload-summary details").first();
+  await expect(inspectionFiles.locator("summary")).toHaveText("Files (1)");
+  await inspectionFiles.locator("summary").click();
   await expect(
-    page.getByText("Example.Show.S01E02.1080p.WEB-DL.mkv", { exact: true }).last(),
+    inspectionFiles.getByText("Example.Show.S01E02.1080p.WEB-DL.mkv", { exact: true }),
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Mark as bad", exact: true }).click();
