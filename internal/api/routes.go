@@ -88,6 +88,7 @@ func (s *Server) Handler() http.Handler {
 		{"GET /api/torrents/automation/runs", s.torrentAutomationRuns, false},
 		{"GET /api/torrents/automation/runs/{id}", s.torrentAutomationRun, false},
 		{"POST /api/torrents/automation/runs/{id}/bad", s.markTorrentAutomationRunBad, false},
+		{"GET /api/torrents/automation/shows", s.torrentAutomationShows, false},
 		{"GET /api/torrents/automation/shows/{id}", s.torrentShowPolicy, false},
 		{"PUT /api/torrents/automation/shows/{id}", s.updateTorrentShowPolicy, false},
 		{"GET /api/torrents/automation/shows/{id}/media-profile", s.torrentShowMediaProfile, false},

@@ -65,6 +65,25 @@ func (s *Server) markTorrentAutomationRunBad(w http.ResponseWriter, r *http.Requ
 	return nil
 }
 
+
+func (s *Server) torrentAutomationShows(w http.ResponseWriter, r *http.Request, session auth.Session) error {
+	rows, err := s.DB.Rows(r.Context(), `SELECT
+		s.id,s.name,s.image,s.status,s.premiered,s.network,
+		COALESCE((SELECT MIN(e.airdate) FROM episodes e WHERE e.show_id=s.id AND e.airdate>=date('now')),'') AS next_episode,
+		CASE WHEN EXISTS(SELECT 1 FROM episodes e WHERE e.show_id=s.id AND e.airdate>=date('now')) THEN 1 ELSE 0 END AS active,
+		CASE WHEN COALESCE(p.policy,'default')='auto' THEN 1 ELSE 0 END AS automation_enabled
+		FROM shows s
+		JOIN profile_shows f ON f.show_id=s.id
+		LEFT JOIN torrent_show_policy p ON p.show_id=s.id
+		WHERE f.profile_id=?
+		ORDER BY s.name COLLATE NOCASE`, session.Profile)
+	if err != nil {
+		return err
+	}
+	jsonResponse(w, 200, map[string]any{"shows": rows})
+	return nil
+}
+
 func (s *Server) torrentShowPolicy(w http.ResponseWriter, r *http.Request, _ auth.Session) error {
 	showID := r.PathValue("id")
 	var exists int
@@ -78,7 +97,7 @@ func (s *Server) torrentShowPolicy(w http.ResponseWriter, r *http.Request, _ aut
 	if err != nil {
 		return err
 	}
-	jsonResponse(w, 200, map[string]string{"policy": policy})
+	jsonResponse(w, 200, map[string]any{"policy": policy, "enabled": policy == "auto"})
 	return nil
 }
 
@@ -87,10 +106,21 @@ func (s *Server) updateTorrentShowPolicy(w http.ResponseWriter, r *http.Request,
 		return err
 	}
 	var in struct {
-		Policy string `json:"policy"`
+		Policy  string `json:"policy"`
+		Enabled *bool  `json:"enabled"`
 	}
 	if err := decode(r, &in); err != nil {
 		return err
+	}
+	if in.Enabled != nil {
+		if *in.Enabled {
+			in.Policy = "auto"
+		} else {
+			in.Policy = "default"
+		}
+	}
+	if in.Policy == "" {
+		return bad("automation enrollment is required")
 	}
 	showID := r.PathValue("id")
 	var exists int
@@ -107,7 +137,10 @@ func (s *Server) updateTorrentShowPolicy(w http.ResponseWriter, r *http.Request,
 	if err != nil {
 		return err
 	}
-	jsonResponse(w, 200, map[string]string{"policy": policy})
+	if s.Events != nil {
+		s.Events.Publish("", "torrent-automation-shows")
+	}
+	jsonResponse(w, 200, map[string]any{"policy": policy, "enabled": policy == "auto"})
 	return nil
 }
 

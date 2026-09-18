@@ -168,7 +168,8 @@ func automationTestStore(t *testing.T, now time.Time) *database.Store {
 	if _, err = db.ExecContext(ctx, `INSERT INTO profiles(id,display_name,avatar,created_at,locale,auth_method) VALUES('profile-a','Alex','mint',1,'en','none');
 INSERT INTO shows(id,name,premiered) VALUES('show-a','Example Show','2026-01-01');
 INSERT INTO episodes(id,show_id,season,number,name,airstamp) VALUES('episode-a','show-a',1,2,'Second',?);
-INSERT INTO profile_shows(profile_id,show_id,added_at) VALUES('profile-a','show-a',1);`, airstamp); err != nil {
+INSERT INTO profile_shows(profile_id,show_id,added_at) VALUES('profile-a','show-a',1);
+INSERT INTO torrent_show_policy(show_id,policy,updated_at) VALUES('show-a','auto',1);`, airstamp); err != nil {
 		t.Fatal(err)
 	}
 	return db
@@ -217,6 +218,34 @@ func automationService(db *database.Store, requester automationRequester, client
 		Control: requester,
 		Clients: automationClientSource{client: client},
 		Now:     func() time.Time { return now },
+	}
+}
+
+func TestAutomationRequiresExplicitShowEnrollment(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	if _, err := db.Exec("DELETE FROM torrent_show_policy WHERE show_id='show-a'"); err != nil {
+		t.Fatal(err)
+	}
+	searchCalls := 0
+	client := &automationClient{}
+	service := automationService(db, automationRequester{searchCalls: &searchCalls}, client, now)
+	processed, err := service.Run(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if processed != 0 || searchCalls != 0 || client.added != 0 || client.magnetAdded != 0 {
+		t.Fatalf("unenrolled show performed automation work: processed=%d searches=%d torrents=%d magnets=%d", processed, searchCalls, client.added, client.magnetAdded)
+	}
+	if err = (AutomationStore{DB: db}).SetShowPolicy(context.Background(), "show-a", "auto"); err != nil {
+		t.Fatal(err)
+	}
+	processed, err = service.Run(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if processed != 1 || searchCalls != 1 || client.added != 1 {
+		t.Fatalf("enrolled show did not enter automation: processed=%d searches=%d torrents=%d", processed, searchCalls, client.added)
 	}
 }
 

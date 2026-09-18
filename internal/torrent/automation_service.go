@@ -579,7 +579,7 @@ func (s *AutomationService) dueEpisodes(ctx context.Context, now time.Time, conf
 		JOIN profile_shows f ON f.show_id=e.show_id
 		LEFT JOIN torrent_show_policy p ON p.show_id=e.show_id
 		WHERE e.airstamp<>'' AND e.number>0
-		AND COALESCE(p.policy,'default') IN ('default','auto')
+		AND p.policy='auto'
 		AND NOT EXISTS(
 			SELECT 1
 			FROM torrent_automation_runs r
