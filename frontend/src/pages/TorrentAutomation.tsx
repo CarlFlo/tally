@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Bot, RotateCcw, Save, ShieldCheck, SlidersHorizontal, Star } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api, Busy, ErrorState, useApp, useLocal } from "../lib";
 import { invalidateResources } from "../queryInvalidation";
@@ -110,7 +110,7 @@ function SizeRange({
         <strong>{label}</strong>
         <span>{minimum}–{maximum} MB/min</span>
       </div>
-      <div className="dual-range" style={{ "--range-min": `${(minimum / 500) * 100}%`, "--range-max": `${(maximum / 500) * 100}%` } as React.CSSProperties}>
+      <div className="dual-range" style={{ "--range-min": `${(minimum / 500) * 100}%`, "--range-max": `${(maximum / 500) * 100}%` } as CSSProperties}>
         <div className="dual-range-track" />
         <input
           type="range"
@@ -238,7 +238,7 @@ export function TorrentAutomationPage() {
       <div className="page-heading">
         <div>
           <span className="eyebrow">
-            {t("torrentAutomation.eyebrow", { defaultValue: "VERIFIED BEFORE IT MOVES" })}
+            {t("torrentAutomation.eyebrow", { defaultValue: "STRONG SIGNALS BEFORE IT MOVES" })}
           </span>
           <h1>
             {t("search.title")}<span className="accent">.</span>
@@ -246,7 +246,7 @@ export function TorrentAutomationPage() {
           <p>
             {t("torrentAutomation.description", {
               defaultValue:
-                "Control how Tally chooses and verifies releases before handing them to your torrent client.",
+                "Control how Tally matches, sizes, verifies, and selects releases before handing them to your torrent client.",
             })}
           </p>
         </div>

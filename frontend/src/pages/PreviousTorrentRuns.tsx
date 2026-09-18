@@ -94,6 +94,12 @@ function titleCase(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function runStatusLabel(t: ReturnType<typeof useTranslation>["t"], value: string) {
+  if (value === "no_verified_candidate")
+    return t("torrentRuns.noSuitableResult", { defaultValue: "No suitable result" });
+  return titleCase(value);
+}
+
 function StatusIcon({ status }: { status?: string }) {
   if (status === "success" || status === "selected") return <CheckCircle2 size={17} />;
   if (status === "failed" || status === "rejected") return <XCircle size={17} />;
@@ -241,7 +247,7 @@ export function PreviousTorrentRunsPage() {
                   <span className="muted small-text">{dateLabel(run.started_at)}</span>
                   <span className="torrent-run-item-badges">
                     <span className={`badge ${run.status === "downloaded" ? "success" : run.status === "failed" ? "failed" : ""}`}>
-                      {titleCase(run.status)}
+                      {runStatusLabel(t, run.status)}
                     </span>
                   </span>
                 </button>
@@ -280,7 +286,7 @@ function RunInspection({ run }: { run: AutomationRun }) {
         <p className="muted">{dateLabel(run.started_at)}</p>
         <div className="torrent-run-statuses">
           <span className={`badge ${run.status === "downloaded" ? "success" : run.status === "failed" ? "failed" : ""}`}>
-            {titleCase(run.status)}
+            {runStatusLabel(t, run.status)}
           </span>
           {run.feedback && (
             <span className="badge failed">

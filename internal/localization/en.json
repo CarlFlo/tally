@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 11
+    "catalogVersion": 12
   },
   "common": {
     "save": "Save",
@@ -250,7 +250,13 @@
     "automationPolicy_default": "Automatic downloads · Use global default",
     "automationPolicy_auto": "Automatic downloads · Always for this show",
     "automationPolicy_never": "Automatic downloads · Never for this show",
-    "automationPolicySaved": "Show automation policy saved"
+    "automationPolicySaved": "Show automation policy saved",
+    "mediaProfile_auto": "Media type · Auto (detected {{type}})",
+    "mediaProfile_live": "Media type · Live-action",
+    "mediaProfile_animated": "Media type · Animated",
+    "mediaType_live": "live-action",
+    "mediaType_animated": "animated",
+    "mediaProfileSaved": "Show media type saved"
   },
   "backups": {
     "versionUnavailable": "Version unavailable",
@@ -658,8 +664,8 @@
     "searchTab": "Search",
     "automationTab": "Automation",
     "previousRunsTab": "Previous Runs",
-    "eyebrow": "VERIFIED BEFORE IT MOVES",
-    "description": "Control how Tally chooses and verifies releases before handing them to your torrent client.",
+    "eyebrow": "STRONG SIGNALS BEFORE IT MOVES",
+    "description": "Control how Tally matches, sizes, verifies, and selects releases before handing them to your torrent client.",
     "enable": "Enable automatic torrent downloads",
     "enableHelp": "This is global for the server. The scheduler can check for releases while this is enabled.",
     "saved": "Torrent automation settings saved",
@@ -689,11 +695,20 @@
     "preferredProviders": "Preferred Jackett providers / indexers",
     "providerPlaceholder": "Use the provider names shown in search results",
     "verification": "Verification",
-    "highVerifiedOnly": "Automatic downloads require High confidence and a verified .torrent payload. Medium, Low, Rejected, and unverified candidates are never downloaded automatically.",
+    "highVerifiedOnly": "Automatic downloads require High confidence. Tally prefers a retrievable .torrent and verifies its payload first; when only a magnet is usable, it may fall back to metadata-only selection after all other rules pass.",
     "releaseDelay": "Release delay (minutes)",
     "retryWindow": "Retry window (hours)",
-    "magnetsManual": "Magnet-only releases stay manual",
-    "magnetsManualHelp": "A magnet does not expose its file list before metadata exchange, so Tally will not choose it for an automatic download."
+    "magnetsManual": "Magnets are a fallback",
+    "magnetsManualHelp": "Tally asks Jackett for an inspectable .torrent whenever possible. A magnet can be selected automatically only when the release is High confidence and passes identity, trust, history, seed, and MB/min checks; it remains Unverified in Previous Runs.",
+    "sizeProfiles": "Episode size",
+    "sizeProfilesHelp": "Filter implausibly small or large releases by MB per minute. Tally uses episode runtime when available, then show runtime; verified torrent contents replace Jackett's reported size when possible.",
+    "liveActionProfile": "Live-action / normal TV",
+    "liveActionMin": "Live-action minimum MB per minute",
+    "liveActionMax": "Live-action maximum MB per minute",
+    "animatedProfile": "Animated / anime",
+    "animatedMin": "Animated minimum MB per minute",
+    "animatedMax": "Animated maximum MB per minute",
+    "sizeProfilesHint": "Auto-detected animated shows use the animated range. You can override a show's media type from its Show actions menu."
   },
   "torrentRuns": {
     "eyebrow": "EVERY DECISION, EXPLAINED",
@@ -735,7 +750,7 @@
     "filterGroups": "removed by group allowlist",
     "filterUploaders": "removed by uploader allowlist",
     "filterConfidence": "not High confidence",
-    "filterMagnets": "magnet-only",
+    "filterMagnets": "magnet fallback",
     "filterBad": "previously marked bad",
     "filterShortlisted": "shortlisted",
     "release": "Release",
@@ -745,7 +760,20 @@
     "confidence": "Confidence",
     "preferredUploader": "preferred uploader",
     "preferredProvider": "preferred provider",
-    "preferredGroup": "preferred group"
+    "preferredGroup": "preferred group",
+    "filterSizeRate": "outside MB/min range",
+    "filterUnusable": "no usable torrent or magnet",
+    "sizeFit": "Size fit",
+    "liveScore": "Live",
+    "animatedScore": "Animated",
+    "magnetFallback": "Magnet fallback · metadata-only",
+    "torrentVerified": ".torrent payload path",
+    "mediaProfile": "Media type",
+    "mediaProfileAuto": "Auto · detected {{type}}",
+    "runtime": "Runtime",
+    "liveRange": "Live-action size range",
+    "animatedRange": "Animated size range",
+    "noSuitableResult": "No suitable result"
   },
   "torrentInspection": {
     "notEpisodeScored": "No episode-specific confidence evaluation is available for this free-text result.",
