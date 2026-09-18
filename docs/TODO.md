@@ -6,7 +6,7 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 `feature/torrent-automation-confidence`
 
-Status: implementation and required full validation are complete; branch is ready for review or merge.
+Status: post-magnet payload verification is in progress; final validation is pending.
 
 ### Evaluation and search metadata
 
@@ -55,6 +55,18 @@ Status: implementation and required full validation are complete; branch is read
 - [x] Treat the existing release delay as a hold window from the first qualifying Jackett `pubDate`, while retaining the episode-air-time guard and keeping missing timestamps neutral.
 - [x] Once the delay window matures, evaluate all currently acceptable candidates so a newer better release can win without needing its own full delay.
 - [x] Record releases held by the delay window in Previous Runs and version the changed decision engine.
+
+### Post-magnet payload verification
+
+- [ ] Persist automatic magnet submissions that still require payload verification so the check survives restarts.
+- [ ] Extend qBittorrent integration to read the resolved file list for a Tally-owned torrent by infohash.
+- [ ] Have the torrent-automation scheduler process pending magnet verifications before new discovery work, without long blocking polls.
+- [ ] Run the resolved qBittorrent file list through the same video/executable/sample/episode identity checks used for inspectable `.torrent` metadata.
+- [ ] Recalculate actual payload MB/min from the resolved file sizes and reject an out-of-range payload using the submission-time media profile/settings.
+- [ ] If post-verification fails, stop/remove the Tally-owned torrent with its partial files, globally block the exact infohash, and record the reason without rewriting the original immutable decision.
+- [ ] If post-verification succeeds, retain the original metadata-only decision and append durable follow-up verification state for Previous Runs.
+- [ ] Treat unresolved magnet metadata as pending/retryable; do not busy-poll or turn an empty file list into a false rejection.
+- [ ] Add migration/backup coverage, qBittorrent protocol tests, deterministic automation tests, Previous Runs UI/localization, and durable architecture/validation docs.
 
 ### Runtime-aware size profiles and magnet automation
 
@@ -118,7 +130,7 @@ Status: implementation and required full validation are complete; branch is read
 - [x] Update `ARCHITECTURE.md`, `DEVELOPMENT.md`, `VALIDATION.md`, and `LESSONS.md` where the durable manual-only torrent contract changes.
 - [x] Update English and Ukrainian localization for all follow-up filter/trust/result-evaluation UI.
 - [x] Update durable documentation for the automation filtering/trust model and its validation rules.
-- [x] Run the complete required validation suite on the final branch head before the branch is considered ready.
+- [ ] Run the complete required validation suite on the final branch head before the branch is considered ready.
 
 ## Current product foundations
 
