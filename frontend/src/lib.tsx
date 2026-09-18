@@ -510,6 +510,13 @@ export function EpisodeDrawer({
   const navigate = useNavigate();
   const [ep, setEp] = useState(episode);
   const [busy, setBusy] = useState(false);
+  const parsedAirstamp = Date.parse(ep.airstamp);
+  const today = dateTimeFormatter("en-CA", {
+    timeZone: boot.preferences.timezone,
+  }).format(Date.now());
+  const isReleased = Number.isFinite(parsedAirstamp)
+    ? parsedAirstamp <= Date.now()
+    : !!ep.airdate && ep.airdate < today;
   async function toggle(field: "watched" | "downloaded") {
     const old = ep;
     const value = !ep[field];
@@ -555,7 +562,7 @@ export function EpisodeDrawer({
       <div className="drawer-actions">
         <button
           className={"button " + (ep.watched ? "active" : "")}
-          disabled={busy}
+          disabled={busy || (!isReleased && !ep.watched)}
           onClick={() => toggle("watched")}
         >
           <Check size={18} />
@@ -563,7 +570,7 @@ export function EpisodeDrawer({
         </button>
         <button
           className={"button " + (ep.downloaded ? "active" : "")}
-          disabled={busy}
+          disabled={busy || (!isReleased && !ep.downloaded)}
           onClick={() => toggle("downloaded")}
         >
           <Download size={18} />
