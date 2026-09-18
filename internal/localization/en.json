@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 19
+    "catalogVersion": 20
   },
   "common": {
     "save": "Save",
@@ -730,7 +730,8 @@
     "retryFirst": "First retry delay (minutes)",
     "retrySecond": "Second retry delay (minutes)",
     "retryLater": "Later retry delay (minutes)",
-    "retryPacingHelp": "These delays apply after unsuccessful or failed automated searches. Tally does not immediately retry Jackett inside the same background attempt."
+    "retryPacingHelp": "These delays apply after unsuccessful or failed automated searches. Tally does not immediately retry Jackett inside the same background attempt.",
+    "maxCandidates": "Torrent candidates inspected per episode"
   },
   "torrentRuns": {
     "eyebrow": "EVERY DECISION, EXPLAINED",
