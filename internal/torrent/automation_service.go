@@ -54,7 +54,7 @@ func (s *AutomationService) Run(ctx context.Context) (int, error) {
 	}
 	processed := 0
 	if caps.Downloads.Enabled {
-		verified, verifyErr := s.processPendingMagnetVerifications(ctx)
+		verified, verifyErr := s.processPendingMagnetVerifications(ctx, caps.Automation)
 		if verifyErr != nil {
 			return processed, verifyErr
 		}
@@ -72,13 +72,6 @@ func (s *AutomationService) Run(ctx context.Context) (int, error) {
 		if err = ctx.Err(); err != nil {
 			return processed, err
 		}
-		ready, err := s.retryReady(ctx, episode.ID, now, caps.Automation.RetryWindowHours)
-		if err != nil {
-			return processed, err
-		}
-		if !ready {
-			continue
-		}
 		claimed, err := s.runEpisode(ctx, episode, caps)
 		if err != nil {
 			return processed, err
@@ -94,7 +87,7 @@ func (s *AutomationService) Run(ctx context.Context) (int, error) {
 
 const pendingMagnetVerificationMaxAge = 24 * time.Hour
 
-func (s *AutomationService) processPendingMagnetVerifications(ctx context.Context) (int, error) {
+func (s *AutomationService) processPendingMagnetVerifications(ctx context.Context, config settings.TorrentAutomation) (int, error) {
 	store := AutomationStore{DB: s.DB}
 	pending, err := store.PendingMagnetVerifications(ctx, 50)
 	if err != nil || len(pending) == 0 {
@@ -210,6 +203,9 @@ func (s *AutomationService) processPendingMagnetVerifications(ctx context.Contex
 			if err = store.RejectMagnetVerification(ctx, item.RunID, assessment, sizeProfile, verifyErr.Error()); err != nil {
 				return completed, err
 			}
+			if err = s.postponeEpisodeSearch(ctx, item.EpisodeID, now, config); err != nil {
+				return completed, err
+			}
 			completed++
 			s.publishChange()
 			continue
@@ -257,12 +253,16 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 	finish := func(status AutomationRunStatus, assessment ReleaseAssessment, name string) error {
 		return store.FinishRun(ctx, runID, status, assessment, name)
 	}
+	if err = s.claimEpisodeSearch(ctx, episode.ID, started, caps.Automation); err != nil {
+		_ = finish(RunFailed, ReleaseAssessment{}, "")
+		return true, err
+	}
 
 	provider := &Jackett{Control: s.Control, BaseURL: caps.Search.BaseURL, APIKey: caps.Search.APIKey}
 	searchStarted := s.now()
 	// Keep discovery broad here. Automation-specific rejection happens below so
 	// Previous Runs can explain exactly why Jackett candidates were removed.
-	results, err := provider.Search(ctx, SearchQuery{Query: query})
+	results, err := provider.Search(ctx, SearchQuery{Query: query, NoRetry: true})
 	if err != nil {
 		_ = store.AppendDecision(ctx, runID, DecisionStep{Stage: "search", Status: "failed", Summary: "Jackett search failed", DurationMS: elapsedMS(searchStarted, s.now())})
 		_ = finish(RunFailed, ReleaseAssessment{}, "")
@@ -573,14 +573,23 @@ func (s *AutomationService) capabilities(ctx context.Context) (automationCapabil
 }
 
 func (s *AutomationService) dueEpisodes(ctx context.Context, now time.Time, config settings.TorrentAutomation) ([]automationEpisode, error) {
-	rows, err := s.DB.QueryContext(ctx, `SELECT DISTINCT e.id,e.show_id,s.name,s.premiered,e.season,e.number,e.airstamp,COALESCE(NULLIF(e.runtime,0),NULLIF(s.runtime,0),0),COALESCE(p.policy,'default')
+	order := "unixepoch(e.airstamp) DESC, e.id ASC"
+	if !config.PrioritizeRecent {
+		order = "COALESCE(st.next_search_at,0) ASC, unixepoch(e.airstamp) ASC, e.id ASC"
+	}
+	query := fmt.Sprintf(`SELECT DISTINCT e.id,e.show_id,s.name,s.premiered,e.season,e.number,e.airstamp,COALESCE(NULLIF(e.runtime,0),NULLIF(s.runtime,0),0),COALESCE(p.policy,'default')
 		FROM episodes e
 		JOIN shows s ON s.id=e.show_id
 		JOIN profile_shows f ON f.show_id=e.show_id
 		LEFT JOIN torrent_show_policy p ON p.show_id=e.show_id
+		LEFT JOIN torrent_automation_episode_state st ON st.episode_id=e.id
 		WHERE e.airstamp<>'' AND e.number>0
 		AND COALESCE(e.downloaded,0)=0
 		AND p.policy='auto'
+		AND unixepoch(e.airstamp) IS NOT NULL
+		AND unixepoch(e.airstamp)<=?
+		AND unixepoch(e.airstamp)>=?
+		AND COALESCE(st.next_search_at,0)<=?
 		AND NOT EXISTS(
 			SELECT 1
 			FROM torrent_automation_runs r
@@ -591,109 +600,23 @@ func (s *AutomationService) dueEpisodes(ctx context.Context, now time.Time, conf
 				OR (r.status='downloaded' AND COALESCE(m.status,'')<>'rejected')
 			)
 		)
-		ORDER BY e.airstamp ASC LIMIT 100`)
+		ORDER BY %s LIMIT ?`, order)
+	latestAir := now.Add(-time.Duration(config.ReleaseDelayMinutes) * time.Minute).Unix()
+	earliestAir := now.Add(-time.Duration(config.RetryWindowHours) * time.Hour).Unix()
+	rows, err := s.DB.QueryContext(ctx, query, latestAir, earliestAir, now.Unix(), config.DiscoveryBudget)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	out := make([]automationEpisode, 0)
-	delay := time.Duration(config.ReleaseDelayMinutes) * time.Minute
-	window := time.Duration(config.RetryWindowHours) * time.Hour
+	out := make([]automationEpisode, 0, config.DiscoveryBudget)
 	for rows.Next() {
 		var episode automationEpisode
 		if err = rows.Scan(&episode.ID, &episode.ShowID, &episode.ShowName, &episode.Premiered, &episode.Season, &episode.Episode, &episode.Airstamp, &episode.Runtime, &episode.Policy); err != nil {
 			return nil, err
 		}
-		aired, parseErr := time.Parse(time.RFC3339, episode.Airstamp)
-		if parseErr != nil {
-			continue
-		}
-		age := now.Sub(aired)
-		if age >= delay && age <= window {
-			out = append(out, episode)
-		}
+		out = append(out, episode)
 	}
 	return out, rows.Err()
-}
-
-func (s *AutomationService) retryReady(ctx context.Context, episodeID string, now time.Time, retryWindowHours int) (bool, error) {
-	rows, err := s.DB.QueryContext(ctx, `SELECT CASE
-			WHEN r.status='downloaded' AND m.status='rejected' THEN COALESCE(m.completed_at,r.started_at)
-			ELSE r.started_at
-		END AS retry_at
-		FROM torrent_automation_runs r
-		LEFT JOIN torrent_magnet_verifications m ON m.run_id=r.id
-		WHERE r.episode_id=?
-		AND (
-			r.status NOT IN ('running','downloaded')
-			OR (r.status='downloaded' AND m.status='rejected')
-		)
-		AND CASE
-			WHEN r.status='downloaded' AND m.status='rejected' THEN COALESCE(m.completed_at,r.started_at)
-			ELSE r.started_at
-		END >=?
-		ORDER BY retry_at DESC`, episodeID, now.Add(-time.Duration(retryWindowHours)*time.Hour).Unix())
-	if err != nil {
-		return false, err
-	}
-	defer rows.Close()
-	attempts := 0
-	var latest int64
-	for rows.Next() {
-		var started int64
-		if err = rows.Scan(&started); err != nil {
-			return false, err
-		}
-		if attempts == 0 {
-			latest = started
-		}
-		attempts++
-	}
-	if err = rows.Err(); err != nil {
-		return false, err
-	}
-	if attempts == 0 {
-		return true, nil
-	}
-	var delay time.Duration
-	switch attempts {
-	case 1:
-		delay = 30 * time.Minute
-	case 2:
-		delay = 2 * time.Hour
-	default:
-		delay = 6 * time.Hour
-	}
-	return now.Sub(time.Unix(latest, 0)) >= delay, nil
-}
-
-func (s *AutomationService) episodeTarget(ctx context.Context, episode automationEpisode) (EpisodeTarget, error) {
-	target := EpisodeTarget{ShowTitle: episode.ShowName, Season: episode.Season, Episode: episode.Episode}
-	if len(episode.Premiered) >= 4 {
-		target.Year, _ = strconv.Atoi(episode.Premiered[:4])
-	}
-	rows, err := s.DB.QueryContext(ctx, "SELECT provider,external_id FROM external_ids WHERE kind='show' AND internal_id=?", episode.ShowID)
-	if err != nil {
-		return target, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var provider, id string
-		if err = rows.Scan(&provider, &id); err != nil {
-			return target, err
-		}
-		switch strings.ToLower(provider) {
-		case "tvmaze":
-			target.TVMazeID = id
-		case "tvdb":
-			target.TVDBID = id
-		case "tmdb":
-			target.TMDBID = id
-		case "imdb":
-			target.IMDBID = id
-		}
-	}
-	return target, rows.Err()
 }
 
 func candidateReleaseAges(items []automationCandidate) []ReleaseAgeEvaluation {
