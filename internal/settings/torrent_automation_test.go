@@ -51,3 +51,38 @@ func TestTorrentAutomationValidatesSizeProfileRanges(t *testing.T) {
 		t.Fatal("animated range above safety maximum was accepted")
 	}
 }
+
+
+func TestTorrentAutomationRequestPolicyDefaultsAreSeededOnce(t *testing.T) {
+	legacy := TorrentAutomation{PreferredQuality: TorrentQuality1080, RetryWindowHours: 24, MaxCandidates: 5}
+	effective := legacy.Effective()
+	if effective.RequestPolicyVersion != TorrentAutomationRequestPolicyVersion {
+		t.Fatalf("legacy request policy was not versioned: %+v", effective)
+	}
+	if effective.DiscoveryBudget != 5 || effective.RetryFirstMinutes != 30 || effective.RetrySecondMinutes != 120 || effective.RetryLaterMinutes != 360 || !effective.PrioritizeRecent {
+		t.Fatalf("legacy settings did not receive safe request defaults: %+v", effective)
+	}
+
+	effective.PrioritizeRecent = false
+	after := effective.Effective()
+	if after.PrioritizeRecent {
+		t.Fatalf("intentional recency-priority disable was overwritten: %+v", after)
+	}
+}
+
+func TestTorrentAutomationValidatesRequestRestraint(t *testing.T) {
+	config := DefaultTorrentAutomation()
+	if err := ValidateTorrentAutomation(config); err != nil {
+		t.Fatalf("defaults should be valid: %v", err)
+	}
+	config.DiscoveryBudget = 26
+	if err := ValidateTorrentAutomation(config); err == nil {
+		t.Fatal("oversized discovery budget was accepted")
+	}
+	config = DefaultTorrentAutomation()
+	config.RetryFirstMinutes = 180
+	config.RetrySecondMinutes = 60
+	if err := ValidateTorrentAutomation(config); err == nil {
+		t.Fatal("decreasing retry backoff was accepted")
+	}
+}
