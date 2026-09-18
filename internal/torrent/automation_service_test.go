@@ -818,6 +818,25 @@ func TestAutomationRetryBackoffPersistsAcrossServiceRestart(t *testing.T) {
 	}
 }
 
+func TestAutomationNeverBackfillsYearOldEpisodes(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	updateAutomationConfig(t, db, func(config *settings.TorrentAutomation) {
+		config.RetryWindowHours = 168
+	})
+	if _, err := db.Exec("UPDATE episodes SET airstamp=? WHERE id='episode-a'", now.AddDate(-1, 0, 0).UTC().Format(time.RFC3339)); err != nil {
+		t.Fatal(err)
+	}
+	searchCalls := 0
+	processed, err := automationService(db, automationRequester{searchCalls: &searchCalls}, &automationClient{}, now).Run(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if processed != 0 || searchCalls != 0 {
+		t.Fatalf("historical episode entered automation: processed=%d searches=%d", processed, searchCalls)
+	}
+}
+
 func TestAutomationDiscoveryBudgetDefersBacklogAndPrioritizesRecentEpisodes(t *testing.T) {
 	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
 	db := automationTestStore(t, now)
