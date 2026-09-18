@@ -67,7 +67,7 @@ func (s *Server) preferences(w http.ResponseWriter, r *http.Request, session aut
 				return bad("choose 20, 50, or 100 rows")
 			}
 		case "job_type_filter":
-			if v != "all" && v != "metadata" && v != "maintenance" && v != "backup" {
+			if v != "all" && v != "metadata" && v != "torrent_automation" && v != "maintenance" && v != "backup" {
 				return bad("invalid job filter")
 			}
 		case "job_status_filter":
