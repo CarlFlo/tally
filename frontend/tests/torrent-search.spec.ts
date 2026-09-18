@@ -99,13 +99,15 @@ test("torrent search navigation and filters follow the saved Jackett state", asy
       })),
     ];
 
-    await page.route("**/api/torrents/search", (route) =>
-      route.fulfill({
+    let searchRequests = 0;
+    await page.route("**/api/torrents/search", (route) => {
+      searchRequests++;
+      return route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({ results, warnings: [] }),
-      }),
-    );
+      });
+    });
 
     let failedSubmission = false;
     await page.route("**/api/torrents/history", (route) => {
@@ -174,6 +176,19 @@ test("torrent search navigation and filters follow the saved Jackett state", asy
           element.scrollHeight > element.clientHeight,
       ),
     ).toBe(true);
+
+    expect(searchRequests).toBe(1);
+    await page.goto("/calendar");
+    await sidebar
+      .getByRole("link", { name: "Torrent search", exact: true })
+      .click();
+    await expect(
+      page.getByRole("textbox", { name: "Torrent search query" }),
+    ).toHaveValue("Example");
+    await expect(
+      page.getByText("Example S01 1080p WEB-DL x264", { exact: true }),
+    ).toBeVisible();
+    expect(searchRequests).toBe(1);
 
     await page
       .locator(".torrent-result")
