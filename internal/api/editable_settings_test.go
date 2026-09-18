@@ -112,3 +112,54 @@ func TestFavoritesEpisodeResetAndPersistentViewPreferences(t *testing.T) {
 	}
 	expect(t, request(t, h, "GET", "/api/statistics?request_limit=1000", nil, owner), 400)
 }
+
+
+func TestTorrentAutomationRequestRestraintSettingsPersist(t *testing.T) {
+	_, h, _ := testServer(t, "disabled")
+
+	response := request(t, h, "GET", "/api/settings/torrent-automation", nil)
+	expect(t, response, http.StatusOK)
+	var saved struct {
+		Data     settings.TorrentAutomation `json:"data"`
+		Revision int64                      `json:"revision"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &saved); err != nil {
+		t.Fatal(err)
+	}
+	if saved.Data.DiscoveryBudget != 5 || saved.Data.RetryFirstMinutes != 30 || saved.Data.RetrySecondMinutes != 120 || saved.Data.RetryLaterMinutes != 360 || !saved.Data.PrioritizeRecent {
+		t.Fatalf("unexpected automation request defaults: %+v", saved.Data)
+	}
+
+	next := saved.Data
+	next.DiscoveryBudget = 7
+	next.MaxCandidates = 4
+	next.RetryFirstMinutes = 45
+	next.RetrySecondMinutes = 180
+	next.RetryLaterMinutes = 480
+	next.PrioritizeRecent = false
+	updated := request(t, h, "PUT", "/api/settings/torrent-automation", map[string]any{
+		"data": next, "revision": saved.Revision,
+	})
+	expect(t, updated, http.StatusOK)
+
+	response = request(t, h, "GET", "/api/settings/torrent-automation", nil)
+	expect(t, response, http.StatusOK)
+	var persisted struct {
+		Data     settings.TorrentAutomation `json:"data"`
+		Revision int64                      `json:"revision"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &persisted); err != nil {
+		t.Fatal(err)
+	}
+	if persisted.Data.DiscoveryBudget != 7 || persisted.Data.MaxCandidates != 4 ||
+		persisted.Data.RetryFirstMinutes != 45 || persisted.Data.RetrySecondMinutes != 180 ||
+		persisted.Data.RetryLaterMinutes != 480 || persisted.Data.PrioritizeRecent {
+		t.Fatalf("automation request controls were not persisted: %+v", persisted.Data)
+	}
+
+	invalid := persisted.Data
+	invalid.DiscoveryBudget = 26
+	expect(t, request(t, h, "PUT", "/api/settings/torrent-automation", map[string]any{
+		"data": invalid, "revision": persisted.Revision,
+	}), http.StatusBadRequest)
+}
