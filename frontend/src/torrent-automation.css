@@ -5,7 +5,7 @@
 .torrent-automation-settings {
   display: grid;
   gap: 16px;
-  max-width: 920px;
+  max-width: 1200px;
 }
 
 .torrent-automation-settings .settings-card {
@@ -375,6 +375,19 @@
   resize: vertical;
 }
 
+@media (min-width: 1050px) {
+  .torrent-automation-settings {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .torrent-automation-settings > .feature-toggle-setting,
+  .torrent-automation-settings > .automation-shows-card,
+  .torrent-automation-settings > .settings-actions {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 1180px) {
   .torrent-run-layout {
     grid-template-columns: minmax(220px, 0.8fr) minmax(0, 2fr);
@@ -452,8 +465,8 @@
 
 .dual-range-track {
   position: absolute;
-  left: 0;
-  right: 0;
+  left: 8px;
+  right: 8px;
   top: 11px;
   height: 4px;
   border-radius: 999px;
