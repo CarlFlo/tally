@@ -119,3 +119,18 @@ func TestResolvedFileVerificationPreservesKnownMagnetInfoHash(t *testing.T) {
 		t.Fatalf("resolved verification lost known magnet infohash: %q", assessment.InfoHash)
 	}
 }
+
+func TestApplyPayloadIdentityVerificationStillRejectsDifferentShow(t *testing.T) {
+	assessment := ApplyPayloadIdentityVerification(
+		ReleaseAssessment{Confidence: ConfidenceHigh, Verification: VerificationVerified},
+		TorrentMetadata{
+			Name:  "Different.Show.S01E02",
+			Files: []TorrentFile{{Path: "Different.Show.S01E02.mkv", Size: 1000}},
+		},
+		EpisodeTarget{ShowTitle: "Example Show", Season: 1, Episode: 2},
+	)
+	if !assessment.Rejected() || !hasReason(assessment.HardRejections, ReasonWrongShow) {
+		t.Fatalf("explicit payload show mismatch was not rejected: %+v", assessment)
+	}
+}
+
