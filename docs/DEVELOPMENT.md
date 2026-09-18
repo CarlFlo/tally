@@ -40,8 +40,8 @@ This file contains implementation rules that apply while changing Tally. `AGENTS
 - Route provider-related outbound work through the existing coordinator and keep background work bounded, cancellable, and observable.
 - Torrent discovery, inspection, automation, and manual search must share the backend release evaluator rather than creating frontend-specific or scheduler-specific acceptance logic.
 - Manual search may display confidence only when Tally has authoritative episode context. Keep confidence separate from quality/size preference.
-- Automatic torrent submission requires High confidence, a locally verified `.torrent` payload, and no hard rejection. Magnet-only candidates remain manual because their file tree cannot be verified before qBittorrent receives them.
-- Deep-inspect only a bounded shortlist or explicitly selected result; never fetch every Jackett result merely to compute UI confidence.
+- Automatic torrent submission always requires High confidence and no hard rejection. Prefer and locally inspect a Jackett `.torrent` when available. A magnet may fall back to metadata-only automatic submission only when no usable `.torrent` is available and all other acceptance rules pass; never label that path verified.
+- Deep-inspect only a bounded shortlist or explicitly selected result; never fetch every Jackett result merely to compute UI confidence. Preserve both `.torrent` and magnet alternatives when Torznab exposes both, and never use a magnet to bypass a meaningful rejection discovered from fetched torrent contents.
 - Re-check search/download/automation capabilities immediately before external side effects. A per-show override must never bypass a disabled global capability.
 - Treat ambiguous downloader responses as reconciliation problems. When an infohash is known, check the client before retrying so a successful-but-uncertain submission does not become a duplicate.
 - Keep automation/run history credential-free. Do not store provider API keys, authenticated URLs, cookies, client tokens, or secrets in decision snapshots.
@@ -72,7 +72,7 @@ When a meaningful fix, investigation, refactor, or production problem reveals a 
 ## Finishing work
 
 - Treat tests as part of the implementation. Update affected assertions/fixtures and add regression coverage when behavior changes.
-- For torrent automation changes, include deterministic coverage for release parsing/evaluation, payload inspection, candidate fallback, bad-infohash handling, retry gating, duplicate prevention, capability re-checks, ambiguous client reconciliation, and disabled/no-op states as applicable.
+- For torrent automation changes, include deterministic coverage for release parsing/evaluation, payload inspection, runtime/size profiles, media classification/override, torrent-vs-magnet transport preference, candidate fallback, bad-infohash handling, retry gating, duplicate prevention, capability re-checks, ambiguous client reconciliation, and disabled/no-op states as applicable.
 - Browser coverage should exercise manual confidence, Automation settings, Previous Runs explainability/feedback, feature-disabled navigation, and responsive behavior when those surfaces change.
 - Run the checks required by `VALIDATION.md` for the changed surface and inspect unexplained failures before rerunning them.
 - Update `TODO.md` to reflect the remaining state of work.
