@@ -48,9 +48,6 @@ func (s *Server) torrentSend(w http.ResponseWriter, r *http.Request, session aut
 		s.selections.Store(in.Selection, selected)
 	}
 	result := payload.Result
-	if payload.Preliminary != nil && payload.Preliminary.Rejected() {
-		return bad("selected result does not match the requested episode")
-	}
 	hash := auth.Digest(result.Magnet + "\x00" + result.URL)
 	id := database.ID()
 	res, e := s.DB.ExecContext(r.Context(), "INSERT INTO torrent_send_history VALUES(?,?,?,?,?,'pending','',?) ON CONFLICT(profile_id,idempotency_key) DO NOTHING", id, session.Profile, in.Key, hash, result.Name, time.Now().Unix())
@@ -87,10 +84,11 @@ func (s *Server) torrentSend(w http.ResponseWriter, r *http.Request, session aut
 			data, e = provider.FetchTorrent(r.Context(), result.URL)
 		}
 		if e == nil {
+			// Manual confidence is advisory. Re-evaluate the selected torrent's
+			// actual payload from a clean assessment so a title/indexer metadata
+			// concern cannot block an explicit user choice. Payload safety and
+			// show/episode identity checks remain authoritative.
 			base := torrent.ReleaseAssessment{Confidence: torrent.ConfidenceLow, Verification: torrent.VerificationUnverified}
-			if payload.Preliminary != nil {
-				base = *payload.Preliminary
-			}
 			_, e = torrent.VerifyTorrentForTarget(base, result, data, payload.Target)
 			inspectionRejected = e != nil
 		}
