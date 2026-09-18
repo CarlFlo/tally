@@ -28,7 +28,7 @@ func (j *Jackett) Search(ctx context.Context, query SearchQuery) ([]SearchResult
 	if err != nil {
 		return nil, err
 	}
-	response, err := j.Control.Do(ctx, providers.Request{Provider: j.ID(), URL: endpoint, Trigger: "torrent_search", Entity: "search", TTL: 2 * time.Minute})
+	response, err := j.Control.Do(ctx, providers.Request{Provider: j.ID(), URL: endpoint, Trigger: "torrent_search", Entity: "search", TTL: 2 * time.Minute, NoRetry: query.NoRetry})
 	if err != nil {
 		return nil, err
 	}
