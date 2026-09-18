@@ -16,6 +16,8 @@ type selection struct {
 
 type torrentSelection struct {
 	Result      torrent.SearchResult       `json:"result"`
+	Query       string                     `json:"query,omitempty"`
+	EpisodeID   string                     `json:"episode_id,omitempty"`
 	Target      *torrent.EpisodeTarget      `json:"target,omitempty"`
 	Preliminary *torrent.ReleaseAssessment `json:"preliminary,omitempty"`
 }
