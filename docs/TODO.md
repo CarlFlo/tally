@@ -6,7 +6,7 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 `feature/torrent-automation-confidence`
 
-Status: post-magnet payload verification is in progress; final validation is pending.
+Status: per-show automation enrollment is in progress; final validation is pending.
 
 ### Evaluation and search metadata
 
@@ -37,6 +37,17 @@ Status: post-magnet payload verification is in progress; final validation is pen
 - [x] Treat `no suitable result` as a normal outcome, not an operational error, and retry later within a bounded window rather than accepting a weak match.
 - [x] Avoid duplicate qBittorrent submissions after ambiguous/time-out responses by reconciling against the selected infohash where possible.
 - [x] Expose Torrent automation as its own independent scheduler job with a default 15-minute cadence and normal scheduler controls/history.
+
+### Per-show automation enrollment
+
+- [ ] Change show automation to explicit opt-in: the global automation switch remains the master control, but only shows explicitly enrolled for automatic downloads are searched by the scheduler.
+- [ ] Add one backend list endpoint for the current profile's My Shows with global automation enrollment and upcoming-episode state; avoid one request per show.
+- [ ] On `/search/automation`, add an enrolled-show section with a search field: empty search shows currently active/calendar shows with a known upcoming episode, while search spans all My Shows.
+- [ ] Allow enrollment to be toggled directly from the automation list with clear enabled/disabled state and responsive feedback.
+- [ ] Add the same enrollment toggle to the individual show page near the primary show actions; both surfaces must update the same global policy.
+- [ ] Remove the old three-choice Default / Auto-download / Never UI so the product presents one unambiguous on/off enrollment model; keep backend compatibility for legacy stored policies where practical.
+- [ ] Add backend/browser coverage for opt-in scheduling, inactive-show search, list/detail synchronization, authorization, and global master-disable behavior.
+- [ ] Localize the new English/Ukrainian UI, update durable automation documentation, and rerun the complete validation suite on the final branch head.
 
 ### Follow-up automation controls
 
