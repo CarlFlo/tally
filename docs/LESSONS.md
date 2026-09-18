@@ -18,6 +18,12 @@ Avoid maintaining parallel client and server interpretations of persisted settin
 
 The same rule applies to inventories. If the filesystem is the authoritative set of archives or assets, do not maintain a second database registry that can drift from it. Derive management operations from the authoritative inventory and cache only information that can be safely rebuilt.
 
+### Let a background job have one master switch
+
+If a scheduled feature already has a persisted scheduler enabled state, do not add a second feature-level enable flag that can disagree with it. One authoritative switch should decide whether scheduled execution occurs; every UI surface should edit that same state and invalidate the same queries.
+
+For experimental jobs, put acknowledgement at the transition from disabled to enabled rather than creating a parallel gate inside the worker. This keeps execution semantics testable and avoids states where the UI says a feature is off while the scheduler still runs it.
+
 ### Give refresh/invalidation one owner
 
 A completed mutation should have one authoritative path that publishes or invalidates the affected state. If the mutation handler, filesystem watcher, background job, and UI all independently trigger the same refresh, duplicate requests and ordering races follow.
