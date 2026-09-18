@@ -83,7 +83,9 @@ func (s *Server) torrentEpisodeTargetFromProvider(ctx context.Context, parsed to
 	lookupCtx := metadata.WithInfo(ctx, metadata.Info{Trigger: "torrent_search"})
 	results, err := s.Metadata.Provider.SearchShows(lookupCtx, parsed.Title)
 	if err != nil {
-		return nil, remote(err)
+		// Episode resolution enriches manual torrent search. Provider failure must
+		// not prevent the underlying Jackett free-text search from continuing.
+		return nil, nil
 	}
 
 	matches := make([]metadata.Show, 0, 1)
@@ -102,7 +104,7 @@ func (s *Server) torrentEpisodeTargetFromProvider(ctx context.Context, parsed to
 	show := matches[0]
 	episodes, err := s.Metadata.Provider.GetEpisodes(lookupCtx, strconv.Itoa(show.ID))
 	if err != nil {
-		return nil, remote(err)
+		return nil, nil
 	}
 	var matched *metadata.Episode
 	for i := range episodes {

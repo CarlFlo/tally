@@ -18,13 +18,15 @@ import (
 type torrentTargetTV struct {
 	results      []metadata.SearchResult
 	episodes     []metadata.Episode
+	searchErr    error
+	episodeErr   error
 	searchCalls  atomic.Int32
 	episodeCalls atomic.Int32
 }
 
 func (f *torrentTargetTV) SearchShows(context.Context, string) ([]metadata.SearchResult, error) {
 	f.searchCalls.Add(1)
-	return f.results, nil
+	return f.results, f.searchErr
 }
 
 func (f *torrentTargetTV) GetShow(context.Context, string) (*metadata.Show, error) {
@@ -33,7 +35,7 @@ func (f *torrentTargetTV) GetShow(context.Context, string) (*metadata.Show, erro
 
 func (f *torrentTargetTV) GetEpisodes(context.Context, string) ([]metadata.Episode, error) {
 	f.episodeCalls.Add(1)
-	return f.episodes, nil
+	return f.episodes, f.episodeErr
 }
 
 func seedTorrentEpisodeTarget(t *testing.T, s *Server) {
@@ -179,6 +181,33 @@ func TestTorrentFreeTextEpisodeResolvesTVMazeWithoutPersistingOrFollowing(t *tes
 	}
 	if persisted != 0 || followed != 0 {
 		t.Fatalf("TVMaze search context changed library state: persisted=%d followed=%d", persisted, followed)
+	}
+}
+
+func TestTorrentFreeTextEpisodeStillSearchesWhenTVMazeResolutionFails(t *testing.T) {
+	s, handler, _ := testServer(t, "disabled")
+	s.Metadata.Provider = &torrentTargetTV{searchErr: fmt.Errorf("tvmaze unavailable")}
+	jackett := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, `<rss xmlns:torznab="http://torznab.com/schemas/2015/feed"><channel><item><title>Offline.Show.S01E01.1080p.WEB-DL-GROUP</title><guid>offline</guid><enclosure url="magnet:?xt=urn:btih:%s" length="1073741824"/><torznab:attr name="seeders" value="20"/></item></channel></rss>`, strings.Repeat("f", 40))
+	}))
+	defer jackett.Close()
+	if err := s.settingsStore().Ensure(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.settingsStore().Save(context.Background(), "search", settings.Search{BaseURL: jackett.URL, APIKey: "PRIVATE-KEY", Enabled: true}, 1); err != nil {
+		t.Fatal(err)
+	}
+
+	response := request(t, handler, "POST", "/api/torrents/search", map[string]any{"query": "Offline Show S01E01"})
+	expect(t, response, 200)
+	var out struct {
+		Results []map[string]any `json:"results"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &out); err != nil || len(out.Results) != 1 {
+		t.Fatalf("manual Jackett search did not survive TVMaze failure: %s", response.Body.String())
+	}
+	if _, ok := out.Results[0]["confidence"]; ok {
+		t.Fatalf("failed metadata resolution should remain unscored: %s", response.Body.String())
 	}
 }
 
