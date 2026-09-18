@@ -110,3 +110,42 @@ func (s *Server) updateTorrentShowPolicy(w http.ResponseWriter, r *http.Request,
 	jsonResponse(w, 200, map[string]string{"policy": policy})
 	return nil
 }
+
+func (s *Server) torrentShowMediaProfile(w http.ResponseWriter, r *http.Request, _ auth.Session) error {
+	showID := r.PathValue("id")
+	profile, err := s.torrentAutomationStore().ShowMediaProfile(r.Context(), showID)
+	if err != nil {
+		return apiError{404, "show not found"}
+	}
+	jsonResponse(w, 200, profile)
+	return nil
+}
+
+func (s *Server) updateTorrentShowMediaProfile(w http.ResponseWriter, r *http.Request, session auth.Session) error {
+	if err := s.operator(session); err != nil {
+		return err
+	}
+	var in struct {
+		Mode string `json:"mode"`
+	}
+	if err := decode(r, &in); err != nil {
+		return err
+	}
+	showID := r.PathValue("id")
+	var exists int
+	if err := s.DB.QueryRowContext(r.Context(), "SELECT EXISTS(SELECT 1 FROM shows WHERE id=?)", showID).Scan(&exists); err != nil {
+		return err
+	}
+	if exists == 0 {
+		return apiError{404, "show not found"}
+	}
+	if err := s.torrentAutomationStore().SetShowMediaProfile(r.Context(), showID, in.Mode); err != nil {
+		return bad(err.Error())
+	}
+	profile, err := s.torrentAutomationStore().ShowMediaProfile(r.Context(), showID)
+	if err != nil {
+		return err
+	}
+	jsonResponse(w, 200, profile)
+	return nil
+}

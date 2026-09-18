@@ -90,6 +90,8 @@ func (s *Server) Handler() http.Handler {
 		{"POST /api/torrents/automation/runs/{id}/bad", s.markTorrentAutomationRunBad, false},
 		{"GET /api/torrents/automation/shows/{id}", s.torrentShowPolicy, false},
 		{"PUT /api/torrents/automation/shows/{id}", s.updateTorrentShowPolicy, false},
+		{"GET /api/torrents/automation/shows/{id}/media-profile", s.torrentShowMediaProfile, false},
+		{"PUT /api/torrents/automation/shows/{id}/media-profile", s.updateTorrentShowMediaProfile, false},
 		{"GET /api/downloader", s.getDownloader, false},
 		{"PUT /api/downloader", s.saveDownloader, false},
 		{"POST /api/downloader/test", s.testDownloader, false},
