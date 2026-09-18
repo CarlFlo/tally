@@ -32,10 +32,11 @@ export function ExperimentalJobConfirmation({
         })}
       </p>
       <div className="dialog-actions">
-        <button className="button" disabled={busy} onClick={onClose}>
+        <button type="button" className="button" disabled={busy} onClick={onClose}>
           {t("common.cancel")}
         </button>
         <button
+          type="button"
           className="button primary"
           disabled={busy}
           onClick={async () => {
