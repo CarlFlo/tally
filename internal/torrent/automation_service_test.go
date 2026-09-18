@@ -96,6 +96,7 @@ type automationClient struct {
 	downloadsCalls int
 	resolvedFiles  []TorrentFile
 	resolvedErr    error
+	downloadName   string
 	resolvedCalls  int
 	stopCalls      int
 	removeCalls    int
@@ -121,7 +122,11 @@ func (c *automationClient) AddTorrent(_ context.Context, data []byte) error {
 func (c *automationClient) Downloads(context.Context, string) (DownloadSnapshot, error) {
 	c.downloadsCalls++
 	if (c.reconcile || c.listed) && c.lastHash != "" {
-		return DownloadSnapshot{Torrents: []Download{{Hash: c.lastHash, Name: "Example.Show.S01E02.1080p.WEB-DL", Category: TallyCategory}}}, nil
+		name := c.downloadName
+		if name == "" {
+			name = "Example.Show.S01E02.1080p.WEB-DL"
+		}
+		return DownloadSnapshot{Torrents: []Download{{Hash: c.lastHash, Name: name, Category: TallyCategory}}}, nil
 	}
 	return DownloadSnapshot{}, nil
 }
@@ -375,32 +380,32 @@ func TestAutomationMagnetVerificationRejectsAmbiguousResolvedIdentity(t *testing
 	db := automationTestStore(t, now)
 	client := &automationClient{
 		listed: true,
+		downloadName: "video",
 		resolvedFiles: []TorrentFile{{Path: "video.mkv", Size: 2 * 1024 * 1024 * 1024}},
 	}
 	service := automationService(db, automationRequester{magnetOnly: true}, client, now)
 	if processed, err := service.Run(context.Background()); err != nil || processed != 1 {
 		t.Fatalf("initial magnet run failed: processed=%d err=%v", processed, err)
 	}
-	clientName := client.lastHash
-	_ = clientName
-	// Simulate a resolved torrent whose own name does not provide episode identity.
-	client.listed = false
-	client.reconcile = false
-	client.downloadsCalls = 0
-	originalDownloads := client.Downloads
-	_ = originalDownloads
-	// The fake's default resolved torrent name is episode-aware, so verify the
-	// ambiguous case directly through the payload verifier used by the scheduler.
-	base := ReleaseAssessment{Confidence: ConfidenceHigh, Verification: VerificationUnverified, Parsed: ParseReleaseName("Example.Show.S01E02")}
-	assessment, err := VerifyResolvedFilesForTarget(base, strings.Repeat("a", 40), "", client.resolvedFiles, EpisodeTarget{ShowTitle: "Example Show", Season: 1, Episode: 2})
+	if processed, err := service.Run(context.Background()); err != nil || processed != 1 {
+		t.Fatalf("ambiguous post verification did not complete: processed=%d err=%v", processed, err)
+	}
+	runs, err := (AutomationStore{DB: db}).ListRuns(context.Background(), 10)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if assessment.Confidence != ConfidenceMedium || assessment.Rejected() {
-		t.Fatalf("expected ambiguous payload identity before scheduler hard rejection: %+v", assessment)
+	verification := runs[0].PostVerification
+	if verification == nil || verification.Status != "rejected" || verification.Assessment == nil || !verification.Assessment.Rejected() {
+		t.Fatalf("ambiguous resolved payload was not rejected: %+v", verification)
+	}
+	if client.stopCalls != 1 || client.removeCalls != 1 || !client.deleteFiles {
+		t.Fatalf("ambiguous magnet was not stopped and deleted: stop=%d remove=%d deleteFiles=%v", client.stopCalls, client.removeCalls, client.deleteFiles)
+	}
+	blocked, err := (AutomationStore{DB: db}).IsBadInfoHash(context.Background(), runs[0].SelectedInfoHash)
+	if err != nil || !blocked {
+		t.Fatalf("ambiguous magnet hash was not globally blocked: blocked=%v err=%v", blocked, err)
 	}
 }
-
 
 func TestAutomationMagnetVerificationRejectsActualSizeOutsideSubmissionRange(t *testing.T) {
 	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
