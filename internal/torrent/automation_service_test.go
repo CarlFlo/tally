@@ -899,6 +899,55 @@ func TestAutomationCanPreferOldestDueBacklogWhenRecencyPriorityDisabled(t *testi
 	}
 }
 
+func TestAutomationProviderFailureIsDeferredWithoutImmediateRetry(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	searchCalls := 0
+	searchNoRetry := false
+	requester := automationRequester{
+		searchCalls: &searchCalls,
+		searchNoRetry: &searchNoRetry,
+		searchErr: errors.New("temporary Jackett failure"),
+	}
+	client := &automationClient{}
+	if processed, err := automationService(db, requester, client, now).Run(context.Background()); err == nil || processed != 0 {
+		t.Fatalf("provider failure should fail the job after one claimed search: processed=%d err=%v", processed, err)
+	}
+	if searchCalls != 1 || !searchNoRetry {
+		t.Fatalf("provider failure triggered aggressive discovery: searches=%d noRetry=%v", searchCalls, searchNoRetry)
+	}
+	if processed, err := automationService(db, requester, client, now).Run(context.Background()); err != nil || processed != 0 {
+		t.Fatalf("immediate rerun should defer the failed episode: processed=%d err=%v", processed, err)
+	}
+	if searchCalls != 1 {
+		t.Fatalf("failed episode was searched again before its retry gate: searches=%d", searchCalls)
+	}
+}
+
+func TestAutomationDeepInspectionRespectsCandidateLimit(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	updateAutomationConfig(t, db, func(config *settings.TorrentAutomation) {
+		config.MaxCandidates = 3
+	})
+	torrentCalls := 0
+	requester := automationRequester{
+		resultCount: 10,
+		torrentCalls: &torrentCalls,
+		beforeTorrent: func() error { return errors.New("torrent unavailable") },
+	}
+	processed, err := automationService(db, requester, &automationClient{}, now).Run(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if processed != 1 {
+		t.Fatalf("automation run was not recorded: processed=%d", processed)
+	}
+	if torrentCalls != 3 {
+		t.Fatalf("deep inspection exceeded configured shortlist: torrent fetches=%d want=3", torrentCalls)
+	}
+}
+
 func TestAutomationDownloadedEpisodeIsNotSubmittedTwice(t *testing.T) {
 	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
 	db := automationTestStore(t, now)
