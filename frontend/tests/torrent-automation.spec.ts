@@ -231,6 +231,13 @@ test("automation page exposes release filters trust rules and disabled capabilit
   await expect(page.getByText("Release groups", { exact: true })).toBeVisible();
   await expect(page.getByText("Source trust", { exact: true })).toBeVisible();
   await expect(page.getByText("Episode size", { exact: true })).toBeVisible();
+  await expect(page.getByText("Search pacing", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Episode searches per run", { exact: true })).toHaveValue("5");
+  await expect(page.getByLabel("Torrent candidates inspected per episode", { exact: true })).toHaveValue("5");
+  await expect(page.getByRole("checkbox", { name: "Prioritize newly aired episodes", exact: true })).toBeChecked();
+  await expect(page.getByLabel("First retry delay (minutes)", { exact: true })).toHaveValue("30");
+  await expect(page.getByLabel("Second retry delay (minutes)", { exact: true })).toHaveValue("120");
+  await expect(page.getByLabel("Later retry delay (minutes)", { exact: true })).toHaveValue("360");
   await expect(page.getByLabel("Live-action minimum MB per minute")).toHaveValue("8");
   await expect(page.getByLabel("Live-action maximum MB per minute")).toHaveValue("220");
   await expect(page.getByLabel("Animated minimum MB per minute")).toHaveValue("4");
