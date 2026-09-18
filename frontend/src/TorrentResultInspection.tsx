@@ -62,8 +62,8 @@ function evaluationSummary(result: TorrentInspectionResult, t: (key: string, opt
     });
   }
   if (result.confidence === "rejected") {
-    return t("torrentInspection.rejectedSummary", {
-      defaultValue: "This candidate conflicts with the expected release and should not be selected automatically.",
+    return t("torrentInspection.manualReviewSummary", {
+      defaultValue: "The available metadata has concerns. Review them before deciding whether to download.",
     });
   }
   if (result.confidence === "high" && result.verification === "verified") {
@@ -185,11 +185,13 @@ export function TorrentResultInspection({ result }: { result: TorrentInspectionR
     concerns.push(reasonLabel(reason.code, reason.detail, t));
   }
 
-  const confidenceLabel = result.confidence
-    ? t(`torrentConfidence.${result.confidence}`, {
-        defaultValue: result.confidence.charAt(0).toUpperCase() + result.confidence.slice(1),
+  const displayConfidence =
+    result.confidence && result.confidence !== "rejected" ? result.confidence : undefined;
+  const confidenceLabel = displayConfidence
+    ? t(`torrentConfidence.${displayConfidence}`, {
+        defaultValue: displayConfidence.charAt(0).toUpperCase() + displayConfidence.slice(1),
       })
-    : t("torrentInspection.notEvaluated", { defaultValue: "Not episode-scored" });
+    : "";
   const verificationLabel = result.verification
     ? t(`torrentConfidence.${result.verification}`, {
         defaultValue: result.verification === "verified" ? "Verified" : "Unverified",
@@ -203,10 +205,12 @@ export function TorrentResultInspection({ result }: { result: TorrentInspectionR
           <h5>{t("torrentInspection.finalEvaluation", { defaultValue: "Final evaluation" })}</h5>
           <p className="torrent-evaluation-summary">{evaluationSummary(result, t)}</p>
         </div>
-        <span className={`badge ${result.confidence ? `confidence-${result.confidence}` : ""}`}>
-          {confidenceLabel}
-          {verificationLabel && result.confidence !== "rejected" ? ` · ${verificationLabel}` : ""}
-        </span>
+        {displayConfidence && (
+          <span className={`badge confidence-${displayConfidence}`}>
+            {confidenceLabel}
+            {verificationLabel ? ` · ${verificationLabel}` : ""}
+          </span>
+        )}
       </div>
 
       <div className="torrent-evidence-grid">
