@@ -3,7 +3,7 @@
     "locale": "uk",
     "name": "Українська",
     "direction": "ltr",
-    "catalogVersion": 17
+    "catalogVersion": 18
   },
   "common": {
     "save": "Зберегти",
@@ -842,7 +842,11 @@
     "provider": "Провайдер",
     "size": "Розмір",
     "delivery": "Спосіб отримання",
-    "mbPerMinute": "МБ/хв"
+    "mbPerMinute": "МБ/хв",
+    "sizeWithinRange": "{{value}} МБ/хв входить у налаштований діапазон для типу «{{profile}}»",
+    "sizeOutsideRange": "{{value}} МБ/хв виходить за налаштований діапазон для типу «{{profile}}»",
+    "liveProfile": "ігрове відео",
+    "animatedProfile": "анімація"
   },
   "torrentConfidence": {
     "high": "Висока",
