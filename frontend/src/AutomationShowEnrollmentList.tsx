@@ -38,25 +38,36 @@ export function AutomationShowEnrollmentList() {
   const enrolled = shows.filter((show) => !!show.automation_enabled).length;
 
   async function setEnrollment(show: AutomationShow, enabled: boolean) {
+    const showsKey = queryKeys.torrentAutomationShows();
+    const previous = cache.getQueryData<AutomationShowsResponse>(showsKey);
     setBusy(show.id);
+    cache.setQueryData<AutomationShowsResponse>(showsKey, (current) =>
+      current
+        ? {
+            shows: current.shows.map((item) =>
+              item.id === show.id
+                ? { ...item, automation_enabled: enabled }
+                : item,
+            ),
+          }
+        : current,
+    );
     try {
       const result = await api<Enrollment>(
         `/torrents/automation/shows/${show.id}`,
         "PUT",
         { enabled },
       );
-      cache.setQueryData<AutomationShowsResponse>(
-        queryKeys.torrentAutomationShows(),
-        (current) =>
-          current
-            ? {
-                shows: current.shows.map((item) =>
-                  item.id === show.id
-                    ? { ...item, automation_enabled: result.enabled }
-                    : item,
-                ),
-              }
-            : current,
+      cache.setQueryData<AutomationShowsResponse>(showsKey, (current) =>
+        current
+          ? {
+              shows: current.shows.map((item) =>
+                item.id === show.id
+                  ? { ...item, automation_enabled: result.enabled }
+                  : item,
+              ),
+            }
+          : current,
       );
       cache.setQueryData(queryKeys.torrentAutomationShow(show.id), result);
       notify(
@@ -65,6 +76,8 @@ export function AutomationShowEnrollmentList() {
           : t("torrentAutomation.showDisabled", { name: show.name }),
       );
     } catch (error) {
+      if (previous) cache.setQueryData(showsKey, previous);
+      else void cache.invalidateQueries({ queryKey: showsKey });
       notify((error as Error).message, true);
     } finally {
       setBusy(null);
