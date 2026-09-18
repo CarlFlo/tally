@@ -316,12 +316,15 @@ test("automation page exposes release filters trust rules and disabled capabilit
     page.getByText("Magnets are a fallback", { exact: true }),
   ).toBeVisible();
 
+  const disabledBootstrap = await (await page.request.get("/api/bootstrap")).json();
+  disabledBootstrap.torrent_search_enabled = false;
+  disabledBootstrap.torrent_downloads_enabled = false;
   await page.route("**/api/bootstrap", async (route) => {
-    const response = await route.fetch();
-    const data = await response.json();
-    data.torrent_search_enabled = false;
-    data.torrent_downloads_enabled = false;
-    await route.fulfill({ response, json: data });
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(disabledBootstrap),
+    });
   });
   await page.reload();
   await expect(page).toHaveURL(/\/calendar$/);
