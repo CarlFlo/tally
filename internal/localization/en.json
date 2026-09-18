@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 17
+    "catalogVersion": 18
   },
   "common": {
     "save": "Save",
@@ -832,7 +832,11 @@
     "provider": "Provider",
     "size": "Size",
     "delivery": "Delivery",
-    "mbPerMinute": "MB/min"
+    "mbPerMinute": "MB/min",
+    "sizeWithinRange": "{{value}} MB/min is within the configured {{profile}} range",
+    "sizeOutsideRange": "{{value}} MB/min is outside the configured {{profile}} range",
+    "liveProfile": "live-action",
+    "animatedProfile": "animated"
   },
   "torrentConfidence": {
     "high": "High",
