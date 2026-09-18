@@ -8,7 +8,7 @@ import (
 
 func (s *Server) runJob(w http.ResponseWriter, r *http.Request, session auth.Session) error {
 	kind := r.PathValue("kind")
-	if kind == "backup" || kind == "maintenance" {
+	if kind == "backup" || kind == "maintenance" || kind == "torrent_automation" {
 		if e := s.operator(session); e != nil {
 			return e
 		}
