@@ -120,6 +120,11 @@ An external search provider should not become the authority for whether a result
 
 This separation also makes confidence and preference easier to reason about. Confidence answers whether the candidate appears to be the intended thing; quality, size, or other preferences choose among candidates that have already met the correctness bar.
 
+### Persist retry eligibility before background provider work
+
+Scheduled external work should make its next-eligible time durable before starting a request when repeated failure could otherwise cause request storms. A provider timeout, process restart, or later scheduler tick must not erase the backoff decision and immediately replay the same work.
+
+Use a small per-run work budget in addition to per-provider rate limiting. Rate limiting controls request spacing; a durable budget controls total fan-out across a backlog. Prefer postponing background work to aggressive immediate retries when freshness is not urgent.
 ### Verify expensive candidates lazily
 
 Deep inspection can multiply provider traffic dramatically if it is applied to every search result. Use cheap metadata to reject and rank first, then perform expensive inspection only for a bounded shortlist or a candidate the user explicitly selected.
