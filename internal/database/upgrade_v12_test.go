@@ -47,6 +47,13 @@ func TestVersionElevenUpgradePromotesDownloadedStateToEpisode(t *testing.T) {
 	if downloadedA != 1 || downloadedB != 0 {
 		t.Fatalf("legacy downloaded state was not promoted globally: a=%d b=%d", downloadedA, downloadedB)
 	}
+	var legacyFlags int
+	if err = db.QueryRow("SELECT SUM(downloaded) FROM profile_episode_state").Scan(&legacyFlags); err != nil {
+		t.Fatal(err)
+	}
+	if legacyFlags != 0 {
+		t.Fatalf("legacy per-profile downloaded flags remain authoritative-looking: %d", legacyFlags)
+	}
 	var version int
 	if err = db.QueryRow("PRAGMA user_version").Scan(&version); err != nil || version != Version {
 		t.Fatalf("unexpected schema version %d err=%v", version, err)
