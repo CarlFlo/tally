@@ -6,19 +6,19 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 `feature/torrent-automation-confidence`
 
-Status: implementing manual-inspection and torrent-automation job-control follow-ups.
+Status: manual-inspection and scheduler-owned torrent-automation job-control follow-ups are implemented.
 
 ### Manual inspection and automation job controls
 
-- [ ] Keep the manual torrent Download action available even when inspection/evaluation rejects or lowers confidence; manual inspection is advisory while server-side submission safety remains authoritative.
-- [ ] In manual result inspection, do not present a candidate as "Rejected". Show positive confidence messaging only when warranted; otherwise surface useful neutral/concern evidence without a rejected verdict.
-- [ ] Fix false-positive "Different show" concern/rejection matching so valid releases are not marked as another show.
-- [ ] Remove the separate "Enable automatic torrent downloads" toggle from `/search/automation`; the Torrent automation scheduler job enabled state becomes the single master on/off control for automatic torrent downloads.
-- [ ] Make the Torrent automation scheduler job disabled by default because it is experimental.
-- [ ] When enabling an experimental scheduler job, require a confirmation dialog before saving, with cancel and an explicit "Yes, I understand, enable anyway" action.
-- [ ] Add an enable/disable toggle beside "Run now" on `/system/jobs`, wired to the same scheduler enabled state used by Settings so both surfaces stay synchronized.
-- [ ] Update localization, backend/frontend regression coverage, and durable documentation for the unified job-control behavior.
-- [ ] Run all validation required by `docs/VALIDATION.md` and investigate any failures.
+- [x] Keep the manual torrent Download action available even when inspection/evaluation rejects or lowers confidence; manual inspection is advisory while server-side submission safety remains authoritative.
+- [x] In manual result inspection, do not present a candidate as "Rejected". Show positive confidence messaging only when warranted; otherwise surface useful neutral/concern evidence without a rejected verdict.
+- [x] Fix false-positive "Different show" concern/rejection matching so valid releases are not marked as another show.
+- [x] Remove the separate "Enable automatic torrent downloads" toggle from `/search/automation`; the Torrent automation scheduler job enabled state becomes the single master on/off control for automatic torrent downloads.
+- [x] Make the Torrent automation scheduler job disabled by default because it is experimental.
+- [x] When enabling an experimental scheduler job, require a confirmation dialog before saving, with cancel and an explicit "Yes, I understand, enable anyway" action.
+- [x] Add an enable/disable toggle beside "Run now" on `/system/jobs`, wired to the same scheduler enabled state used by Settings so both surfaces stay synchronized.
+- [x] Update localization, backend/frontend regression coverage, and durable documentation for the unified job-control behavior.
+- [x] Run all validation required by `docs/VALIDATION.md` and investigate any failures.
 
 ### Evaluation and search metadata
 
@@ -42,14 +42,14 @@ Status: implementing manual-inspection and torrent-automation job-control follow
 ### Global automation
 
 - [x] Add an `Automation` tab inside Torrent Search; automation/download policy is deployment-global, not profile-owned.
-- [x] Add minimal global controls: enable automatic downloads, preferred quality, minimum seeders, release delay, and bounded retry behavior. High confidence remains an invariant rather than a tunable lower threshold; verification state depends on the available transport.
+- [x] Add minimal global release-selection controls: preferred quality, minimum seeders, release delay, and bounded retry behavior. The scheduler job enabled state is the separate server-wide execution switch. High confidence remains an invariant rather than a tunable lower threshold; verification state depends on the available transport.
 - [x] Keep per-show automation deployment-global and explicit opt-in. Only enrolled shows are searched; notifications remain profile-owned and are not part of download enrollment.
 - [x] Default the Automation show list to currently `Running` shows from My Shows; when searching, allow any matching My Shows entry. Keep automated discovery release-oriented by excluding episodes outside the bounded recent retry window (hard maximum 7 days), so old seasons are never backfilled.
 - [x] Keep existing search/download capability toggles backend-authoritative; automation stops before submission if downloading becomes disabled mid-run.
 - [x] Prevent duplicate grabs and serialize decisions per episode while keeping overall work bounded/cancellable.
 - [x] Treat `no suitable result` as a normal outcome, not an operational error, and retry later within a bounded window rather than accepting a weak match.
 - [x] Avoid duplicate qBittorrent submissions after ambiguous/time-out responses by reconciling against the selected infohash where possible.
-- [x] Expose Torrent automation as its own independent scheduler job with a default 15-minute cadence and normal scheduler controls/history.
+- [x] Expose Torrent automation as its own independent scheduler job with a default 15-minute cadence, disabled-by-default experimental state, and shared scheduler controls/history in Settings and System → Jobs.
 
 ### Global episode download state
 
@@ -63,13 +63,13 @@ Status: implementing manual-inspection and torrent-automation job-control follow
 
 ### Per-show automation enrollment
 
-- [x] Change show automation to explicit opt-in: the global automation switch remains the master control, but only shows explicitly enrolled for automatic downloads are searched by the scheduler.
+- [x] Change show automation to explicit opt-in: the Torrent automation scheduler job enabled state is the master control, but only shows explicitly enrolled for automatic downloads are searched by the scheduler.
 - [x] Add one backend list endpoint for the current profile's My Shows with global automation enrollment and upcoming-episode state; avoid one request per show.
 - [x] On `/search/automation`, add an enrolled-show section with a search field: empty search shows currently `Running` My Shows, while search spans all My Shows.
 - [x] Allow enrollment to be toggled directly from the automation list with clear enabled/disabled state and responsive feedback.
 - [x] Add the same enrollment toggle to the individual show page near the primary show actions; both surfaces must update the same global policy.
 - [x] Remove the old three-choice Default / Auto-download / Never UI so the product presents one unambiguous on/off enrollment model; keep backend compatibility for legacy stored policies where practical.
-- [x] Add backend/browser coverage for opt-in scheduling, inactive-show search, list/detail synchronization, authorization, and global master-disable behavior.
+- [x] Add backend/browser coverage for opt-in scheduling, inactive-show search, list/detail synchronization, authorization, and scheduler master-disable behavior.
 - [x] Localize the new English/Ukrainian UI and update durable automation documentation.
 
 ### Follow-up automation controls
