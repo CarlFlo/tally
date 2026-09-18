@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 14
+    "catalogVersion": 15
   },
   "common": {
     "save": "Save",
@@ -808,7 +808,8 @@
     "uploader": "Uploader",
     "provider": "Provider",
     "size": "Size",
-    "delivery": "Delivery"
+    "delivery": "Delivery",
+    "mbPerMinute": "MB/min"
   },
   "torrentConfidence": {
     "high": "High",

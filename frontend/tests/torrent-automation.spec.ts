@@ -77,6 +77,8 @@ test("episode search expands into a strengths and concerns evaluation", async ({
   ).toBeVisible();
   await expect(page.getByText("Strengths", { exact: true })).toBeVisible();
   await expect(page.getByText("Concerns", { exact: true })).toBeVisible();
+  const ratioMeta = page.locator(".torrent-inspection-meta").filter({ hasText: "MB/min" });
+  await expect(ratioMeta).toContainText("MB/min");
 
   await page.locator(".torrent-result").nth(1).click();
   await expect(page.locator(".torrent-result-inspection")).toHaveCount(1);

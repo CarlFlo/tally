@@ -3,7 +3,7 @@
     "locale": "uk",
     "name": "Українська",
     "direction": "ltr",
-    "catalogVersion": 9
+    "catalogVersion": 10
   },
   "common": {
     "save": "Зберегти",
@@ -816,7 +816,8 @@
     "uploader": "Аплоадер",
     "provider": "Провайдер",
     "size": "Розмір",
-    "delivery": "Спосіб отримання"
+    "delivery": "Спосіб отримання",
+    "mbPerMinute": "МБ/хв"
   },
   "torrentConfidence": {
     "high": "Висока",
