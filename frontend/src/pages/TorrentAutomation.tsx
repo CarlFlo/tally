@@ -24,6 +24,10 @@ type AutomationConfig = {
   allowed_uploaders: string[];
   preferred_uploaders: string[];
   preferred_providers: string[];
+  live_min_mb_per_minute: number;
+  live_max_mb_per_minute: number;
+  animated_min_mb_per_minute: number;
+  animated_max_mb_per_minute: number;
 };
 
 type SavedAutomation = { data: AutomationConfig; revision: number };
@@ -81,6 +85,54 @@ function appendKeyword(current: string, keyword: string) {
   const words = current.split(/\s+/).filter(Boolean);
   if (words.some((word) => word.toLowerCase() === keyword.toLowerCase())) return current;
   return [...words, keyword].join(" ");
+}
+
+function SizeRange({
+  label,
+  minLabel,
+  maxLabel,
+  minimum,
+  maximum,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  minLabel: string;
+  maxLabel: string;
+  minimum: number;
+  maximum: number;
+  disabled: boolean;
+  onChange: (minimum: number, maximum: number) => void;
+}) {
+  return (
+    <div className="size-range-setting">
+      <div className="size-range-heading">
+        <strong>{label}</strong>
+        <span>{minimum}–{maximum} MB/min</span>
+      </div>
+      <div className="dual-range" style={{ "--range-min": `${(minimum / 500) * 100}%`, "--range-max": `${(maximum / 500) * 100}%` } as React.CSSProperties}>
+        <div className="dual-range-track" />
+        <input
+          type="range"
+          min="1"
+          max="500"
+          value={minimum}
+          disabled={disabled}
+          aria-label={minLabel}
+          onChange={(event) => onChange(Math.min(Number(event.target.value), maximum - 1), maximum)}
+        />
+        <input
+          type="range"
+          min="1"
+          max="500"
+          value={maximum}
+          disabled={disabled}
+          aria-label={maxLabel}
+          onChange={(event) => onChange(minimum, Math.max(Number(event.target.value), minimum + 1))}
+        />
+      </div>
+    </div>
+  );
 }
 
 export function TorrentAutomationPage() {
@@ -284,6 +336,44 @@ export function TorrentAutomationPage() {
           </label>
         </section>
 
+        <section className="panel settings-card size-profile-card">
+          <h3>
+            <SlidersHorizontal size={19} />
+            {t("torrentAutomation.sizeProfiles", { defaultValue: "Episode size" })}
+          </h3>
+          <p className="muted">
+            {t("torrentAutomation.sizeProfilesHelp", {
+              defaultValue:
+                "Filter implausibly small or large releases by MB per minute. Tally uses episode runtime when available, then show runtime; verified torrent contents replace Jackett's reported size when possible.",
+            })}
+          </p>
+          <div className="size-profile-ranges">
+            <SizeRange
+              label={t("torrentAutomation.liveActionProfile", { defaultValue: "Live-action / normal TV" })}
+              minLabel={t("torrentAutomation.liveActionMin", { defaultValue: "Live-action minimum MB per minute" })}
+              maxLabel={t("torrentAutomation.liveActionMax", { defaultValue: "Live-action maximum MB per minute" })}
+              minimum={data.live_min_mb_per_minute}
+              maximum={data.live_max_mb_per_minute}
+              disabled={busy}
+              onChange={(minimum, maximum) => change({ live_min_mb_per_minute: minimum, live_max_mb_per_minute: maximum })}
+            />
+            <SizeRange
+              label={t("torrentAutomation.animatedProfile", { defaultValue: "Animated / anime" })}
+              minLabel={t("torrentAutomation.animatedMin", { defaultValue: "Animated minimum MB per minute" })}
+              maxLabel={t("torrentAutomation.animatedMax", { defaultValue: "Animated maximum MB per minute" })}
+              minimum={data.animated_min_mb_per_minute}
+              maximum={data.animated_max_mb_per_minute}
+              disabled={busy}
+              onChange={(minimum, maximum) => change({ animated_min_mb_per_minute: minimum, animated_max_mb_per_minute: maximum })}
+            />
+          </div>
+          <p className="muted small-text">
+            {t("torrentAutomation.sizeProfilesHint", {
+              defaultValue: "Auto-detected animated shows use the animated range. You can override a show's media type from its Show actions menu.",
+            })}
+          </p>
+        </section>
+
         <section className="panel settings-card automation-rule-card">
           <div className="automation-rule-heading">
             <div>
@@ -438,7 +528,7 @@ export function TorrentAutomationPage() {
           <p className="muted">
             {t("torrentAutomation.highVerifiedOnly", {
               defaultValue:
-                "Automatic downloads require High confidence and a verified .torrent payload. Medium, Low, Rejected, and unverified candidates are never downloaded automatically.",
+                "Automatic downloads require High confidence. Tally prefers a retrievable .torrent and verifies its payload first; when only a magnet is usable, it may fall back to metadata-only selection after all other rules pass.",
             })}
           </p>
           <div className="settings-grid two-fields">
@@ -478,13 +568,13 @@ export function TorrentAutomationPage() {
             <div>
               <strong>
                 {t("torrentAutomation.magnetsManual", {
-                  defaultValue: "Magnet-only releases stay manual",
+                  defaultValue: "Magnets are a fallback",
                 })}
               </strong>
               <p>
                 {t("torrentAutomation.magnetsManualHelp", {
                   defaultValue:
-                    "A magnet does not expose its file list before metadata exchange, so Tally will not choose it for an automatic download.",
+                    "Tally asks Jackett for an inspectable .torrent whenever possible. A magnet can be selected automatically only when the release is High confidence and passes identity, trust, history, seed, and MB/min checks; it remains Unverified in Previous Runs.",
                 })}
               </p>
             </div>
