@@ -335,7 +335,7 @@ test("previous runs explains verified decisions, accepts bad feedback and stays 
         occurred_at: 1_789_666_803,
       },
     ],
-    engine_version: "2",
+    engine_version: "3",
     started_at: 1_789_666_800,
     ended_at: 1_789_666_804,
     duration_ms: 4_000,
