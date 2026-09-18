@@ -6,7 +6,7 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 `feature/torrent-automation-confidence`
 
-Status: downloads initial-render and released-only episode-state follow-ups are implemented; final validation is pending.
+Status: downloads initial-render, released-only episode-state, and manual-search refine persistence follow-ups are implemented; final validation is pending.
 
 ### Evaluation and search metadata
 
@@ -151,6 +151,7 @@ Status: downloads initial-render and released-only episode-state follow-ups are 
 - [x] Defer free-text episode resolution, confidence, trust/history checks, and MB/min evaluation until a result is expanded or submitted.
 - [x] Keep server-side submission safety authoritative even when a result was never expanded.
 - [x] Remember the latest successful manual search/results across normal SPA navigation using the profile-scoped query cache; sign-out clears it and normal cache expiry bounds retention.
+- [x] Keep the manual `Refine your search` controls in the same profile-scoped transient search view cache so useful seed/size/keyword/quality filters survive normal revisits without becoming permanent deployment settings.
 - [x] Fix dual-range track/thumb alignment and use a two-column automation settings layout when viewport width permits.
 - [x] Replace identity-as-strength copy with configured MB/min fit and preferred-source evidence.
 
