@@ -7,7 +7,6 @@ import { invalidateResources } from "./queryInvalidation";
 import { useTranslation } from "react-i18next";
 
 type Action = "remove" | "clear";
-type ShowAutomationPolicy = "default" | "auto" | "never";
 type ShowMediaProfileMode = "auto" | "live" | "animated";
 type ShowMediaProfile = { mode: ShowMediaProfileMode; detected: "live" | "animated"; effective: "live" | "animated" };
 
@@ -34,12 +33,6 @@ export function ShowActionsMenu({
     !!boot.profile?.is_admin &&
     boot.torrent_search_enabled &&
     boot.torrent_downloads_enabled;
-  const policy = useQuery<{ policy: ShowAutomationPolicy }>({
-    queryKey: ["torrent-automation-show-policy", show.id],
-    queryFn: ({ signal }) =>
-      api(`/torrents/automation/shows/${show.id}`, "GET", undefined, signal),
-    enabled: canManageAutomation,
-  });
   const mediaProfile = useQuery<ShowMediaProfile>({
     queryKey: ["torrent-automation-show-media-profile", show.id],
     queryFn: ({ signal }) =>
@@ -92,22 +85,6 @@ export function ShowActionsMenu({
       setBusy(false);
     }
   }
-  async function updateAutomationPolicy(next: ShowAutomationPolicy) {
-    close();
-    setBusy(true);
-    try {
-      await api(`/torrents/automation/shows/${show.id}`, "PUT", {
-        policy: next,
-      });
-      await policy.refetch();
-      notify(t("actions.automationPolicySaved"));
-    } catch (error) {
-      notify((error as Error).message, true);
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function updateMediaProfile(next: ShowMediaProfileMode) {
     close();
     setBusy(true);
@@ -204,26 +181,6 @@ export function ShowActionsMenu({
               {t("actions.refreshMetadata")}
             </button>
           )}
-          {canManageAutomation &&
-            (["default", "auto", "never"] as const).map((value) => (
-              <button
-                key={value}
-                role="menuitem"
-                disabled={policy.isPending}
-                onClick={() => void updateAutomationPolicy(value)}
-              >
-                <Check
-                  size={16}
-                  style={{
-                    visibility:
-                      (policy.data?.policy || "default") === value
-                        ? "visible"
-                        : "hidden",
-                  }}
-                />
-                {t(`actions.automationPolicy_${value}`)}
-              </button>
-            ))}
           {canManageAutomation &&
             (["auto", "live", "animated"] as const).map((value) => {
               const detected = mediaProfile.data?.detected || "live";

@@ -1,4 +1,5 @@
 import { ShowActionsMenu } from "../ShowActionsMenu";
+import { ShowAutomationEnrollmentButton } from "../ShowAutomationEnrollment";
 import { released } from "../releaseTime";
 import { EpisodeRow, FavoriteButton } from "../EpisodeControls";
 import { useEffect, useState } from "react";
@@ -268,6 +269,7 @@ export function ShowPage() {
           </div>
           <div className="show-detail-actions">
             <FavoriteButton show={show} />
+            <ShowAutomationEnrollmentButton show={show} />
             <button
               className="button"
               disabled={busy}
