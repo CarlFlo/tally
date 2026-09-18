@@ -6,7 +6,7 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 `feature/torrent-automation-confidence`
 
-Status: per-show automation enrollment and global episode download state are implemented; final validation is pending.
+Status: final torrent automation usability/performance follow-up is implemented; final validation is pending.
 
 ### Evaluation and search metadata
 
@@ -15,7 +15,7 @@ Status: per-show automation enrollment and global episode download state are imp
 - [x] Enrich normalized Jackett/Torznab results with useful metadata when supplied: category, infohash, external IDs, grabs, and ratio/download factors.
 - [x] Add conservative release parsing/matching for show identity, aliases/year, season/episode forms, quality/source/codec clues, seeders, and size sanity.
 - [x] Treat specials, multi-episode releases, season packs, ambiguous identities, and malformed titles conservatively.
-- [x] Surface compact localized confidence on manual search without exposing internal numeric scoring. Only show confidence when an actual episode target is known; do not infer authoritative confidence from arbitrary free-text search.
+- [x] Keep manual discovery fast: return Jackett results first, then resolve authoritative episode context/confidence only when a result is expanded or submitted. Do not infer authoritative confidence from arbitrary free-text search.
 
 ### Torrent verification
 
@@ -104,8 +104,8 @@ Status: per-show automation enrollment and global episode download state are imp
 - [x] Replace the current inline `Why` details disclosure with a click-to-expand panel attached directly beneath the selected `.torrent-result`; expansion must push later results down naturally rather than overlaying them.
 - [x] Make the whole result row the primary expansion target while preserving normal Download/copy/action button behavior without accidental toggles.
 - [x] Show a clear final evaluation in the expanded panel plus side-by-side strengths/pros and concerns/cons.
-- [x] Collapse redundant identity reasons such as `Show matches` + `Episode matches` into a concise human-readable statement such as `Correct show and episode`.
-- [x] Classify positive evidence such as healthy seeders, matching identity, useful metadata, preferred release group/uploader/provider, and verified payload under strengths.
+- [x] Treat correct show/episode identity as an eligibility assumption rather than a displayed strength; mismatches remain rejection/concern evidence.
+- [x] Classify positive evidence such as healthy seeders, runtime-normalized size inside the configured active range, preferred release group/uploader/provider, and verified payload under strengths.
 - [x] Classify actual negative/limiting evidence such as an uninspectable magnet payload, ambiguous or missing metadata, low swarm health, previous bad history, or hard rejection reasons under concerns. The absence of a preferred group/uploader/provider is neutral rather than evidence against a release.
 - [x] Show useful parsed metadata in the expanded panel (quality, source, codec, release group, uploader when available, provider/indexer, size, seeders, verification state) without exposing the internal numeric score.
 - [x] When manual search has authoritative episode context and runtime, show the release's runtime-normalized MB/min ratio in the expanded metadata; omit it for arbitrary free-text searches without runtime context.
@@ -140,6 +140,15 @@ Status: per-show automation enrollment and global episode download state are imp
 - [x] Stress-cycle the three Torrent Search tabs in one browser document and verify navigation remains responsive, inputs/buttons remain interactive, and no stale searches/listeners/subscriptions block the tab.
 - [x] Confirm active Search requests are cancelled cleanly on route changes without delaying navigation or leaving stale callbacks.
 - [x] Add or refine browser regression coverage for rapid repeated Torrent Search tab navigation rather than masking any problem with cooldowns or forced reloads.
+
+### Final usability/performance follow-up
+
+- [x] Accept `torrent_automation` consistently in schedule save/manual trigger/job filters and keep manual execution operator-only.
+- [x] Defer free-text episode resolution, confidence, trust/history checks, and MB/min evaluation until a result is expanded or submitted.
+- [x] Keep server-side submission safety authoritative even when a result was never expanded.
+- [x] Remember the latest successful manual search/results across normal SPA navigation using the profile-scoped query cache; sign-out clears it and normal cache expiry bounds retention.
+- [x] Fix dual-range track/thumb alignment and use a two-column automation settings layout when viewport width permits.
+- [x] Replace identity-as-strength copy with configured MB/min fit and preferred-source evidence.
 
 ### Quality and documentation
 
