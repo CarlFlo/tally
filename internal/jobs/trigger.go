@@ -30,7 +30,7 @@ func (s *Service) TriggerAndWait(ctx context.Context, kind, trigger, show string
 }
 
 func (s *Service) trigger(kind, trigger, show string) (string, <-chan error, error) {
-	if kind != "metadata" && kind != "maintenance" && kind != "backup" {
+	if kind != "metadata" && kind != "torrent_automation" && kind != "maintenance" && kind != "backup" {
 		return "", nil, fmt.Errorf("unknown job")
 	}
 	key := kind
