@@ -29,6 +29,12 @@ type AutomationConfig = {
   live_max_mb_per_minute: number;
   animated_min_mb_per_minute: number;
   animated_max_mb_per_minute: number;
+  request_policy_version: number;
+  discovery_budget: number;
+  retry_first_minutes: number;
+  retry_second_minutes: number;
+  retry_later_minutes: number;
+  prioritize_recent: boolean;
 };
 
 type SavedAutomation = { data: AutomationConfig; revision: number };
@@ -521,6 +527,106 @@ export function TorrentAutomationPage() {
               onChange={(event) => changeRuleText({ preferred_providers: event.target.value })}
             />
           </label>
+        </section>
+
+        <section className="panel settings-card">
+          <h3>
+            <Bot size={19} />
+            {t("torrentAutomation.searchPacing", { defaultValue: "Search pacing" })}
+          </h3>
+          <p className="muted">
+            {t("torrentAutomation.searchPacingHelp", {
+              defaultValue:
+                "Limit how much external discovery work one scheduler run can do. Deferred episodes stay queued for later runs instead of creating a burst of Jackett requests.",
+            })}
+          </p>
+          <div className="settings-grid two-fields">
+            <label>
+              {t("torrentAutomation.discoveryBudget", {
+                defaultValue: "Episode searches per run",
+              })}
+              <input
+                type="number"
+                min="1"
+                max="25"
+                value={data.discovery_budget}
+                disabled={busy}
+                onChange={(event) =>
+                  change({ discovery_budget: Math.max(1, Number(event.target.value)) })
+                }
+              />
+            </label>
+            <label className="toggle-setting compact-toggle">
+              <input
+                type="checkbox"
+                checked={data.prioritize_recent}
+                disabled={busy}
+                onChange={(event) => change({ prioritize_recent: event.target.checked })}
+              />
+              {t("torrentAutomation.prioritizeRecent", {
+                defaultValue: "Prioritize newly aired episodes",
+              })}
+            </label>
+          </div>
+          <p className="muted small-text">
+            {t("torrentAutomation.prioritizeRecentHelp", {
+              defaultValue:
+                "When several episodes are ready, newer releases are searched before older backlog items.",
+            })}
+          </p>
+          <div className="settings-grid two-fields">
+            <label>
+              {t("torrentAutomation.retryFirst", {
+                defaultValue: "First retry delay (minutes)",
+              })}
+              <input
+                type="number"
+                min="5"
+                max="1440"
+                value={data.retry_first_minutes}
+                disabled={busy}
+                onChange={(event) =>
+                  change({ retry_first_minutes: Math.max(5, Number(event.target.value)) })
+                }
+              />
+            </label>
+            <label>
+              {t("torrentAutomation.retrySecond", {
+                defaultValue: "Second retry delay (minutes)",
+              })}
+              <input
+                type="number"
+                min="5"
+                max="1440"
+                value={data.retry_second_minutes}
+                disabled={busy}
+                onChange={(event) =>
+                  change({ retry_second_minutes: Math.max(5, Number(event.target.value)) })
+                }
+              />
+            </label>
+            <label>
+              {t("torrentAutomation.retryLater", {
+                defaultValue: "Later retry delay (minutes)",
+              })}
+              <input
+                type="number"
+                min="5"
+                max="1440"
+                value={data.retry_later_minutes}
+                disabled={busy}
+                onChange={(event) =>
+                  change({ retry_later_minutes: Math.max(5, Number(event.target.value)) })
+                }
+              />
+            </label>
+          </div>
+          <p className="muted small-text">
+            {t("torrentAutomation.retryPacingHelp", {
+              defaultValue:
+                "These delays apply after unsuccessful or failed automated searches. Tally does not immediately retry Jackett inside the same background attempt.",
+            })}
+          </p>
         </section>
 
         <section className="panel settings-card">
