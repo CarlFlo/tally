@@ -23,6 +23,8 @@ type automationRequester struct {
 	searchCalls   *int
 	searchNoRetry *bool
 	queries       *[]string
+	searchErr     error
+	resultCount   int
 	torrentCalls  *int
 	beforeTorrent func() error
 }
@@ -56,6 +58,9 @@ func (r automationRequester) Do(_ context.Context, request providers.Request) (p
 	if r.queries != nil {
 		*r.queries = append(*r.queries, u.Query().Get("q"))
 	}
+	if r.searchErr != nil {
+		return providers.Response{}, r.searchErr
+	}
 	var enclosure, itemLink string
 	if r.magnetOnly || r.withMagnet {
 		hash := r.magnetHash
@@ -82,7 +87,15 @@ func (r automationRequester) Do(_ context.Context, request providers.Request) (p
 	if r.published != "" {
 		pubDate = "<pubDate>" + r.published + "</pubDate>"
 	}
-	feed := fmt.Sprintf(`<rss xmlns:torznab="http://torznab.com/schemas/2015/feed"><channel><item><title>Example.Show.S01E02.1080p.WEB-DL.H264-GROUP</title><guid>one</guid>%s%s<enclosure url="%s" length="%d"/><torznab:attr name="seeders" value="50"/></item></channel></rss>`, itemLink, pubDate, enclosure, size)
+	count := r.resultCount
+	if count < 1 {
+		count = 1
+	}
+	var items strings.Builder
+	for index := 0; index < count; index++ {
+		items.WriteString(fmt.Sprintf(`<item><title>Example.Show.S01E02.1080p.WEB-DL.H264-GROUP</title><guid>result-%d</guid>%s%s<enclosure url="%s" length="%d"/><torznab:attr name="seeders" value="50"/></item>`, index, itemLink, pubDate, enclosure, size))
+	}
+	feed := `<rss xmlns:torznab="http://torznab.com/schemas/2015/feed"><channel>` + items.String() + `</channel></rss>`
 	return providers.Response{Body: []byte(feed), Status: 200}, nil
 }
 
