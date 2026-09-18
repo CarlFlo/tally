@@ -8,6 +8,8 @@ import { useTranslation } from "react-i18next";
 
 type Action = "remove" | "clear";
 type ShowAutomationPolicy = "default" | "auto" | "never";
+type ShowMediaProfileMode = "auto" | "live" | "animated";
+type ShowMediaProfile = { mode: ShowMediaProfileMode; detected: "live" | "animated"; effective: "live" | "animated" };
 
 export function ShowActionsMenu({
   show,
@@ -36,6 +38,12 @@ export function ShowActionsMenu({
     queryKey: ["torrent-automation-show-policy", show.id],
     queryFn: ({ signal }) =>
       api(`/torrents/automation/shows/${show.id}`, "GET", undefined, signal),
+    enabled: canManageAutomation,
+  });
+  const mediaProfile = useQuery<ShowMediaProfile>({
+    queryKey: ["torrent-automation-show-media-profile", show.id],
+    queryFn: ({ signal }) =>
+      api(`/torrents/automation/shows/${show.id}/media-profile`, "GET", undefined, signal),
     enabled: canManageAutomation,
   });
 
@@ -93,6 +101,22 @@ export function ShowActionsMenu({
       });
       await policy.refetch();
       notify(t("actions.automationPolicySaved"));
+    } catch (error) {
+      notify((error as Error).message, true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function updateMediaProfile(next: ShowMediaProfileMode) {
+    close();
+    setBusy(true);
+    try {
+      await api(`/torrents/automation/shows/${show.id}/media-profile`, "PUT", {
+        mode: next,
+      });
+      await mediaProfile.refetch();
+      notify(t("actions.mediaProfileSaved"));
     } catch (error) {
       notify((error as Error).message, true);
     } finally {
@@ -200,6 +224,35 @@ export function ShowActionsMenu({
                 {t(`actions.automationPolicy_${value}`)}
               </button>
             ))}
+          {canManageAutomation &&
+            (["auto", "live", "animated"] as const).map((value) => {
+              const detected = mediaProfile.data?.detected || "live";
+              const label =
+                value === "auto"
+                  ? t("actions.mediaProfile_auto", {
+                      type: t(`actions.mediaType_${detected}`),
+                    })
+                  : t(`actions.mediaProfile_${value}`);
+              return (
+                <button
+                  key={`media-${value}`}
+                  role="menuitem"
+                  disabled={mediaProfile.isPending}
+                  onClick={() => void updateMediaProfile(value)}
+                >
+                  <Check
+                    size={16}
+                    style={{
+                      visibility:
+                        (mediaProfile.data?.mode || "auto") === value
+                          ? "visible"
+                          : "hidden",
+                    }}
+                  />
+                  {label}
+                </button>
+              );
+            })}
           <button
             role="menuitem"
             className="danger-text"
