@@ -13,7 +13,7 @@ import (
 	"github.com/CarlFlo/tally/internal/database"
 )
 
-const DecisionEngineVersion = "3"
+const DecisionEngineVersion = "4"
 
 type AutomationRunStatus string
 
@@ -36,6 +36,31 @@ type DecisionStep struct {
 	DurationMS int64          `json:"duration_ms,omitempty"`
 }
 
+type MagnetVerification struct {
+	RunID         string                 `json:"run_id"`
+	InfoHash      string                 `json:"infohash"`
+	Status        string                 `json:"status"`
+	Attempts      int                    `json:"attempts"`
+	LastCheckedAt int64                  `json:"last_checked_at,omitempty"`
+	CompletedAt   *int64                 `json:"completed_at,omitempty"`
+	Assessment    *ReleaseAssessment     `json:"assessment,omitempty"`
+	SizeProfile   *SizeProfileEvaluation `json:"size_profile,omitempty"`
+	Error         string                 `json:"error,omitempty"`
+}
+
+type PendingMagnetVerification struct {
+	RunID            string
+	ShowID           string
+	EpisodeID        string
+	ShowName         string
+	Season           int
+	Episode          int
+	SelectedName     string
+	InfoHash         string
+	SettingsSnapshot json.RawMessage
+	Attempts         int
+}
+
 type AutomationRun struct {
 	ID               string              `json:"id"`
 	ShowID           string              `json:"show_id"`
@@ -56,6 +81,7 @@ type AutomationRun struct {
 	EndedAt          *int64              `json:"ended_at,omitempty"`
 	DurationMS       int64               `json:"duration_ms"`
 	Feedback         *AutomationFeedback `json:"feedback,omitempty"`
+	PostVerification *MagnetVerification  `json:"post_verification,omitempty"`
 }
 
 type AutomationFeedback struct {
@@ -127,6 +153,131 @@ func (s AutomationStore) SetShowMediaProfile(ctx context.Context, showID, mode s
 	_, err := s.DB.ExecContext(ctx, `INSERT INTO torrent_show_media_profile(show_id,profile,updated_at) VALUES(?,?,?)
 		ON CONFLICT(show_id) DO UPDATE SET profile=excluded.profile,updated_at=excluded.updated_at`, showID, mode, time.Now().Unix())
 	return err
+}
+
+
+func (s AutomationStore) QueueMagnetVerification(ctx context.Context, runID, infohash string) error {
+	infohash = normalizeInfoHash(infohash)
+	if runID == "" || infohash == "" {
+		return fmt.Errorf("magnet verification requires a run and infohash")
+	}
+	_, err := s.DB.ExecContext(ctx, `INSERT INTO torrent_magnet_verifications(run_id,infohash,status)
+		VALUES(?,?,'pending') ON CONFLICT(run_id) DO NOTHING`, runID, infohash)
+	return err
+}
+
+func (s AutomationStore) PendingMagnetVerifications(ctx context.Context, limit int) ([]PendingMagnetVerification, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	rows, err := s.DB.QueryContext(ctx, `SELECT r.id,r.show_id,r.episode_id,r.show_name,r.season,r.episode,r.selected_name,
+		m.infohash,r.settings_snapshot,m.attempts
+		FROM torrent_magnet_verifications m
+		JOIN torrent_automation_runs r ON r.id=m.run_id
+		WHERE m.status='pending'
+		ORDER BY r.started_at ASC LIMIT ?`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]PendingMagnetVerification, 0)
+	for rows.Next() {
+		var item PendingMagnetVerification
+		var snapshot string
+		if err = rows.Scan(&item.RunID, &item.ShowID, &item.EpisodeID, &item.ShowName, &item.Season, &item.Episode,
+			&item.SelectedName, &item.InfoHash, &snapshot, &item.Attempts); err != nil {
+			return nil, err
+		}
+		item.SettingsSnapshot = json.RawMessage(snapshot)
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func (s AutomationStore) RecordMagnetVerificationAttempt(ctx context.Context, runID, message string) error {
+	if len(message) > 500 {
+		message = message[:500]
+	}
+	_, err := s.DB.ExecContext(ctx, `UPDATE torrent_magnet_verifications
+		SET attempts=attempts+1,last_checked_at=?,error=?
+		WHERE run_id=? AND status='pending'`, time.Now().Unix(), message, runID)
+	return err
+}
+
+func (s AutomationStore) FinishMagnetVerification(ctx context.Context, runID, status string, assessment ReleaseAssessment, sizeProfile SizeProfileEvaluation, message string) error {
+	if status != "verified" && status != "rejected" && status != "unavailable" {
+		return fmt.Errorf("invalid magnet verification status")
+	}
+	if len(message) > 500 {
+		message = message[:500]
+	}
+	assessmentRaw, err := json.Marshal(assessment)
+	if err != nil {
+		return err
+	}
+	sizeRaw, err := json.Marshal(sizeProfile)
+	if err != nil {
+		return err
+	}
+	now := time.Now().Unix()
+	res, err := s.DB.ExecContext(ctx, `UPDATE torrent_magnet_verifications
+		SET status=?,attempts=attempts+1,last_checked_at=?,completed_at=?,assessment=?,size_profile=?,error=?
+		WHERE run_id=? AND status='pending'`, status, now, now, string(assessmentRaw), string(sizeRaw), message, runID)
+	if err != nil {
+		return err
+	}
+	changed, _ := res.RowsAffected()
+	if changed != 1 {
+		return fmt.Errorf("magnet verification is not pending")
+	}
+	return nil
+}
+
+func (s AutomationStore) BlockInfoHash(ctx context.Context, infohash, reason, sourceRunID string) error {
+	infohash = normalizeInfoHash(infohash)
+	if infohash == "" {
+		return fmt.Errorf("invalid infohash")
+	}
+	if len(reason) > 200 {
+		reason = reason[:200]
+	}
+	_, err := s.DB.ExecContext(ctx, `INSERT INTO torrent_bad_hashes(infohash,reason,source_run_id,marked_by,created_at)
+		VALUES(?,?,?,'system',?) ON CONFLICT(infohash) DO NOTHING`, infohash, reason, sourceRunID, time.Now().Unix())
+	return err
+}
+
+func scanMagnetVerification(
+	infohash, status sql.NullString,
+	attempts sql.NullInt64,
+	lastChecked, completed sql.NullInt64,
+	assessmentRaw, sizeRaw, verificationError sql.NullString,
+) (*MagnetVerification, error) {
+	if !status.Valid {
+		return nil, nil
+	}
+	out := &MagnetVerification{
+		InfoHash: infohash.String, Status: status.String, Attempts: int(attempts.Int64),
+		LastCheckedAt: lastChecked.Int64, Error: verificationError.String,
+	}
+	if completed.Valid {
+		value := completed.Int64
+		out.CompletedAt = &value
+	}
+	if assessmentRaw.Valid && assessmentRaw.String != "" && assessmentRaw.String != "{}" {
+		var assessment ReleaseAssessment
+		if err := json.Unmarshal([]byte(assessmentRaw.String), &assessment); err != nil {
+			return nil, fmt.Errorf("stored magnet verification assessment is invalid: %w", err)
+		}
+		out.Assessment = &assessment
+	}
+	if sizeRaw.Valid && sizeRaw.String != "" && sizeRaw.String != "{}" {
+		var sizeProfile SizeProfileEvaluation
+		if err := json.Unmarshal([]byte(sizeRaw.String), &sizeProfile); err != nil {
+			return nil, fmt.Errorf("stored magnet verification size profile is invalid: %w", err)
+		}
+		out.SizeProfile = &sizeProfile
+	}
+	return out, nil
 }
 
 func (s AutomationStore) StartRun(ctx context.Context, run AutomationRun) (string, error) {
@@ -227,8 +378,11 @@ func (s AutomationStore) ListRuns(ctx context.Context, limit int) ([]AutomationR
 	}
 	rows, err := s.DB.QueryContext(ctx, `SELECT r.id,r.show_id,r.episode_id,r.show_name,r.season,r.episode,r.query,r.status,
 		r.confidence,r.verification,r.selected_name,r.selected_infohash,r.settings_snapshot,r.decision_log,r.engine_version,
-		r.started_at,r.ended_at,r.duration_ms,f.profile_id,f.reason,f.note,f.created_at
-		FROM torrent_automation_runs r LEFT JOIN torrent_automation_feedback f ON f.run_id=r.id
+		r.started_at,r.ended_at,r.duration_ms,f.profile_id,f.reason,f.note,f.created_at,
+		m.infohash,m.status,m.attempts,m.last_checked_at,m.completed_at,m.assessment,m.size_profile,m.error
+		FROM torrent_automation_runs r
+		LEFT JOIN torrent_automation_feedback f ON f.run_id=r.id
+		LEFT JOIN torrent_magnet_verifications m ON m.run_id=r.id
 		ORDER BY r.started_at DESC LIMIT ?`, limit)
 	if err != nil {
 		return nil, err
@@ -248,8 +402,11 @@ func (s AutomationStore) ListRuns(ctx context.Context, limit int) ([]AutomationR
 func (s AutomationStore) GetRun(ctx context.Context, id string) (AutomationRun, error) {
 	row := s.DB.QueryRowContext(ctx, `SELECT r.id,r.show_id,r.episode_id,r.show_name,r.season,r.episode,r.query,r.status,
 		r.confidence,r.verification,r.selected_name,r.selected_infohash,r.settings_snapshot,r.decision_log,r.engine_version,
-		r.started_at,r.ended_at,r.duration_ms,f.profile_id,f.reason,f.note,f.created_at
-		FROM torrent_automation_runs r LEFT JOIN torrent_automation_feedback f ON f.run_id=r.id WHERE r.id=?`, id)
+		r.started_at,r.ended_at,r.duration_ms,f.profile_id,f.reason,f.note,f.created_at,
+		m.infohash,m.status,m.attempts,m.last_checked_at,m.completed_at,m.assessment,m.size_profile,m.error
+		FROM torrent_automation_runs r
+		LEFT JOIN torrent_automation_feedback f ON f.run_id=r.id
+		LEFT JOIN torrent_magnet_verifications m ON m.run_id=r.id WHERE r.id=?`, id)
 	return scanAutomationRun(row)
 }
 
@@ -261,9 +418,12 @@ func scanAutomationRun(scanner automationRunScanner) (AutomationRun, error) {
 	var ended sql.NullInt64
 	var feedbackProfile, feedbackReason, feedbackNote sql.NullString
 	var feedbackCreated sql.NullInt64
+	var magnetInfoHash, magnetStatus, magnetAssessment, magnetSize, magnetError sql.NullString
+	var magnetAttempts, magnetLastChecked, magnetCompleted sql.NullInt64
 	if err := scanner.Scan(&run.ID, &run.ShowID, &run.EpisodeID, &run.ShowName, &run.Season, &run.Episode, &run.Query, &run.Status,
 		&run.Confidence, &run.Verification, &run.SelectedName, &run.SelectedInfoHash, &settingsRaw, &decisionsRaw, &run.EngineVersion,
-		&run.StartedAt, &ended, &run.DurationMS, &feedbackProfile, &feedbackReason, &feedbackNote, &feedbackCreated); err != nil {
+		&run.StartedAt, &ended, &run.DurationMS, &feedbackProfile, &feedbackReason, &feedbackNote, &feedbackCreated,
+		&magnetInfoHash, &magnetStatus, &magnetAttempts, &magnetLastChecked, &magnetCompleted, &magnetAssessment, &magnetSize, &magnetError); err != nil {
 		return AutomationRun{}, err
 	}
 	if ended.Valid {
@@ -278,6 +438,14 @@ func scanAutomationRun(scanner automationRunScanner) (AutomationRun, error) {
 	}
 	if feedbackReason.Valid {
 		run.Feedback = &AutomationFeedback{ProfileID: feedbackProfile.String, Reason: feedbackReason.String, Note: feedbackNote.String, CreatedAt: feedbackCreated.Int64}
+	}
+	verification, err := scanMagnetVerification(magnetInfoHash, magnetStatus, magnetAttempts, magnetLastChecked, magnetCompleted, magnetAssessment, magnetSize, magnetError)
+	if err != nil {
+		return AutomationRun{}, err
+	}
+	if verification != nil {
+		verification.RunID = run.ID
+		run.PostVerification = verification
 	}
 	return run, nil
 }

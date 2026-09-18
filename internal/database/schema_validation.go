@@ -128,6 +128,13 @@ func ValidateSchema(ctx context.Context, db Querier) error {
 			rows.Close()
 		}
 	}
+	if version >= 11 {
+		rows, err := db.QueryContext(ctx, "SELECT run_id,infohash,status,attempts,last_checked_at,completed_at,assessment,size_profile,error FROM torrent_magnet_verifications LIMIT 0")
+		if err != nil {
+			return fmt.Errorf("database torrent magnet verification schema is incomplete: %w", err)
+		}
+		rows.Close()
+	}
 	profileQuery := "SELECT id,display_name,avatar,created_at FROM profiles LIMIT 0"
 	if version >= 7 {
 		profileQuery = "SELECT id,display_name,avatar,created_at,locale FROM profiles LIMIT 0"
