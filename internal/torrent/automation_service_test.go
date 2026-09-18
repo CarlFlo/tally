@@ -497,9 +497,6 @@ func TestRejectedPostMagnetVerificationCanRetryEpisodeAfterBackoff(t *testing.T)
 		t.Fatalf("rejected post-check retried before backoff: processed=%d err=%v", processed, err)
 	}
 
-	if _, err := db.Exec(`UPDATE torrent_magnet_verifications SET completed_at=? WHERE status='rejected'`, now.Add(-31*time.Minute).Unix()); err != nil {
-		t.Fatal(err)
-	}
 	client.resolvedFiles = nil
 	client.listed = false
 	client.stopCalls = 0
@@ -509,7 +506,7 @@ func TestRejectedPostMagnetVerificationCanRetryEpisodeAfterBackoff(t *testing.T)
 	retryService := automationService(db, automationRequester{
 		magnetOnly: true,
 		magnetHash: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-	}, client, now)
+	}, client, now.Add(31*time.Minute))
 	if processed, err := retryService.Run(context.Background()); err != nil || processed != 1 {
 		t.Fatalf("episode did not retry after rejected post-check backoff: processed=%d err=%v", processed, err)
 	}
