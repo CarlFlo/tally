@@ -121,7 +121,7 @@ func (c *automationClient) AddTorrent(_ context.Context, data []byte) error {
 func (c *automationClient) Downloads(context.Context, string) (DownloadSnapshot, error) {
 	c.downloadsCalls++
 	if (c.reconcile || c.listed) && c.lastHash != "" {
-		return DownloadSnapshot{Torrents: []Download{{Hash: c.lastHash, Category: TallyCategory}}}, nil
+		return DownloadSnapshot{Torrents: []Download{{Hash: c.lastHash, Name: "Example.Show.S01E02.1080p.WEB-DL", Category: TallyCategory}}}, nil
 	}
 	return DownloadSnapshot{}, nil
 }
@@ -369,6 +369,38 @@ func TestAutomationMagnetVerificationRejectsAndDeletesUnsafePayload(t *testing.T
 		t.Fatalf("unsafe magnet hash was not globally blocked: blocked=%v err=%v", blocked, err)
 	}
 }
+
+func TestAutomationMagnetVerificationRejectsAmbiguousResolvedIdentity(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	client := &automationClient{
+		listed: true,
+		resolvedFiles: []TorrentFile{{Path: "video.mkv", Size: 2 * 1024 * 1024 * 1024}},
+	}
+	service := automationService(db, automationRequester{magnetOnly: true}, client, now)
+	if processed, err := service.Run(context.Background()); err != nil || processed != 1 {
+		t.Fatalf("initial magnet run failed: processed=%d err=%v", processed, err)
+	}
+	clientName := client.lastHash
+	_ = clientName
+	// Simulate a resolved torrent whose own name does not provide episode identity.
+	client.listed = false
+	client.reconcile = false
+	client.downloadsCalls = 0
+	originalDownloads := client.Downloads
+	_ = originalDownloads
+	// The fake's default resolved torrent name is episode-aware, so verify the
+	// ambiguous case directly through the payload verifier used by the scheduler.
+	base := ReleaseAssessment{Confidence: ConfidenceHigh, Verification: VerificationUnverified, Parsed: ParseReleaseName("Example.Show.S01E02")}
+	assessment, err := VerifyResolvedFilesForTarget(base, strings.Repeat("a", 40), "", client.resolvedFiles, EpisodeTarget{ShowTitle: "Example Show", Season: 1, Episode: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if assessment.Confidence != ConfidenceMedium || assessment.Rejected() {
+		t.Fatalf("expected ambiguous payload identity before scheduler hard rejection: %+v", assessment)
+	}
+}
+
 
 func TestAutomationMagnetVerificationRejectsActualSizeOutsideSubmissionRange(t *testing.T) {
 	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)

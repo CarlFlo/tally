@@ -112,9 +112,9 @@ func (s *AutomationService) processPendingMagnetVerifications(ctx context.Contex
 	if err != nil {
 		return 0, err
 	}
-	existing := make(map[string]bool, len(snapshot.Torrents))
+	existing := make(map[string]Download, len(snapshot.Torrents))
 	for _, item := range snapshot.Torrents {
-		existing[strings.ToLower(item.Hash)] = true
+		existing[strings.ToLower(item.Hash)] = item
 	}
 
 	completed := 0
@@ -123,7 +123,8 @@ func (s *AutomationService) processPendingMagnetVerifications(ctx context.Contex
 		if err = ctx.Err(); err != nil {
 			return completed, err
 		}
-		if !existing[strings.ToLower(item.InfoHash)] {
+		download, exists := existing[strings.ToLower(item.InfoHash)]
+		if !exists {
 			if now.Sub(time.Unix(item.StartedAt, 0)) >= pendingMagnetVerificationMaxAge {
 				if err = store.FinishMagnetVerification(ctx, item.RunID, "unavailable", ReleaseAssessment{
 					Confidence: ConfidenceHigh, Verification: VerificationUnverified, InfoHash: item.InfoHash,
@@ -184,7 +185,13 @@ func (s *AutomationService) processPendingMagnetVerifications(ctx context.Contex
 			Confidence: ConfidenceHigh, Verification: VerificationUnverified,
 			Parsed: ParseReleaseName(item.SelectedName), InfoHash: item.InfoHash,
 		}
-		assessment, verifyErr := VerifyResolvedFilesForTarget(base, item.InfoHash, item.SelectedName, files, target)
+		resolvedName := strings.TrimSpace(download.Name)
+		assessment, verifyErr := VerifyResolvedFilesForTarget(base, item.InfoHash, resolvedName, files, target)
+		if verifyErr == nil && assessment.Confidence != ConfidenceHigh {
+			assessment.HardRejections = appendReason(assessment.HardRejections, AssessmentReason{Code: ReasonAmbiguousIdentity, Detail: "post_magnet_payload"})
+			assessment.Confidence = ConfidenceRejected
+			verifyErr = verificationError(assessment)
+		}
 		sizeProfile := SizeProfileEvaluation{}
 		if assessment.Payload != nil {
 			sizeProfile = EvaluateSizeProfile(assessment.Payload.TotalSize, submission.RuntimeMinutes, submission.Automation, profile)
