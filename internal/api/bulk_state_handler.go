@@ -33,9 +33,10 @@ func (s *Server) bulkState(w http.ResponseWriter, r *http.Request, session auth.
 		where = append(where, "season=?")
 		args = append(args, *in.Season)
 	}
-	if in.AiredOnly {
-		where = append(where, "((airstamp<>'' AND julianday(airstamp)<=julianday('now')) OR (airstamp='' AND airdate<>'' AND airdate<=date('now')))")
-	}
+	// Bulk watched/downloaded state is always limited to released episodes.
+	// A date-only episode airing today is still considered upcoming until an
+	// exact airstamp is known, matching the frontend release-time rules.
+	where = append(where, "((airstamp<>'' AND julianday(airstamp)<=julianday('now')) OR (airstamp='' AND airdate<>'' AND airdate<date('now')))")
 	filter := strings.Join(where, " AND ")
 
 	tx, err := s.DB.BeginTx(r.Context(), nil)
