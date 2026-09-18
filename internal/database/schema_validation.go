@@ -142,6 +142,13 @@ func ValidateSchema(ctx context.Context, db Querier) error {
 		}
 		rows.Close()
 	}
+	if version >= 13 {
+		rows, err := db.QueryContext(ctx, "SELECT episode_id,attempts,next_search_at,last_search_at,updated_at FROM torrent_automation_episode_state LIMIT 0")
+		if err != nil {
+			return fmt.Errorf("database torrent automation retry state is incomplete: %w", err)
+		}
+		rows.Close()
+	}
 	profileQuery := "SELECT id,display_name,avatar,created_at FROM profiles LIMIT 0"
 	if version >= 7 {
 		profileQuery = "SELECT id,display_name,avatar,created_at,locale FROM profiles LIMIT 0"
