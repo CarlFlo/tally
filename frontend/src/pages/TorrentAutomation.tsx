@@ -556,6 +556,21 @@ export function TorrentAutomationPage() {
                 }
               />
             </label>
+            <label>
+              {t("torrentAutomation.maxCandidates", {
+                defaultValue: "Torrent candidates inspected per episode",
+              })}
+              <input
+                type="number"
+                min="1"
+                max="20"
+                value={data.max_candidates}
+                disabled={busy}
+                onChange={(event) =>
+                  change({ max_candidates: Math.max(1, Number(event.target.value)) })
+                }
+              />
+            </label>
             <label className="toggle-setting compact-toggle">
               <input
                 type="checkbox"
