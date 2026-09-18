@@ -299,3 +299,8 @@ Do not keep dead tooling merely because it once participated in validation; the 
 Roadmaps should describe current/future work, validation docs should describe the present verification contract, and architecture docs should describe durable design. Git already stores historical implementation detail.
 
 When a fix teaches a reusable lesson, capture the generalized prevention rule here rather than appending another dated incident paragraph elsewhere.
+
+### Prefer stronger evidence without making missing evidence fatal
+When a provider offers both a `.torrent` and a magnet, keep both instead of collapsing them into one download field. Inspect the `.torrent` first because its file tree is stronger evidence. A missing or temporarily unavailable inspectable payload can justify a conservative metadata-only fallback, but a payload that was successfully inspected and failed identity or safety checks is stronger negative evidence and must not be bypassed by switching transports.
+
+Runtime-normalized size is useful as a sanity signal because absolute episode size means different things for a 20-minute episode and a 90-minute episode. Use the most specific runtime available, keep missing runtime/size neutral, and store separate media profiles when compression characteristics differ materially. Debug scores for inactive profiles can aid tuning without letting those inactive scores influence selection.

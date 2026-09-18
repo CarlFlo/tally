@@ -23,18 +23,18 @@ Status: runtime-aware size profiling and automatic magnet fallback are in progre
 - [x] Fetch retrievable `.torrent` files through the provider coordination boundary without exposing provider URLs to the browser.
 - [x] Parse bencoded torrent metadata locally, derive/validate infohash as appropriate, and inspect the complete file tree before qBittorrent submission.
 - [x] Reject clearly unsuitable payloads such as missing meaningful video, executable/script content, suspicious archive-only payloads, sample-only payloads, episode mismatch, or previously blocked infohashes.
-- [x] Record verification as `verified` or `unverified`; automatic download requires a verified candidate.
-- [x] Magnet-only results remain available for manual download but are never eligible for automatic download because their payload cannot be inspected first.
+- [x] Record verification as `verified` or `unverified`; inspectable `.torrent` candidates require verification, while guarded magnet fallback remains explicitly unverified.
+- [x] Prefer an inspectable `.torrent` when available; allow High-confidence magnet fallback only when no usable `.torrent` metadata is available and all metadata-level rules pass.
 - [x] If the best candidate fails verification, continue through the next bounded shortlist candidate rather than immediately failing the run.
 
 ### Global automation
 
 - [x] Add an `Automation` tab inside Torrent Search; automation/download policy is deployment-global, not profile-owned.
-- [x] Add minimal global controls: enable automatic downloads, preferred quality, minimum seeders, release delay, and bounded retry behavior. High + Verified remains an invariant rather than a tunable lower threshold.
+- [x] Add minimal global controls: enable automatic downloads, preferred quality, minimum seeders, release delay, and bounded retry behavior. High confidence remains an invariant rather than a tunable lower threshold; verification state depends on the available transport.
 - [x] Add a global per-show download override UI using download-only choices: `Default`, `Auto-download`, or `Never auto-download`. Notifications remain profile-owned and are not part of this policy.
 - [x] Keep existing search/download capability toggles backend-authoritative; automation stops before submission if downloading becomes disabled mid-run.
 - [x] Prevent duplicate grabs and serialize decisions per episode while keeping overall work bounded/cancellable.
-- [x] Treat `no verified candidate` as a normal outcome, not an operational error, and retry later within a bounded window rather than accepting a weak match.
+- [x] Treat `no suitable result` as a normal outcome, not an operational error, and retry later within a bounded window rather than accepting a weak match.
 - [x] Avoid duplicate qBittorrent submissions after ambiguous/time-out responses by reconciling against the selected infohash where possible.
 - [x] Expose Torrent automation as its own independent scheduler job with a default 15-minute cadence and normal scheduler controls/history.
 
@@ -52,14 +52,14 @@ Status: runtime-aware size profiling and automatic magnet fallback are in progre
 
 ### Runtime-aware size profiles and magnet automation
 
-- [ ] Add configurable MB/minute ranges for live-action and animated shows, surfaced as compact dual range sliders in Torrent Automation.
-- [ ] Use episode runtime when available and show runtime as fallback; treat missing runtime/size as neutral rather than guessing.
-- [ ] Persist TV metadata needed to classify animation where available, auto-detect animated vs live-action from show type/genres, and add a per-show admin override on the show page.
-- [ ] Apply the active media profile as both a hard size-per-minute filter and a bounded ranking/debug signal without changing show/episode confidence semantics.
-- [ ] Record both live-action and animated size-fit scores in Previous Runs; visually de-emphasize the inactive profile while keeping it available for debugging.
-- [ ] Prefer a retrievable Jackett `.torrent` for local payload inspection, but allow High-confidence automatic magnet submission when no usable `.torrent` is available and all metadata-level rules pass.
-- [ ] Keep magnet fallback explicit in run history as metadata-only/unverified, preserve bad-infohash checks when an infohash can be derived, and never claim payload verification for a magnet.
-- [ ] Add migration, backend/frontend tests, English/Ukrainian localization, and durable documentation for the new media-profile and magnet-selection rules.
+- [x] Add configurable MB/minute ranges for live-action and animated shows, surfaced as compact dual range sliders in Torrent Automation.
+- [x] Use episode runtime when available and show runtime as fallback; treat missing runtime/size as neutral rather than guessing.
+- [x] Persist TV metadata needed to classify animation where available, auto-detect animated vs live-action from show type/genres, and add a per-show admin override on the show page.
+- [x] Apply the active media profile as both a hard size-per-minute filter and a bounded ranking/debug signal without changing show/episode confidence semantics.
+- [x] Record both live-action and animated size-fit scores in Previous Runs; visually de-emphasize the inactive profile while keeping it available for debugging.
+- [x] Prefer a retrievable Jackett `.torrent` for local payload inspection, but allow High-confidence automatic magnet submission when no usable `.torrent` is available and all metadata-level rules pass.
+- [x] Keep magnet fallback explicit in run history as metadata-only/unverified, preserve bad-infohash checks when an infohash can be derived, and never claim payload verification for a magnet.
+- [x] Add migration, backend/frontend tests, English/Ukrainian localization, and durable documentation for the new media-profile and magnet-selection rules.
 
 ### Manual search result inspection
 
@@ -121,7 +121,7 @@ The following are established capabilities rather than active TODO items:
 - SQLite-backed application settings, schedules, jobs, statistics, logs, bell notifications, Webhook/Discord delivery, and live updates.
 - TVmaze metadata coordination with bounded requests, caching, retries, cancellation, rate limiting, and circuit protection.
 - Validated SQLite migrations, pre-upgrade snapshots, archive backups, retention, staged validation, and in-process restore.
-- Jackett discovery plus manual and verified automated qBittorrent submission/download monitoring with operator-managed credentials.
+- Jackett discovery plus manual and guarded automated qBittorrent submission/download monitoring with operator-managed credentials.
 - Version-managed English and Ukrainian bundled locales plus validated hot-loaded custom locale files.
 
 ## Deferred scope
