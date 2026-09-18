@@ -34,7 +34,7 @@ export function AutomationShowEnrollmentList() {
   const needle = filter.trim().toLowerCase();
   const visible = needle
     ? shows.filter((show) => show.name.toLowerCase().includes(needle))
-    : shows.filter((show) => !!show.active);
+    : shows.filter((show) => show.status.trim().toLowerCase() === "running");
   const enrolled = shows.filter((show) => !!show.automation_enabled).length;
 
   async function setEnrollment(show: AutomationShow, enabled: boolean) {
