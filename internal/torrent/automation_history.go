@@ -234,6 +234,46 @@ func (s AutomationStore) FinishMagnetVerification(ctx context.Context, runID, st
 	return nil
 }
 
+
+func (s AutomationStore) RejectMagnetVerification(ctx context.Context, runID string, assessment ReleaseAssessment, sizeProfile SizeProfileEvaluation, message string) error {
+	if len(message) > 500 {
+		message = message[:500]
+	}
+	assessmentRaw, err := json.Marshal(assessment)
+	if err != nil {
+		return err
+	}
+	sizeRaw, err := json.Marshal(sizeProfile)
+	if err != nil {
+		return err
+	}
+	infohash := normalizeInfoHash(assessment.InfoHash)
+	if infohash == "" {
+		return fmt.Errorf("rejected magnet verification has no valid infohash")
+	}
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	now := time.Now().Unix()
+	res, err := tx.ExecContext(ctx, `UPDATE torrent_magnet_verifications
+		SET status='rejected',attempts=attempts+1,last_checked_at=?,completed_at=?,assessment=?,size_profile=?,error=?
+		WHERE run_id=? AND status='pending'`, now, now, string(assessmentRaw), string(sizeRaw), message, runID)
+	if err != nil {
+		return err
+	}
+	changed, _ := res.RowsAffected()
+	if changed != 1 {
+		return fmt.Errorf("magnet verification is not pending")
+	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO torrent_bad_hashes(infohash,reason,source_run_id,marked_by,created_at)
+		VALUES(?,'post_magnet_verification',?,NULL,?) ON CONFLICT(infohash) DO NOTHING`, infohash, runID, now); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
 func (s AutomationStore) BlockInfoHash(ctx context.Context, infohash, reason, sourceRunID string) error {
 	infohash = normalizeInfoHash(infohash)
 	if infohash == "" {

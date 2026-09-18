@@ -139,7 +139,17 @@ func (s *AutomationService) processPendingMagnetVerifications(ctx context.Contex
 		}
 		files, fileErr := inspector.ResolvedFiles(ctx, item.InfoHash)
 		if fileErr != nil {
-			_ = store.RecordMagnetVerificationAttempt(ctx, item.RunID, fileErr.Error())
+			if now.Sub(time.Unix(item.StartedAt, 0)) >= pendingMagnetVerificationMaxAge {
+				if err = store.FinishMagnetVerification(ctx, item.RunID, "unavailable", ReleaseAssessment{
+					Confidence: ConfidenceHigh, Verification: VerificationUnverified, InfoHash: item.InfoHash,
+				}, SizeProfileEvaluation{}, fileErr.Error()); err != nil {
+					return completed, err
+				}
+				completed++
+				s.publishChange()
+			} else {
+				_ = store.RecordMagnetVerificationAttempt(ctx, item.RunID, fileErr.Error())
+			}
 			continue
 		}
 		if len(files) == 0 {
@@ -190,10 +200,7 @@ func (s *AutomationService) processPendingMagnetVerifications(ctx context.Contex
 				_ = store.RecordMagnetVerificationAttempt(ctx, item.RunID, "payload rejected but qBittorrent removal failed: "+removeErr.Error())
 				return completed, removeErr
 			}
-			if blockErr := store.BlockInfoHash(ctx, item.InfoHash, "post_magnet_verification", item.RunID); blockErr != nil {
-				return completed, blockErr
-			}
-			if err = store.FinishMagnetVerification(ctx, item.RunID, "rejected", assessment, sizeProfile, verifyErr.Error()); err != nil {
+			if err = store.RejectMagnetVerification(ctx, item.RunID, assessment, sizeProfile, verifyErr.Error()); err != nil {
 				return completed, err
 			}
 			completed++
