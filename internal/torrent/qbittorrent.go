@@ -205,6 +205,44 @@ func (q *QBittorrent) Downloads(ctx context.Context, category string) (DownloadS
 	return snapshot, nil
 }
 
+
+type qBittorrentFile struct {
+	Name string `json:"name"`
+	Size int64  `json:"size"`
+}
+
+func (q *QBittorrent) ResolvedFiles(ctx context.Context, hash string) ([]TorrentFile, error) {
+	if !qBittorrentHash.MatchString(hash) {
+		return nil, fmt.Errorf("invalid torrent hash")
+	}
+	res, err := q.call(ctx, "/api/v2/torrents/files?"+url.Values{"hash": {hash}}.Encode(), http.MethodGet, nil, "")
+	if err != nil {
+		return nil, err
+	}
+	var rows []qBittorrentFile
+	if err = json.Unmarshal(res.Body, &rows); err != nil {
+		return nil, fmt.Errorf("qBittorrent returned invalid torrent file data")
+	}
+	if len(rows) > maxTorrentFiles {
+		return nil, fmt.Errorf("qBittorrent returned too many torrent files")
+	}
+	files := make([]TorrentFile, 0, len(rows))
+	for _, row := range rows {
+		name := strings.ReplaceAll(strings.TrimSpace(row.Name), "\\", "/")
+		if row.Size < 0 || len(name) == 0 || len(name) > 4096 {
+			return nil, fmt.Errorf("qBittorrent returned invalid torrent file metadata")
+		}
+		segments := strings.Split(name, "/")
+		for _, segment := range segments {
+			if !validTorrentPathSegment(segment) {
+				return nil, fmt.Errorf("qBittorrent returned an unsafe torrent file path")
+			}
+		}
+		files = append(files, TorrentFile{Path: name, Size: row.Size})
+	}
+	return files, nil
+}
+
 func (q *QBittorrent) torrentAction(ctx context.Context, path, hash string, extra url.Values) error {
 	if !qBittorrentHash.MatchString(hash) {
 		return fmt.Errorf("invalid torrent hash")

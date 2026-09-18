@@ -2,6 +2,7 @@ package torrent
 
 import (
 	"fmt"
+	"math"
 	"path"
 	"strings"
 )
@@ -112,6 +113,26 @@ func VerifyTorrentForTarget(base ReleaseAssessment, candidate SearchResult, data
 	assessment := ApplyPayloadVerification(base, candidate, metadata)
 	if target != nil && !assessment.Rejected() {
 		assessment = ApplyPayloadIdentityVerification(assessment, metadata, *target)
+	}
+	return assessment, verificationError(assessment)
+}
+
+
+func VerifyResolvedFilesForTarget(base ReleaseAssessment, infohash, name string, files []TorrentFile, target EpisodeTarget) (ReleaseAssessment, error) {
+	if len(files) == 0 || len(files) > maxTorrentFiles {
+		return base, fmt.Errorf("resolved torrent metadata contains no usable files")
+	}
+	metadata := TorrentMetadata{Name: name, Files: append([]TorrentFile(nil), files...)}
+	for _, file := range files {
+		if file.Path == "" || file.Size < 0 || metadata.TotalSize > math.MaxInt64-file.Size {
+			return base, fmt.Errorf("resolved torrent file metadata is invalid")
+		}
+		metadata.TotalSize += file.Size
+	}
+	base.InfoHash = normalizeInfoHash(infohash)
+	assessment := ApplyPayloadVerification(base, SearchResult{InfoHash: base.InfoHash}, metadata)
+	if !assessment.Rejected() {
+		assessment = ApplyPayloadIdentityVerification(assessment, metadata, target)
 	}
 	return assessment, verificationError(assessment)
 }

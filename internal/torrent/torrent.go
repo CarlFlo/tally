@@ -69,6 +69,10 @@ type SearchProvider interface {
 	Search(context.Context, SearchQuery) ([]SearchResult, error)
 }
 
+type ResolvedFileClient interface {
+	ResolvedFiles(context.Context, string) ([]TorrentFile, error)
+}
+
 type DownloadClient interface {
 	Name() string
 	TestConnection(context.Context) error
