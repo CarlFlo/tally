@@ -106,6 +106,27 @@ test("episode search expands into a strengths and concerns evaluation", async ({
     data: { policy: "default" },
   });
   expect(reset.ok()).toBe(true);
+
+  await page.getByRole("button", { name: "Show actions: Example Show" }).click();
+  await expect(
+    page.getByRole("menuitem", { name: /Media type · Auto \(detected / }),
+  ).toBeVisible();
+  await page.getByRole("menuitem", { name: "Media type · Animated", exact: true }).click();
+
+  const mediaProfile = await page.request.get(
+    `/api/torrents/automation/shows/${showID}/media-profile`,
+  );
+  expect(mediaProfile.ok()).toBe(true);
+  expect((await mediaProfile.json()).effective).toBe("animated");
+
+  const resetMedia = await page.request.put(
+    `/api/torrents/automation/shows/${showID}/media-profile`,
+    {
+      headers: { "X-Tally-CSRF": "1" },
+      data: { mode: "auto" },
+    },
+  );
+  expect(resetMedia.ok()).toBe(true);
 });
 
 test("automation page exposes release filters trust rules and disabled capability guards", async ({
@@ -122,6 +143,11 @@ test("automation page exposes release filters trust rules and disabled capabilit
   await expect(page.getByText("Release filters", { exact: true })).toBeVisible();
   await expect(page.getByText("Release groups", { exact: true })).toBeVisible();
   await expect(page.getByText("Source trust", { exact: true })).toBeVisible();
+  await expect(page.getByText("Episode size", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Live-action minimum MB per minute")).toHaveValue("8");
+  await expect(page.getByLabel("Live-action maximum MB per minute")).toHaveValue("220");
+  await expect(page.getByLabel("Animated minimum MB per minute")).toHaveValue("4");
+  await expect(page.getByLabel("Animated maximum MB per minute")).toHaveValue("140");
   await expect(page.getByLabel("Allowed release groups", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Allowed uploaders", { exact: true })).toBeVisible();
   await expect(
@@ -135,10 +161,10 @@ test("automation page exposes release filters trust rules and disabled capabilit
   await expect(exclude).toHaveValue("cam telesync hardsub dubbed");
 
   await expect(
-    page.getByText(/Automatic downloads require High confidence and a verified \.torrent payload/),
+    page.getByText(/Automatic downloads require High confidence\. Tally prefers a retrievable \.torrent/),
   ).toBeVisible();
   await expect(
-    page.getByText("Magnet-only releases stay manual", { exact: true }),
+    page.getByText("Magnets are a fallback", { exact: true }),
   ).toBeVisible();
 
   await page.route("**/api/bootstrap", async (route) => {
@@ -204,6 +230,12 @@ test("previous runs explains verified decisions, accepts bad feedback and stays 
     selected_infohash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     settings_snapshot: {
       show_policy: "default",
+      show_media_profile: {
+        mode: "auto",
+        detected: "live",
+        effective: "live",
+      },
+      runtime_minutes: 45,
       automation: {
         min_seeders: 5,
         preferred_quality: "1080p",
@@ -212,6 +244,10 @@ test("previous runs explains verified decisions, accepts bad feedback and stays 
         exclude_keywords: "cam telesync hardsub dubbed",
         preferred_groups: ["FLUX"],
         preferred_providers: ["Fixture HD"],
+        live_min_mb_per_minute: 8,
+        live_max_mb_per_minute: 220,
+        animated_min_mb_per_minute: 4,
+        animated_max_mb_per_minute: 140,
       },
     },
     decision_log: [
@@ -244,17 +280,38 @@ test("previous runs explains verified decisions, accepts bad feedback and stays 
               seeders: 90,
               size: 2_147_483_648,
               confidence: "high",
+              size_profile: {
+                known: true,
+                runtime_minutes: 45,
+                mb_per_minute: 45.5,
+                active_profile: "live",
+                active_score: 92,
+                live_score: 92,
+                animated_score: 64,
+                in_active_range: true,
+              },
             },
           ],
         },
         occurred_at: 1_789_666_801,
       },
       {
-        stage: "verification",
+        stage: "inspection",
         status: "success",
-        summary: "Torrent contents verified.",
+        summary: "Candidate payload verified from Jackett torrent metadata.",
         data: {
           name: "Example.Show.S01E02.1080p.WEB-DL.mkv",
+          submission_type: "torrent",
+          size_profile: {
+            known: true,
+            runtime_minutes: 45,
+            mb_per_minute: 45.5,
+            active_profile: "live",
+            active_score: 92,
+            live_score: 92,
+            animated_score: 64,
+            in_active_range: true,
+          },
           payload: {
             video_files: 1,
             subtitle_files: 1,
@@ -278,7 +335,7 @@ test("previous runs explains verified decisions, accepts bad feedback and stays 
         occurred_at: 1_789_666_803,
       },
     ],
-    engine_version: "1",
+    engine_version: "2",
     started_at: 1_789_666_800,
     ended_at: 1_789_666_804,
     duration_ms: 4_000,
@@ -323,7 +380,10 @@ test("previous runs explains verified decisions, accepts bad feedback and stays 
   ).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("heading", { name: "Example Show · S01E02" })).toBeVisible();
   await expect(page.getByText("High · Verified", { exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Verification" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Inspection" })).toBeVisible();
+  await expect(page.locator(".size-score-pair .active").first()).toContainText("Live 92");
+  await expect(page.locator(".size-score-pair .inactive").first()).toContainText("Animated 64");
+  await expect(page.getByText("Auto · detected Live", { exact: true })).toBeVisible();
   await page.getByText("Files (1)", { exact: true }).click();
   await expect(
     page.getByText("Example.Show.S01E02.1080p.WEB-DL.mkv", { exact: true }).last(),

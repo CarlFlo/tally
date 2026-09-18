@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import {
   api,
   Busy,
@@ -94,7 +95,7 @@ function titleCase(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function runStatusLabel(t: ReturnType<typeof useTranslation>["t"], value: string) {
+function runStatusLabel(t: TFunction, value: string) {
   if (value === "no_verified_candidate")
     return t("torrentRuns.noSuitableResult", { defaultValue: "No suitable result" });
   return titleCase(value);
