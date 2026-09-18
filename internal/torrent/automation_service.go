@@ -60,7 +60,7 @@ func (s *AutomationService) Run(ctx context.Context) (int, error) {
 		}
 		processed += verified
 	}
-	if !caps.Automation.Enabled || !caps.Search.Enabled || !caps.Search.Configured() || !caps.Downloads.Enabled {
+	if !caps.Search.Enabled || !caps.Search.Configured() || !caps.Downloads.Enabled {
 		return processed, nil
 	}
 	now := s.now()
@@ -474,8 +474,8 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 			_ = finish(RunFailed, assessment, candidate.Result.Name)
 			return true, capabilityErr
 		}
-		if !latest.Automation.Enabled || !latest.Search.Enabled || !latest.Downloads.Enabled {
-			_ = store.AppendDecision(ctx, runID, DecisionStep{Stage: "decision", Status: "skipped", Summary: "Automation or torrent capability was disabled before submission"})
+		if !latest.Search.Enabled || !latest.Downloads.Enabled {
+			_ = store.AppendDecision(ctx, runID, DecisionStep{Stage: "decision", Status: "skipped", Summary: "Torrent search or download capability was disabled before submission"})
 			if err = finish(RunSkipped, assessment, candidate.Result.Name); err != nil {
 				return true, err
 			}
