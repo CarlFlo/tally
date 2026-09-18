@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 18
+    "catalogVersion": 19
   },
   "common": {
     "save": "Save",
@@ -721,7 +721,16 @@
     "showEnabled": "Automation enabled for {{name}}",
     "showDisabled": "Automation disabled for {{name}}",
     "showAutomationOn": "Automation on",
-    "showAutomationOff": "Automation off"
+    "showAutomationOff": "Automation off",
+    "searchPacing": "Search pacing",
+    "searchPacingHelp": "Limit how much external discovery work one scheduler run can do. Deferred episodes stay queued for later runs instead of creating a burst of Jackett requests.",
+    "discoveryBudget": "Episode searches per run",
+    "prioritizeRecent": "Prioritize newly aired episodes",
+    "prioritizeRecentHelp": "When several episodes are ready, newer releases are searched before older backlog items.",
+    "retryFirst": "First retry delay (minutes)",
+    "retrySecond": "Second retry delay (minutes)",
+    "retryLater": "Later retry delay (minutes)",
+    "retryPacingHelp": "These delays apply after unsuccessful or failed automated searches. Tally does not immediately retry Jackett inside the same background attempt."
   },
   "torrentRuns": {
     "eyebrow": "EVERY DECISION, EXPLAINED",
