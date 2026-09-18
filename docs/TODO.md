@@ -6,7 +6,7 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 `feature/torrent-automation-confidence`
 
-Status: downloads initial-render, released-only episode-state, and manual-search refine persistence follow-ups are implemented; final validation is pending.
+Status: downloads initial-render, released-only episode-state, and manual-search refine persistence follow-ups are implemented and fully validated; branch is ready for review.
 
 ### Evaluation and search metadata
 
