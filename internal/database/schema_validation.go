@@ -116,6 +116,18 @@ func ValidateSchema(ctx context.Context, db Querier) error {
 			rows.Close()
 		}
 	}
+	if version >= 10 {
+		for _, query := range []string{
+			"SELECT id,show_type FROM shows LIMIT 0",
+			"SELECT show_id,profile,updated_at FROM torrent_show_media_profile LIMIT 0",
+		} {
+			rows, err := db.QueryContext(ctx, query)
+			if err != nil {
+				return fmt.Errorf("database torrent media profile schema is incomplete: %w", err)
+			}
+			rows.Close()
+		}
+	}
 	profileQuery := "SELECT id,display_name,avatar,created_at FROM profiles LIMIT 0"
 	if version >= 7 {
 		profileQuery = "SELECT id,display_name,avatar,created_at,locale FROM profiles LIMIT 0"
