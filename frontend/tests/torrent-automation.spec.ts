@@ -235,6 +235,14 @@ test("automation page exposes release filters trust rules and disabled capabilit
   await expect(page.getByLabel("Live-action maximum MB per minute")).toHaveValue("220");
   await expect(page.getByLabel("Animated minimum MB per minute")).toHaveValue("4");
   await expect(page.getByLabel("Animated maximum MB per minute")).toHaveValue("140");
+  expect(
+    await page.locator(".torrent-automation-settings").evaluate(
+      (element) => getComputedStyle(element).gridTemplateColumns.split(" ").length,
+    ),
+  ).toBe(2);
+  const sizeTrack = page.locator(".dual-range-track").first();
+  await expect(sizeTrack).toHaveCSS("left", "8px");
+  await expect(sizeTrack).toHaveCSS("right", "8px");
   await expect(page.getByLabel("Allowed release groups", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Allowed uploaders", { exact: true })).toBeVisible();
   await expect(
