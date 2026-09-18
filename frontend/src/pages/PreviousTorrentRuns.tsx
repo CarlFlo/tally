@@ -42,6 +42,23 @@ type Feedback = {
   created_at: number;
 };
 
+type PostVerification = {
+  run_id: string;
+  infohash: string;
+  status: "pending" | "verified" | "rejected" | "unavailable";
+  attempts: number;
+  last_checked_at?: number;
+  completed_at?: number;
+  assessment?: {
+    confidence?: string;
+    verification?: string;
+    hard_rejections?: Array<{ code: string; detail?: string }>;
+    payload?: any;
+  };
+  size_profile?: SizeProfile;
+  error?: string;
+};
+
 type AutomationRun = {
   id: string;
   show_id: string;
@@ -62,6 +79,7 @@ type AutomationRun = {
   ended_at?: number;
   duration_ms: number;
   feedback?: Feedback;
+  post_verification?: PostVerification;
 };
 
 type RunsResponse = { runs: AutomationRun[] };
@@ -144,6 +162,87 @@ function SizeScores({ profile }: { profile?: SizeProfile }) {
         {profile.runtime_minutes ? ` · ${profile.runtime_minutes} min` : ""}
       </small>
     </div>
+  );
+}
+
+
+function PayloadSummary({ payload }: { payload?: any }) {
+  if (!payload) return null;
+  return (
+    <div className="torrent-payload-summary">
+      <span><FileVideo size={15} />{payload.video_files ?? 0} video</span>
+      <span>{payload.subtitle_files ?? 0} subtitles</span>
+      <span>{payload.executable_files ?? 0} executable</span>
+      {payload.total_size ? <span>{bytes(payload.total_size)}</span> : null}
+      {Array.isArray(payload.files) && payload.files.length > 0 && (
+        <details>
+          <summary>Files ({payload.files.length})</summary>
+          <div className="torrent-file-tree">
+            {payload.files.map((file: any) => (
+              <div key={`${file.path}-${file.size}`}>
+                <code>{file.path}</code><span>{bytes(file.size)}</span>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function PostVerificationCard({ verification, marker }: { verification: PostVerification; marker: number }) {
+  const { t } = useTranslation();
+  const labels: Record<PostVerification["status"], string> = {
+    pending: t("torrentRuns.postVerifyPending", { defaultValue: "Waiting for magnet metadata" }),
+    verified: t("torrentRuns.postVerifyVerified", { defaultValue: "Magnet payload verified after submission" }),
+    rejected: t("torrentRuns.postVerifyRejected", { defaultValue: "Magnet payload rejected and removed" }),
+    unavailable: t("torrentRuns.postVerifyUnavailable", { defaultValue: "Magnet payload could not be verified" }),
+  };
+  const status =
+    verification.status === "verified"
+      ? "success"
+      : verification.status === "rejected"
+        ? "rejected"
+        : verification.status === "unavailable"
+          ? "skipped"
+          : "pending";
+  return (
+    <section className="decision-step post-magnet-verification">
+      <div className="decision-marker">{marker}</div>
+      <div className="decision-card">
+        <div className="decision-step-head">
+          <h3>
+            <StatusIcon status={status} />
+            {t("torrentRuns.postVerification", { defaultValue: "Post-download verification" })}
+          </h3>
+          {verification.attempts > 0 && (
+            <span>
+              {t("torrentRuns.verificationAttempts", {
+                count: verification.attempts,
+                defaultValue: "{{count}} checks",
+              })}
+            </span>
+          )}
+        </div>
+        <p>{labels[verification.status]}</p>
+        {verification.size_profile && (
+          <div className="decision-size-score">
+            <SizeScores profile={verification.size_profile} />
+          </div>
+        )}
+        <PayloadSummary payload={verification.assessment?.payload} />
+        {verification.error && <p className="muted small-text">{verification.error}</p>}
+        {!!verification.assessment?.hard_rejections?.length && (
+          <div className="decision-rejections">
+            {verification.assessment.hard_rejections.map((reason, index) => (
+              <span key={`${reason.code}-${index}`}>
+                {titleCase(reason.code || "rejected")}{reason.detail ? ` · ${reason.detail}` : ""}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -295,6 +394,13 @@ function RunInspection({ run }: { run: AutomationRun }) {
             </span>
           )}
           <ConfidenceBadge run={run} />
+          {run.post_verification && (
+            <span
+              className={`badge ${run.post_verification.status === "verified" ? "success" : run.post_verification.status === "rejected" ? "failed" : ""}`}
+            >
+              {t("torrentRuns.postVerificationShort", { defaultValue: "Post-check" })} · {titleCase(run.post_verification.status)}
+            </span>
+          )}
         </div>
       </div>
 
@@ -324,9 +430,12 @@ function RunInspection({ run }: { run: AutomationRun }) {
             </div>
           </section>
         ))}
+        {run.post_verification && (
+          <PostVerificationCard verification={run.post_verification} marker={run.decision_log.length + 1} />
+        )}
         {run.feedback && (
           <section className="decision-step">
-            <div className="decision-marker">{run.decision_log.length + 1}</div>
+            <div className="decision-marker">{run.decision_log.length + (run.post_verification ? 2 : 1)}</div>
             <div className="decision-card decision-feedback">
               <div className="decision-step-head">
                 <h3><AlertTriangle size={17} />{t("torrentRuns.postFeedback", { defaultValue: "Post-run feedback" })}</h3>
@@ -438,26 +547,7 @@ function DecisionData({ step }: { step: DecisionStep }) {
             : t("torrentRuns.torrentVerified", { defaultValue: ".torrent payload path" })}
         </p>
       )}
-      {payload && (
-        <div className="torrent-payload-summary">
-          <span><FileVideo size={15} />{payload.video_files ?? 0} video</span>
-          <span>{payload.subtitle_files ?? 0} subtitles</span>
-          <span>{payload.executable_files ?? 0} executable</span>
-          {payload.total_size ? <span>{bytes(payload.total_size)}</span> : null}
-          {Array.isArray(payload.files) && payload.files.length > 0 && (
-            <details>
-              <summary>Files ({payload.files.length})</summary>
-              <div className="torrent-file-tree">
-                {payload.files.map((file: any) => (
-                  <div key={`${file.path}-${file.size}`}>
-                    <code>{file.path}</code><span>{bytes(file.size)}</span>
-                  </div>
-                ))}
-              </div>
-            </details>
-          )}
-        </div>
-      )}
+      <PayloadSummary payload={payload} />
       {data.name && step.stage !== "filter" && <p className="muted small-text"><code>{data.name}</code></p>}
       {Array.isArray(data.hard_rejections) && data.hard_rejections.length > 0 && (
         <div className="decision-rejections">

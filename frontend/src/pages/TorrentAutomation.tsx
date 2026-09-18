@@ -574,7 +574,7 @@ export function TorrentAutomationPage() {
               <p>
                 {t("torrentAutomation.magnetsManualHelp", {
                   defaultValue:
-                    "Tally asks Jackett for an inspectable .torrent whenever possible. A magnet can be selected automatically only when the release is High confidence and passes identity, trust, history, seed, and MB/min checks; it remains Unverified in Previous Runs.",
+                    "Tally asks Jackett for an inspectable .torrent whenever possible. A magnet can be selected automatically only when the release is High confidence and passes identity, trust, history, seed, and MB/min checks. It starts Unverified, then Tally checks qBittorrent's resolved file list on later automation runs and removes unsafe or mismatched payloads.",
                 })}
               </p>
             </div>

@@ -545,3 +545,8 @@
 .decision-size-score {
   margin-top: 10px;
 }
+
+
+.post-magnet-verification .decision-card {
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--border));
+}
