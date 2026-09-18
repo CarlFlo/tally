@@ -25,6 +25,7 @@ import {
   useLocal,
 } from "../lib";
 import { invalidateResources } from "../queryInvalidation";
+import { queryKeys } from "../queryKeys";
 import { i18n } from "../i18n";
 import {
   TorrentResultInspection,
@@ -38,6 +39,13 @@ type Result = TorrentInspectionResult & {
   leechers: number;
   published: string;
   sendable: boolean;
+  evaluated?: boolean;
+};
+
+type SearchView = {
+  query: string;
+  results: Result[];
+  searched: boolean;
 };
 
 const QUALITY_GROUPS = [
@@ -70,18 +78,30 @@ function torrentAge(value: string) {
 export function SearchPage() {
   const { t } = useTranslation();
   const [params] = useSearchParams();
-  const { notify } = useApp();
+  const { boot, notify } = useApp();
   const cache = useQueryClient();
   const settings = useLocal<any>("capabilities", "/capabilities");
   const history = useLocal<any>("torrent-history", "/torrents/history");
-  const [query, setQuery] = useState(params.get("q") || "");
-  const [results, setResults] = useState<Result[]>([]);
-  const [searched, setSearched] = useState(false);
+  const routeQuery = params.get("q") || "";
+  const viewKey = queryKeys.torrentSearchView(boot.profile?.id || "anonymous");
+  const cachedView = cache.getQueryData<SearchView>(viewKey);
+  const restoreCached = !routeQuery || routeQuery === cachedView?.query;
+  const [query, setQuery] = useState(
+    routeQuery || (restoreCached ? cachedView?.query : "") || "",
+  );
+  const [results, setResults] = useState<Result[]>(
+    restoreCached ? cachedView?.results || [] : [],
+  );
+  const [searched, setSearched] = useState(
+    restoreCached ? !!cachedView?.searched : false,
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [sending, setSending] = useState<string | null>(null);
   const [sent, setSent] = useState<string[]>([]);
   const [expandedResult, setExpandedResult] = useState<string | null>(null);
+  const [evaluatingResult, setEvaluatingResult] = useState<string | null>(null);
+  const [evaluationErrors, setEvaluationErrors] = useState<Record<string, Error | undefined>>({});
   const [keys] = useState(new Map<string, string>());
   const [seeders, setSeeders] = useState(0);
   const [minSize, setMinSize] = useState("");
@@ -91,12 +111,16 @@ export function SearchPage() {
   const [quality, setQuality] = useState<string[]>([]);
   const [sort, setSort] = useState("seeders");
   const activeSearch = useRef<AbortController | null>(null);
+  const activeEvaluation = useRef<AbortController | null>(null);
   const autoSearchStarted = useRef(false);
   useEffect(
     () => () => {
-      const controller = activeSearch.current;
+      const searchController = activeSearch.current;
+      const evaluationController = activeEvaluation.current;
       activeSearch.current = null;
-      controller?.abort();
+      activeEvaluation.current = null;
+      searchController?.abort();
+      evaluationController?.abort();
     },
     [],
   );
@@ -122,6 +146,11 @@ export function SearchPage() {
       );
       if (controller.signal.aborted) return;
       setResults(data.results);
+      cache.setQueryData<SearchView>(viewKey, {
+        query,
+        results: data.results,
+        searched: true,
+      });
       setExpandedResult(null);
       if (data.warnings.length) notify(data.warnings.join(" · "), true);
       setSearched(true);
@@ -146,6 +175,60 @@ export function SearchPage() {
     autoSearchStarted.current = true;
     void search();
   }, [params, query]);
+
+  async function loadEvaluation(result: Result) {
+    activeEvaluation.current?.abort();
+    const controller = new AbortController();
+    activeEvaluation.current = controller;
+    setEvaluatingResult(result.id);
+    setEvaluationErrors((current) => ({ ...current, [result.id]: undefined }));
+    try {
+      const evaluation = await api<Partial<TorrentInspectionResult>>(
+        `/torrents/search/${result.id}/evaluation`,
+        "GET",
+        undefined,
+        controller.signal,
+      );
+      if (controller.signal.aborted) return;
+      setResults((current) => {
+        const next = current.map((item) =>
+          item.id === result.id
+            ? { ...item, ...evaluation, evaluated: true }
+            : item,
+        );
+        cache.setQueryData<SearchView>(viewKey, (cached) => ({
+          query: cached?.query || query,
+          results: next,
+          searched: true,
+        }));
+        return next;
+      });
+    } catch (e) {
+      if (!controller.signal.aborted) {
+        setEvaluationErrors((current) => ({
+          ...current,
+          [result.id]: e as Error,
+        }));
+      }
+    } finally {
+      if (activeEvaluation.current === controller) {
+        activeEvaluation.current = null;
+        setEvaluatingResult(null);
+      }
+    }
+  }
+
+  function toggleResult(result: Result) {
+    if (expandedResult === result.id) {
+      activeEvaluation.current?.abort();
+      activeEvaluation.current = null;
+      setEvaluatingResult(null);
+      setExpandedResult(null);
+      return;
+    }
+    setExpandedResult(result.id);
+    if (!result.evaluated) void loadEvaluation(result);
+  }
 
   const includeWords = include.toLowerCase().split(/\s+/).filter(Boolean);
   const excludeWords = exclude.toLowerCase().split(/\s+/).filter(Boolean);
@@ -399,12 +482,12 @@ export function SearchPage() {
                         role="button"
                         tabIndex={0}
                         aria-expanded={expanded}
-                        onClick={() => setExpandedResult(expanded ? null : result.id)}
+                        onClick={() => toggleResult(result)}
                         onKeyDown={(event) => {
                           if (event.target !== event.currentTarget) return;
                           if (event.key === "Enter" || event.key === " ") {
                             event.preventDefault();
-                            setExpandedResult(expanded ? null : result.id);
+                            toggleResult(result);
                           }
                         }}
                       >
@@ -504,7 +587,22 @@ export function SearchPage() {
                           />
                         </div>
                       </div>
-                      {expanded && <TorrentResultInspection result={result} />}
+                      {expanded && (
+                        result.evaluated ? (
+                          <TorrentResultInspection result={result} />
+                        ) : evaluationErrors[result.id] ? (
+                          <div className="torrent-result-inspection">
+                            <ErrorState
+                              error={evaluationErrors[result.id]!}
+                              retry={() => void loadEvaluation(result)}
+                            />
+                          </div>
+                        ) : (
+                          <div className="torrent-result-inspection torrent-evaluation-loading">
+                            {evaluatingResult === result.id && <Busy />}
+                          </div>
+                        )
+                      )}
                     </div>
                   );
                 })}
