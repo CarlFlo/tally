@@ -197,11 +197,10 @@ func ApplyPayloadIdentityVerification(base ReleaseAssessment, metadata TorrentMe
 			continue
 		}
 		exactEpisode = true
-		if parsed.Title != "" {
-			showMatch, showConflict := candidateMatchesTargetShow(SearchResult{}, parsed, target)
-			if showConflict && !showMatch {
-				wrongShow = true
-			}
+		if parsed.Title != "" && !releaseTitleMatchesTarget(parsed.Title, target) {
+			// Once the actual torrent payload exposes an explicit episode title,
+			// a mismatching show name is strong enough evidence to reject it.
+			wrongShow = true
 		}
 	}
 
