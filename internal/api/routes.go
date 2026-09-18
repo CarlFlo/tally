@@ -80,6 +80,7 @@ func (s *Server) Handler() http.Handler {
 		{"GET /api/alerts", s.alerts, false},
 		{"DELETE /api/alerts/{id}", s.dismissAlert, false},
 		{"POST /api/torrents/search", s.torrentSearch, false},
+		{"GET /api/torrents/search/{id}/evaluation", s.torrentSearchEvaluation, false},
 		{"POST /api/torrents/send", s.torrentSend, false},
 		{"GET /api/torrents/downloads", s.torrentDownloads, false},
 		{"POST /api/torrents/downloads/{hash}/{action}", s.torrentDownloadAction, false},
