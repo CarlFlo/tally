@@ -20,8 +20,17 @@ func (s *Server) episodeState(w http.ResponseWriter, r *http.Request, session au
 	}
 	episodeID := r.PathValue("id")
 	var show string
-	if s.DB.QueryRowContext(r.Context(), "SELECT show_id FROM episodes WHERE id=?", episodeID).Scan(&show) != nil || !s.follows(r, session.Profile, show) {
+	var isReleased int
+	if s.DB.QueryRowContext(r.Context(), `SELECT show_id,
+		CASE WHEN
+			(airstamp<>'' AND julianday(airstamp)<=julianday('now'))
+			OR (airstamp='' AND airdate<>'' AND airdate<date('now'))
+		THEN 1 ELSE 0 END
+		FROM episodes WHERE id=?`, episodeID).Scan(&show, &isReleased) != nil || !s.follows(r, session.Profile, show) {
 		return apiError{404, "episode is not in your library"}
+	}
+	if isReleased == 0 && ((in.Watched != nil && *in.Watched) || (in.Downloaded != nil && *in.Downloaded)) {
+		return bad("episode has not been released yet")
 	}
 	tx, err := s.DB.BeginTx(r.Context(), nil)
 	if err != nil {
