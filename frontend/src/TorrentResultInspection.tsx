@@ -29,10 +29,15 @@ export type TorrentInspectionResult = {
     preferred_uploader?: boolean;
     preferred_provider?: boolean;
   };
+  size_profile?: {
+    known?: boolean;
+    mb_per_minute?: number;
+    active_profile?: "live" | "animated";
+    in_active_range?: boolean;
+  };
 };
 
 const positiveReasonCodes = new Set([
-  "expected_size",
   "video_payload",
   "no_blocked_payload",
 ]);
@@ -83,28 +88,32 @@ function evaluationSummary(result: TorrentInspectionResult, t: (key: string, opt
 
 export function TorrentResultInspection({ result }: { result: TorrentInspectionResult }) {
   const { t } = useTranslation();
-  const reasonCodes = new Set((result.reasons || []).map((reason) => reason.code));
   const strengths: string[] = [];
   const concerns: string[] = [];
 
-  if (reasonCodes.has("show_match") && reasonCodes.has("episode_match")) {
-    strengths.push(
-      t("torrentInspection.correctIdentity", {
-        defaultValue: "Correct show and episode",
-      }),
-    );
-  } else if (reasonCodes.has("show_match")) {
-    strengths.push(
-      t("torrentInspection.showIdentityMatch", {
-        defaultValue: "Show identity matches",
-      }),
-    );
-  } else if (reasonCodes.has("episode_match")) {
-    strengths.push(
-      t("torrentInspection.episodeIdentityMatch", {
-        defaultValue: "Episode number matches",
-      }),
-    );
+  if (result.size_profile?.known && typeof result.size_profile.mb_per_minute === "number") {
+    const profile =
+      result.size_profile.active_profile === "animated"
+        ? t("torrentInspection.animatedProfile", { defaultValue: "animated" })
+        : t("torrentInspection.liveProfile", { defaultValue: "live-action" });
+    const value = result.size_profile.mb_per_minute.toFixed(1);
+    if (result.size_profile.in_active_range) {
+      strengths.push(
+        t("torrentInspection.sizeWithinRange", {
+          defaultValue: "{{value}} MB/min is within the configured {{profile}} range",
+          value,
+          profile,
+        }),
+      );
+    } else {
+      concerns.push(
+        t("torrentInspection.sizeOutsideRange", {
+          defaultValue: "{{value}} MB/min is outside the configured {{profile}} range",
+          value,
+          profile,
+        }),
+      );
+    }
   }
 
   if (result.seeders > 0) {
