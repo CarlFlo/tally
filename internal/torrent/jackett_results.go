@@ -68,14 +68,25 @@ func normalizeJackettItem(item jackettItem) SearchResult {
 	if result.Size == 0 {
 		result.Size = item.Enclosure.Length
 	}
-	link := item.Enclosure.URL
-	if link == "" {
-		link = item.Link
+	for _, link := range []string{item.Enclosure.URL, item.Link} {
+		link = strings.TrimSpace(link)
+		if link == "" {
+			continue
+		}
+		if ValidMagnet(link) {
+			if result.Magnet == "" {
+				result.Magnet = link
+			}
+			continue
+		}
+		if result.URL == "" {
+			result.URL = link
+		}
 	}
-	if ValidMagnet(link) {
-		result.Magnet, result.DownloadType = link, "Magnet"
-	} else {
-		result.URL, result.DownloadType = link, "Torrent file"
+	if result.URL != "" {
+		result.DownloadType = "Torrent file"
+	} else if result.Magnet != "" {
+		result.DownloadType = "Magnet"
 	}
 	peers, explicitLeechers := 0, false
 	categorySeen := map[int]bool{}
@@ -94,7 +105,10 @@ func normalizeJackettItem(item jackettItem) SearchResult {
 			result.Grabs, _ = strconv.Atoi(value)
 		case "magneturl":
 			if ValidMagnet(value) {
-				result.Magnet, result.DownloadType = value, "Magnet"
+				result.Magnet = value
+				if result.URL == "" {
+					result.DownloadType = "Magnet"
+				}
 			}
 		case "indexer":
 			if value != "" {

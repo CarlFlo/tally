@@ -28,7 +28,7 @@ type AutomationService struct {
 
 type automationEpisode struct {
 	ID, ShowID, ShowName, Premiered, Airstamp, Policy string
-	Season, Episode                                    int
+	Season, Episode, Runtime                           int
 }
 
 type automationCapabilities struct {
@@ -38,8 +38,9 @@ type automationCapabilities struct {
 }
 
 type automationCandidate struct {
-	Result     SearchResult
-	Assessment ReleaseAssessment
+	Result      SearchResult
+	Assessment  ReleaseAssessment
+	SizeProfile SizeProfileEvaluation
 }
 
 func (s *AutomationService) Run(ctx context.Context) (int, error) {
@@ -87,14 +88,20 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 	if err != nil {
 		return false, err
 	}
+	store := AutomationStore{DB: s.DB}
+	mediaProfile, err := store.ShowMediaProfile(ctx, episode.ShowID)
+	if err != nil {
+		return false, err
+	}
 	query := fmt.Sprintf("%s S%02dE%02d", episode.ShowName, episode.Season, episode.Episode)
 	snapshot, _ := json.Marshal(map[string]any{
-		"automation":        caps.Automation,
-		"show_policy":       episode.Policy,
-		"search_enabled":    caps.Search.Enabled,
-		"downloads_enabled": caps.Downloads.Enabled,
+		"automation":         caps.Automation,
+		"show_policy":        episode.Policy,
+		"show_media_profile": mediaProfile,
+		"runtime_minutes":    episode.Runtime,
+		"search_enabled":     caps.Search.Enabled,
+		"downloads_enabled":  caps.Downloads.Enabled,
 	})
-	store := AutomationStore{DB: s.DB}
 	runID, err := store.StartRun(ctx, AutomationRun{
 		ShowID: episode.ShowID, EpisodeID: episode.ID, ShowName: episode.ShowName,
 		Season: episode.Season, Episode: episode.Episode, Query: query,
@@ -127,8 +134,8 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 	})
 
 	valid := make([]automationCandidate, 0, len(results))
-	rejected, magnetOnly, previouslyBad := 0, 0, 0
-	belowSeeders, keywordFiltered, groupFiltered, uploaderFiltered, nonHigh := 0, 0, 0, 0, 0
+	rejected, magnetOnly, previouslyBad, unusable := 0, 0, 0, 0
+	belowSeeders, keywordFiltered, groupFiltered, uploaderFiltered, nonHigh, sizeRateFiltered := 0, 0, 0, 0, 0, 0
 	for _, result := range results {
 		if result.Seeders < caps.Automation.MinSeeders {
 			belowSeeders++
@@ -151,8 +158,12 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 			uploaderFiltered++
 			continue
 		}
-		if result.InfoHash != "" {
-			bad, checkErr := store.IsBadInfoHash(ctx, result.InfoHash)
+		knownHash := result.InfoHash
+		if knownHash == "" {
+			knownHash = MagnetInfoHash(result.Magnet)
+		}
+		if knownHash != "" {
+			bad, checkErr := store.IsBadInfoHash(ctx, knownHash)
 			if checkErr != nil {
 				_ = finish(RunFailed, ReleaseAssessment{}, "")
 				return true, checkErr
@@ -162,26 +173,34 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 				continue
 			}
 		}
-		if result.URL == "" {
-			magnetOnly++
-			continue
-		}
 		if assessment.Confidence != ConfidenceHigh {
 			nonHigh++
 			continue
 		}
-		valid = append(valid, automationCandidate{Result: result, Assessment: assessment})
+		sizeProfile := EvaluateSizeProfile(result.Size, episode.Runtime, caps.Automation, mediaProfile.Effective)
+		if sizeProfile.Known && !sizeProfile.InActiveRange {
+			sizeRateFiltered++
+			continue
+		}
+		if result.URL == "" && !ValidMagnet(result.Magnet) {
+			unusable++
+			continue
+		}
+		if result.URL == "" && ValidMagnet(result.Magnet) {
+			magnetOnly++
+		}
+		valid = append(valid, automationCandidate{Result: result, Assessment: assessment, SizeProfile: sizeProfile})
 	}
 	rankAutomationCandidates(valid, caps.Automation)
 	if len(valid) > caps.Automation.MaxCandidates {
 		valid = valid[:caps.Automation.MaxCandidates]
 	}
 	_ = store.AppendDecision(ctx, runID, DecisionStep{
-		Stage: "filter", Status: "success", Summary: fmt.Sprintf("%d candidates remained for verification", len(valid)),
+		Stage: "filter", Status: "success", Summary: fmt.Sprintf("%d candidates remained for selection", len(valid)),
 		Data: map[string]any{
 			"rejected": rejected, "below_min_seeders": belowSeeders, "keyword_filtered": keywordFiltered,
 			"group_filtered": groupFiltered, "uploader_filtered": uploaderFiltered, "non_high_confidence": nonHigh,
-			"magnet_only": magnetOnly, "previously_bad": previouslyBad,
+			"size_rate_filtered": sizeRateFiltered, "magnet_only": magnetOnly, "unusable": unusable, "previously_bad": previouslyBad,
 			"shortlisted": len(valid), "candidates": candidateAuditRows(valid, caps.Automation),
 		},
 	})
@@ -193,46 +212,103 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 			_ = store.FinishRun(background, runID, RunCancelled, ReleaseAssessment{}, "")
 			return true, err
 		}
-		verifyStarted := s.now()
-		data, fetchErr := provider.FetchTorrent(ctx, candidate.Result.URL)
-		if fetchErr != nil {
-			_ = store.AppendDecision(ctx, runID, DecisionStep{
-				Stage: "inspection", Status: "rejected", Summary: "Candidate metadata could not be fetched",
-				Data: map[string]any{"rank": index + 1, "name": candidate.Result.Name, "reason": "metadata_fetch_failed"},
-				DurationMS: elapsedMS(verifyStarted, s.now()),
-			})
-			continue
+
+		assessment := candidate.Assessment
+		assessment.InfoHash = candidate.Result.InfoHash
+		if assessment.InfoHash == "" {
+			assessment.InfoHash = MagnetInfoHash(candidate.Result.Magnet)
 		}
-		assessment, verifyErr := VerifyTorrentForTarget(candidate.Assessment, candidate.Result, data, &target)
-		if verifyErr == nil && assessment.InfoHash != "" {
-			bad, checkErr := store.IsBadInfoHash(ctx, assessment.InfoHash)
-			if checkErr != nil {
-				_ = finish(RunFailed, assessment, candidate.Result.Name)
-				return true, checkErr
-			}
-			if bad {
-				assessment = RejectKnownBadInfoHash(assessment)
-				verifyErr = verificationError(assessment)
+		var torrentData []byte
+		useTorrent := false
+		inspectionStarted := s.now()
+
+		if candidate.Result.URL != "" {
+			data, fetchErr := provider.FetchTorrent(ctx, candidate.Result.URL)
+			if fetchErr == nil {
+				verified, verifyErr := VerifyTorrentForTarget(candidate.Assessment, candidate.Result, data, &target)
+				assessment = verified
+				if verifyErr == nil && assessment.InfoHash != "" {
+					bad, checkErr := store.IsBadInfoHash(ctx, assessment.InfoHash)
+					if checkErr != nil {
+						_ = finish(RunFailed, assessment, candidate.Result.Name)
+						return true, checkErr
+					}
+					if bad {
+						assessment = RejectKnownBadInfoHash(assessment)
+						verifyErr = verificationError(assessment)
+					}
+				}
+				if verifyErr == nil && assessment.EligibleForAutomaticDownload() {
+					verifiedSize := candidate.SizeProfile
+					if assessment.Payload != nil {
+						verifiedSize = EvaluateSizeProfile(assessment.Payload.TotalSize, episode.Runtime, caps.Automation, mediaProfile.Effective)
+					}
+					if verifiedSize.Known && !verifiedSize.InActiveRange {
+						_ = store.AppendDecision(ctx, runID, DecisionStep{
+							Stage: "inspection", Status: "rejected", Summary: "Verified torrent size fell outside the active MB/min range",
+							Data: map[string]any{"rank": index + 1, "name": candidate.Result.Name, "size_profile": verifiedSize, "payload": assessment.Payload},
+							DurationMS: elapsedMS(inspectionStarted, s.now()),
+						})
+						continue
+					}
+					candidate.SizeProfile = verifiedSize
+					torrentData = data
+					useTorrent = true
+					_ = store.AppendDecision(ctx, runID, DecisionStep{
+						Stage: "inspection", Status: "success", Summary: "Candidate payload verified from Jackett torrent metadata",
+						Data: map[string]any{
+							"rank": index + 1, "name": candidate.Result.Name, "infohash": assessment.InfoHash,
+							"confidence": assessment.Confidence, "verification": assessment.Verification, "payload": assessment.Payload,
+							"size_profile": candidate.SizeProfile,
+						}, DurationMS: elapsedMS(inspectionStarted, s.now()),
+					})
+				} else if !ValidMagnet(candidate.Result.Magnet) {
+					_ = store.AppendDecision(ctx, runID, DecisionStep{
+						Stage: "inspection", Status: "rejected", Summary: "Candidate failed verified inspection and has no magnet fallback",
+						Data: map[string]any{
+							"rank": index + 1, "name": candidate.Result.Name, "confidence": assessment.Confidence,
+							"verification": assessment.Verification, "hard_rejections": assessment.HardRejections, "payload": assessment.Payload,
+							"size_profile": candidate.SizeProfile,
+						}, DurationMS: elapsedMS(inspectionStarted, s.now()),
+					})
+					continue
+				}
+			} else if !ValidMagnet(candidate.Result.Magnet) {
+				_ = store.AppendDecision(ctx, runID, DecisionStep{
+					Stage: "inspection", Status: "rejected", Summary: "Jackett torrent metadata could not be fetched and no magnet fallback is available",
+					Data: map[string]any{"rank": index + 1, "name": candidate.Result.Name, "reason": "metadata_fetch_failed"},
+					DurationMS: elapsedMS(inspectionStarted, s.now()),
+				})
+				continue
 			}
 		}
-		if verifyErr != nil || !assessment.EligibleForAutomaticDownload() {
+
+		if !useTorrent {
+			if !ValidMagnet(candidate.Result.Magnet) || assessment.Confidence != ConfidenceHigh || assessment.Rejected() {
+				continue
+			}
+			assessment.Verification = VerificationUnverified
+			if assessment.InfoHash == "" {
+				assessment.InfoHash = MagnetInfoHash(candidate.Result.Magnet)
+			}
+			if assessment.InfoHash != "" {
+				bad, checkErr := store.IsBadInfoHash(ctx, assessment.InfoHash)
+				if checkErr != nil {
+					_ = finish(RunFailed, assessment, candidate.Result.Name)
+					return true, checkErr
+				}
+				if bad {
+					continue
+				}
+			}
 			_ = store.AppendDecision(ctx, runID, DecisionStep{
-				Stage: "inspection", Status: "rejected", Summary: "Candidate failed verified inspection",
+				Stage: "inspection", Status: "metadata_only", Summary: "Using High-confidence magnet fallback without payload verification",
 				Data: map[string]any{
-					"rank": index + 1, "name": candidate.Result.Name,
-					"confidence": assessment.Confidence, "verification": assessment.Verification,
-					"hard_rejections": assessment.HardRejections, "payload": assessment.Payload,
-				}, DurationMS: elapsedMS(verifyStarted, s.now()),
+					"rank": index + 1, "name": candidate.Result.Name, "infohash": assessment.InfoHash,
+					"confidence": assessment.Confidence, "verification": assessment.Verification, "size_profile": candidate.SizeProfile,
+				}, DurationMS: elapsedMS(inspectionStarted, s.now()),
 			})
-			continue
 		}
-		_ = store.AppendDecision(ctx, runID, DecisionStep{
-			Stage: "inspection", Status: "success", Summary: "Candidate payload verified",
-			Data: map[string]any{
-				"rank": index + 1, "name": candidate.Result.Name, "infohash": assessment.InfoHash,
-				"confidence": assessment.Confidence, "verification": assessment.Verification, "payload": assessment.Payload,
-			}, DurationMS: elapsedMS(verifyStarted, s.now()),
-		})
 
 		latest, capabilityErr := s.capabilities(ctx)
 		if capabilityErr != nil {
@@ -254,7 +330,13 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 			return true, clientErr
 		}
 		downloadStarted := s.now()
-		clientErr = client.AddTorrent(ctx, data)
+		submissionType := "magnet"
+		if useTorrent {
+			submissionType = "torrent"
+			clientErr = client.AddTorrent(ctx, torrentData)
+		} else {
+			clientErr = client.AddMagnet(ctx, candidate.Result.Magnet)
+		}
 		if clientErr != nil && assessment.InfoHash != "" {
 			if clientSnapshot, reconcileErr := client.Downloads(ctx, TallyCategory); reconcileErr == nil && snapshotHasHash(clientSnapshot, assessment.InfoHash) {
 				clientErr = nil
@@ -262,23 +344,24 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 		}
 		if clientErr != nil {
 			_ = store.AppendDecision(ctx, runID, DecisionStep{
-				Stage: "download", Status: "failed", Summary: "qBittorrent submission failed",
-				Data: map[string]any{"name": candidate.Result.Name, "infohash": assessment.InfoHash},
+				Stage: "download", Status: "failed", Summary: "Torrent client submission failed",
+				Data: map[string]any{"name": candidate.Result.Name, "infohash": assessment.InfoHash, "submission_type": submissionType},
 				DurationMS: elapsedMS(downloadStarted, s.now()),
 			})
 			_ = finish(RunFailed, assessment, candidate.Result.Name)
 			return true, clientErr
 		}
 		_ = store.AppendDecision(ctx, runID, DecisionStep{
-			Stage: "decision", Status: "selected", Summary: "Best verified candidate selected",
+			Stage: "decision", Status: "selected", Summary: "Best suitable candidate selected",
 			Data: map[string]any{
 				"name": candidate.Result.Name, "confidence": assessment.Confidence, "verification": assessment.Verification,
+				"submission_type": submissionType, "size_profile": candidate.SizeProfile,
 				"preferences": AutomationPreferenceSignals(candidate.Result, candidate.Assessment.Parsed, caps.Automation),
 			},
 		})
 		_ = store.AppendDecision(ctx, runID, DecisionStep{
-			Stage: "download", Status: "success", Summary: "Sent to qBittorrent successfully",
-			Data: map[string]any{"infohash": assessment.InfoHash}, DurationMS: elapsedMS(downloadStarted, s.now()),
+			Stage: "download", Status: "success", Summary: "Sent to torrent client successfully",
+			Data: map[string]any{"infohash": assessment.InfoHash, "submission_type": submissionType}, DurationMS: elapsedMS(downloadStarted, s.now()),
 		})
 		if err = finish(RunDownloaded, assessment, candidate.Result.Name); err != nil {
 			return true, err
@@ -288,7 +371,7 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 	}
 
 	_ = store.AppendDecision(ctx, runID, DecisionStep{
-		Stage: "decision", Status: "no_verified_candidate", Summary: "No verified high-confidence candidate was suitable for automatic download",
+		Stage: "decision", Status: "no_verified_candidate", Summary: "No suitable High-confidence candidate was available for automatic download",
 		Data: map[string]any{"elapsed_ms": elapsedMS(started, s.now())},
 	})
 	if err = finish(RunNoVerifiedCandidate, ReleaseAssessment{Verification: VerificationUnverified}, ""); err != nil {
@@ -316,7 +399,7 @@ func (s *AutomationService) capabilities(ctx context.Context) (automationCapabil
 }
 
 func (s *AutomationService) dueEpisodes(ctx context.Context, now time.Time, config settings.TorrentAutomation) ([]automationEpisode, error) {
-	rows, err := s.DB.QueryContext(ctx, `SELECT DISTINCT e.id,e.show_id,s.name,s.premiered,e.season,e.number,e.airstamp,COALESCE(p.policy,'default')
+	rows, err := s.DB.QueryContext(ctx, `SELECT DISTINCT e.id,e.show_id,s.name,s.premiered,e.season,e.number,e.airstamp,COALESCE(NULLIF(e.runtime,0),NULLIF(s.runtime,0),0),COALESCE(p.policy,'default')
 		FROM episodes e
 		JOIN shows s ON s.id=e.show_id
 		JOIN profile_shows f ON f.show_id=e.show_id
@@ -334,7 +417,7 @@ func (s *AutomationService) dueEpisodes(ctx context.Context, now time.Time, conf
 	window := time.Duration(config.RetryWindowHours) * time.Hour
 	for rows.Next() {
 		var episode automationEpisode
-		if err = rows.Scan(&episode.ID, &episode.ShowID, &episode.ShowName, &episode.Premiered, &episode.Season, &episode.Episode, &episode.Airstamp, &episode.Policy); err != nil {
+		if err = rows.Scan(&episode.ID, &episode.ShowID, &episode.ShowName, &episode.Premiered, &episode.Season, &episode.Episode, &episode.Airstamp, &episode.Runtime, &episode.Policy); err != nil {
 			return nil, err
 		}
 		aired, parseErr := time.Parse(time.RFC3339, episode.Airstamp)
@@ -429,6 +512,9 @@ func rankAutomationCandidates(items []automationCandidate, config settings.Torre
 		if leftQuality != rightQuality {
 			return leftQuality > rightQuality
 		}
+		if left.SizeProfile.Known && right.SizeProfile.Known && left.SizeProfile.ActiveScore != right.SizeProfile.ActiveScore {
+			return left.SizeProfile.ActiveScore > right.SizeProfile.ActiveScore
+		}
 		if left.Result.Seeders != right.Result.Seeders {
 			return left.Result.Seeders > right.Result.Seeders
 		}
@@ -466,6 +552,7 @@ func candidateAuditRows(items []automationCandidate, config settings.TorrentAuto
 			"uploader": item.Result.Uploader, "seeders": item.Result.Seeders, "size": item.Result.Size,
 			"confidence": item.Assessment.Confidence, "parsed": item.Assessment.Parsed,
 			"preferences": AutomationPreferenceSignals(item.Result, item.Assessment.Parsed, config),
+			"size_profile": item.SizeProfile,
 		})
 	}
 	return rows
