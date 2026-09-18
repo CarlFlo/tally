@@ -109,9 +109,17 @@ func candidateMatchesTargetShow(candidate SearchResult, parsed ParsedRelease, ta
 		return true, false
 	}
 
-	candidateTitle := normalizeReleaseTitle(parsed.Title)
+	// A release-title mismatch alone is not authoritative enough to call this a
+	// different show. Release naming is inconsistent across indexers, aliases,
+	// punctuation, and localized titles. Keep it ambiguous for ranking/manual
+	// review; only conflicting external IDs are a hard metadata-level conflict.
+	return releaseTitleMatchesTarget(parsed.Title, target), false
+}
+
+func releaseTitleMatchesTarget(title string, target EpisodeTarget) bool {
+	candidateTitle := normalizeReleaseTitle(title)
 	if candidateTitle == "" {
-		return false, false
+		return false
 	}
 	names := append([]string{target.ShowTitle}, target.Aliases...)
 	for _, name := range names {
@@ -120,13 +128,13 @@ func candidateMatchesTargetShow(candidate SearchResult, parsed ParsedRelease, ta
 			continue
 		}
 		if candidateTitle == normalized {
-			return true, false
+			return true
 		}
 		if target.Year > 0 && candidateTitle == normalized+" "+strconv.Itoa(target.Year) {
-			return true, false
+			return true
 		}
 	}
-	return false, true
+	return false
 }
 
 func hasReason(reasons []AssessmentReason, code AssessmentReasonCode) bool {
