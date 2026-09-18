@@ -138,7 +138,7 @@ func TestDownloadedEpisodeMutationPublishesGlobalLibraryInvalidation(t *testing.
 	s, h, _ := testServer(t, "disabled")
 	if _, err := s.DB.Exec(`INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-member','Member','mint',2);
 	INSERT INTO shows(id,name) VALUES('shared-show','Shared Show');
-	INSERT INTO episodes(id,show_id,season,number,name) VALUES('shared-episode','shared-show',1,1,'Pilot');
+	INSERT INTO episodes(id,show_id,season,number,name,airdate) VALUES('shared-episode','shared-show',1,1,'Pilot','2000-01-01');
 	INSERT INTO profile_shows(profile_id,show_id,added_at) VALUES
 		('profile-admin','shared-show',1),
 		('profile-member','shared-show',1);`); err != nil {
