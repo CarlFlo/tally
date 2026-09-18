@@ -34,3 +34,17 @@ func EvaluateReleaseAge(published string, now time.Time, minimum time.Duration) 
 	out.Ready = minimum <= 0 || age >= minimum
 	return out
 }
+
+func ReleaseDelayWindowOpen(ages []ReleaseAgeEvaluation) bool {
+	known := false
+	for _, age := range ages {
+		if !age.Known {
+			continue
+		}
+		known = true
+		if age.Ready {
+			return true
+		}
+	}
+	return !known
+}

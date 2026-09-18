@@ -179,10 +179,6 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 			continue
 		}
 		releaseAge := EvaluateReleaseAge(result.Published, s.now(), time.Duration(caps.Automation.ReleaseDelayMinutes)*time.Minute)
-		if releaseAge.Known && !releaseAge.Ready {
-			releaseDelayFiltered++
-			continue
-		}
 		sizeProfile := EvaluateSizeProfile(result.Size, episode.Runtime, caps.Automation, mediaProfile.Effective)
 		if sizeProfile.Known && !sizeProfile.InActiveRange {
 			sizeRateFiltered++
@@ -196,6 +192,17 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 			magnetOnly++
 		}
 		valid = append(valid, automationCandidate{Result: result, Assessment: assessment, SizeProfile: sizeProfile, ReleaseAge: releaseAge})
+	}
+	if !ReleaseDelayWindowOpen(candidateReleaseAges(valid)) {
+		ready := valid[:0]
+		for _, candidate := range valid {
+			if candidate.ReleaseAge.Known {
+				releaseDelayFiltered++
+				continue
+			}
+			ready = append(ready, candidate)
+		}
+		valid = ready
 	}
 	rankAutomationCandidates(valid, caps.Automation)
 	if len(valid) > caps.Automation.MaxCandidates {
@@ -507,6 +514,14 @@ func (s *AutomationService) episodeTarget(ctx context.Context, episode automatio
 		}
 	}
 	return target, rows.Err()
+}
+
+func candidateReleaseAges(items []automationCandidate) []ReleaseAgeEvaluation {
+	ages := make([]ReleaseAgeEvaluation, 0, len(items))
+	for _, item := range items {
+		ages = append(ages, item.ReleaseAge)
+	}
+	return ages
 }
 
 func rankAutomationCandidates(items []automationCandidate, config settings.TorrentAutomation) {
