@@ -59,6 +59,7 @@ type PendingMagnetVerification struct {
 	InfoHash         string
 	SettingsSnapshot json.RawMessage
 	Attempts         int
+	StartedAt        int64
 }
 
 type AutomationRun struct {
@@ -171,7 +172,7 @@ func (s AutomationStore) PendingMagnetVerifications(ctx context.Context, limit i
 		limit = 50
 	}
 	rows, err := s.DB.QueryContext(ctx, `SELECT r.id,r.show_id,r.episode_id,r.show_name,r.season,r.episode,r.selected_name,
-		m.infohash,r.settings_snapshot,m.attempts
+		m.infohash,r.settings_snapshot,m.attempts,r.started_at
 		FROM torrent_magnet_verifications m
 		JOIN torrent_automation_runs r ON r.id=m.run_id
 		WHERE m.status='pending'
@@ -185,7 +186,7 @@ func (s AutomationStore) PendingMagnetVerifications(ctx context.Context, limit i
 		var item PendingMagnetVerification
 		var snapshot string
 		if err = rows.Scan(&item.RunID, &item.ShowID, &item.EpisodeID, &item.ShowName, &item.Season, &item.Episode,
-			&item.SelectedName, &item.InfoHash, &snapshot, &item.Attempts); err != nil {
+			&item.SelectedName, &item.InfoHash, &snapshot, &item.Attempts, &item.StartedAt); err != nil {
 			return nil, err
 		}
 		item.SettingsSnapshot = json.RawMessage(snapshot)

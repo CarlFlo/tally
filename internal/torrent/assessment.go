@@ -30,6 +30,7 @@ const (
 	ReasonEpisodeMatch          AssessmentReasonCode = "episode_match"
 	ReasonHealthySwarm          AssessmentReasonCode = "healthy_swarm"
 	ReasonExpectedSize          AssessmentReasonCode = "expected_size"
+	ReasonSizeOutOfRange        AssessmentReasonCode = "size_out_of_range"
 	ReasonVideoPayload          AssessmentReasonCode = "video_payload"
 	ReasonNoBlockedPayload      AssessmentReasonCode = "no_blocked_payload"
 	ReasonKnownBadInfoHash      AssessmentReasonCode = "known_bad_infohash"
@@ -271,6 +272,8 @@ func verificationError(assessment ReleaseAssessment) error {
 			return fmt.Errorf("torrent contains no supported video files")
 		case ReasonSampleOnly:
 			return fmt.Errorf("torrent contains only sample or trailer video files")
+		case ReasonSizeOutOfRange:
+			return fmt.Errorf("torrent payload size is outside the configured MB per minute range")
 		case ReasonWrongShow:
 			return fmt.Errorf("torrent payload appears to contain a different show")
 		case ReasonWrongEpisode:

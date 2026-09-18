@@ -52,15 +52,22 @@ func (s *AutomationService) Run(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	processed := 0
+	if caps.Downloads.Enabled {
+		verified, verifyErr := s.processPendingMagnetVerifications(ctx)
+		if verifyErr != nil {
+			return processed, verifyErr
+		}
+		processed += verified
+	}
 	if !caps.Automation.Enabled || !caps.Search.Enabled || !caps.Search.Configured() || !caps.Downloads.Enabled {
-		return 0, nil
+		return processed, nil
 	}
 	now := s.now()
 	episodes, err := s.dueEpisodes(ctx, now, caps.Automation)
 	if err != nil {
 		return 0, err
 	}
-	processed := 0
 	for _, episode := range episodes {
 		if err = ctx.Err(); err != nil {
 			return processed, err
@@ -82,6 +89,124 @@ func (s *AutomationService) Run(ctx context.Context) (int, error) {
 	}
 	_ = (AutomationStore{DB: s.DB}).PruneRuns(ctx, now.AddDate(0, 0, -90))
 	return processed, nil
+}
+
+
+const pendingMagnetVerificationMaxAge = 24 * time.Hour
+
+func (s *AutomationService) processPendingMagnetVerifications(ctx context.Context) (int, error) {
+	store := AutomationStore{DB: s.DB}
+	pending, err := store.PendingMagnetVerifications(ctx, 50)
+	if err != nil || len(pending) == 0 {
+		return 0, err
+	}
+	client, err := s.Clients.Current(ctx)
+	if err != nil {
+		return 0, err
+	}
+	inspector, ok := client.(ResolvedFileClient)
+	if !ok {
+		return 0, fmt.Errorf("the configured torrent client cannot inspect magnet file metadata")
+	}
+	snapshot, err := client.Downloads(ctx, TallyCategory)
+	if err != nil {
+		return 0, err
+	}
+	existing := make(map[string]bool, len(snapshot.Torrents))
+	for _, item := range snapshot.Torrents {
+		existing[strings.ToLower(item.Hash)] = true
+	}
+
+	completed := 0
+	now := s.now()
+	for _, item := range pending {
+		if err = ctx.Err(); err != nil {
+			return completed, err
+		}
+		if !existing[strings.ToLower(item.InfoHash)] {
+			if now.Sub(time.Unix(item.StartedAt, 0)) >= pendingMagnetVerificationMaxAge {
+				if err = store.FinishMagnetVerification(ctx, item.RunID, "unavailable", ReleaseAssessment{
+					Confidence: ConfidenceHigh, Verification: VerificationUnverified, InfoHash: item.InfoHash,
+				}, SizeProfileEvaluation{}, "torrent no longer exists in the Tally qBittorrent category"); err != nil {
+					return completed, err
+				}
+				completed++
+				s.publishChange()
+			} else {
+				_ = store.RecordMagnetVerificationAttempt(ctx, item.RunID, "torrent not visible in the Tally qBittorrent category yet")
+			}
+			continue
+		}
+		files, fileErr := inspector.ResolvedFiles(ctx, item.InfoHash)
+		if fileErr != nil {
+			_ = store.RecordMagnetVerificationAttempt(ctx, item.RunID, fileErr.Error())
+			continue
+		}
+		if len(files) == 0 {
+			if now.Sub(time.Unix(item.StartedAt, 0)) >= pendingMagnetVerificationMaxAge {
+				if err = store.FinishMagnetVerification(ctx, item.RunID, "unavailable", ReleaseAssessment{
+					Confidence: ConfidenceHigh, Verification: VerificationUnverified, InfoHash: item.InfoHash,
+				}, SizeProfileEvaluation{}, "magnet metadata was not resolved within 24 hours"); err != nil {
+					return completed, err
+				}
+				completed++
+				s.publishChange()
+			} else {
+				_ = store.RecordMagnetVerificationAttempt(ctx, item.RunID, "")
+			}
+			continue
+		}
+
+		var submission struct {
+			Automation       settings.TorrentAutomation `json:"automation"`
+			ShowMediaProfile ShowMediaProfile            `json:"show_media_profile"`
+			RuntimeMinutes   int                         `json:"runtime_minutes"`
+		}
+		if err = json.Unmarshal(item.SettingsSnapshot, &submission); err != nil {
+			return completed, fmt.Errorf("stored magnet verification settings are invalid: %w", err)
+		}
+		profile := submission.ShowMediaProfile.Effective
+		if profile != MediaProfileAnimated {
+			profile = MediaProfileLive
+		}
+		target := EpisodeTarget{ShowTitle: item.ShowName, Season: item.Season, Episode: item.Episode}
+		base := ReleaseAssessment{
+			Confidence: ConfidenceHigh, Verification: VerificationUnverified,
+			Parsed: ParseReleaseName(item.SelectedName), InfoHash: item.InfoHash,
+		}
+		assessment, verifyErr := VerifyResolvedFilesForTarget(base, item.InfoHash, item.SelectedName, files, target)
+		sizeProfile := SizeProfileEvaluation{}
+		if assessment.Payload != nil {
+			sizeProfile = EvaluateSizeProfile(assessment.Payload.TotalSize, submission.RuntimeMinutes, submission.Automation, profile)
+			if sizeProfile.Known && !sizeProfile.InActiveRange {
+				assessment.HardRejections = appendReason(assessment.HardRejections, AssessmentReason{Code: ReasonSizeOutOfRange})
+				assessment.Confidence = ConfidenceRejected
+				verifyErr = verificationError(assessment)
+			}
+		}
+		if verifyErr != nil || assessment.Rejected() {
+			_ = client.Stop(ctx, item.InfoHash)
+			if removeErr := client.Remove(ctx, item.InfoHash, true); removeErr != nil {
+				_ = store.RecordMagnetVerificationAttempt(ctx, item.RunID, "payload rejected but qBittorrent removal failed: "+removeErr.Error())
+				return completed, removeErr
+			}
+			if blockErr := store.BlockInfoHash(ctx, item.InfoHash, "post_magnet_verification", item.RunID); blockErr != nil {
+				return completed, blockErr
+			}
+			if err = store.FinishMagnetVerification(ctx, item.RunID, "rejected", assessment, sizeProfile, verifyErr.Error()); err != nil {
+				return completed, err
+			}
+			completed++
+			s.publishChange()
+			continue
+		}
+		if err = store.FinishMagnetVerification(ctx, item.RunID, "verified", assessment, sizeProfile, ""); err != nil {
+			return completed, err
+		}
+		completed++
+		s.publishChange()
+	}
+	return completed, nil
 }
 
 func (s *AutomationService) runEpisode(ctx context.Context, episode automationEpisode, caps automationCapabilities) (bool, error) {
@@ -308,6 +433,9 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 			if assessment.InfoHash == "" {
 				assessment.InfoHash = MagnetInfoHash(candidate.Result.Magnet)
 			}
+			if normalizeInfoHash(assessment.InfoHash) == "" {
+				continue
+			}
 			if assessment.InfoHash != "" {
 				bad, checkErr := store.IsBadInfoHash(ctx, assessment.InfoHash)
 				if checkErr != nil {
@@ -346,6 +474,12 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 			_ = finish(RunFailed, assessment, candidate.Result.Name)
 			return true, clientErr
 		}
+		if !useTorrent {
+			if _, ok := client.(ResolvedFileClient); !ok {
+				_ = store.AppendDecision(ctx, runID, DecisionStep{Stage: "inspection", Status: "rejected", Summary: "Torrent client cannot provide post-magnet file verification"})
+				continue
+			}
+		}
 		downloadStarted := s.now()
 		submissionType := "magnet"
 		if useTorrent {
@@ -367,6 +501,14 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 			})
 			_ = finish(RunFailed, assessment, candidate.Result.Name)
 			return true, clientErr
+		}
+		if !useTorrent {
+			if queueErr := store.QueueMagnetVerification(ctx, runID, assessment.InfoHash); queueErr != nil {
+				_ = client.Stop(ctx, assessment.InfoHash)
+				_ = client.Remove(ctx, assessment.InfoHash, true)
+				_ = finish(RunFailed, assessment, candidate.Result.Name)
+				return true, queueErr
+			}
 		}
 		_ = store.AppendDecision(ctx, runID, DecisionStep{
 			Stage: "decision", Status: "selected", Summary: "Best suitable candidate selected",
