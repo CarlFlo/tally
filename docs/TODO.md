@@ -6,7 +6,7 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 `feature/torrent-automation-confidence`
 
-Status: free-text episode metadata resolution is implemented; final validation is pending.
+Status: implementation and required full validation are complete; branch is ready for review or merge.
 
 ### Evaluation and search metadata
 
@@ -118,7 +118,7 @@ Status: free-text episode metadata resolution is implemented; final validation i
 - [x] Update `ARCHITECTURE.md`, `DEVELOPMENT.md`, `VALIDATION.md`, and `LESSONS.md` where the durable manual-only torrent contract changes.
 - [x] Update English and Ukrainian localization for all follow-up filter/trust/result-evaluation UI.
 - [x] Update durable documentation for the automation filtering/trust model and its validation rules.
-- [ ] Run the complete required validation suite on the final branch head before the branch is considered ready.
+- [x] Run the complete required validation suite on the final branch head before the branch is considered ready.
 
 ## Current product foundations
 
