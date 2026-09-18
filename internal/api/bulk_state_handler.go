@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/CarlFlo/tally/internal/activity"
@@ -25,44 +26,59 @@ func (s *Server) bulkState(w http.ResponseWriter, r *http.Request, session auth.
 	if !s.follows(r, session.Profile, id) {
 		return apiError{404, "show is not in your library"}
 	}
-	var watched, downloaded any
-	if in.Watched != nil {
-		watched = *in.Watched
-	}
-	if in.Downloaded != nil {
-		downloaded = *in.Downloaded
-	}
-	query := `INSERT INTO profile_episode_state SELECT ?,id,COALESCE(?,0),COALESCE(?,0),? FROM episodes WHERE show_id=?`
-	args := []any{session.Profile, watched, downloaded, time.Now().Unix(), id}
+
+	where := []string{"show_id=?"}
+	args := []any{id}
 	if in.Season != nil {
-		query += " AND season=?"
+		where = append(where, "season=?")
 		args = append(args, *in.Season)
 	}
 	if in.AiredOnly {
-		query += " AND ((airstamp<>'' AND julianday(airstamp)<=julianday('now')) OR (airstamp='' AND airdate<>'' AND airdate<=date('now')))"
+		where = append(where, "((airstamp<>'' AND julianday(airstamp)<=julianday('now')) OR (airstamp='' AND airdate<>'' AND airdate<=date('now')))")
 	}
-	query += ` ON CONFLICT(profile_id,episode_id) DO UPDATE SET watched=COALESCE(?,watched),downloaded=COALESCE(?,downloaded),updated_at=excluded.updated_at`
-	args = append(args, watched, downloaded)
-	tx, e := s.DB.BeginTx(r.Context(), nil)
-	if e != nil {
-		return e
+	filter := strings.Join(where, " AND ")
+
+	tx, err := s.DB.BeginTx(r.Context(), nil)
+	if err != nil {
+		return err
 	}
 	defer tx.Rollback()
-	res, e := tx.ExecContext(r.Context(), query, args...)
-	if e != nil {
-		return e
+
+	var updated int
+	if err = tx.QueryRowContext(r.Context(), "SELECT COUNT(*) FROM episodes WHERE "+filter, args...).Scan(&updated); err != nil {
+		return err
 	}
-	n, _ := res.RowsAffected()
+	if in.Watched != nil {
+		watchArgs := []any{session.Profile, *in.Watched, time.Now().Unix()}
+		watchArgs = append(watchArgs, args...)
+		query := `INSERT INTO profile_episode_state(profile_id,episode_id,watched,downloaded,updated_at)
+			SELECT ?,id,?,0,? FROM episodes WHERE ` + filter + `
+			ON CONFLICT(profile_id,episode_id) DO UPDATE SET watched=excluded.watched,updated_at=excluded.updated_at`
+		if _, err = tx.ExecContext(r.Context(), query, watchArgs...); err != nil {
+			return err
+		}
+	}
+	if in.Downloaded != nil {
+		downloadArgs := []any{*in.Downloaded}
+		downloadArgs = append(downloadArgs, args...)
+		if _, err = tx.ExecContext(r.Context(), "UPDATE episodes SET downloaded=? WHERE "+filter, downloadArgs...); err != nil {
+			return err
+		}
+	}
+
 	var name string
-	if e = tx.QueryRowContext(r.Context(), "SELECT name FROM shows WHERE id=?", id).Scan(&name); e != nil {
-		return e
+	if err = tx.QueryRowContext(r.Context(), "SELECT name FROM shows WHERE id=?", id).Scan(&name); err != nil {
+		return err
 	}
-	if e = activity.Record(r.Context(), tx, activity.Event{Action: "episode_progress_updated", Profile: session.Profile, ShowID: id, ShowName: name, Message: "Updated episode progress for " + name}); e != nil {
-		return e
+	if err = activity.Record(r.Context(), tx, activity.Event{
+		Action: "episode_progress_updated", Profile: session.Profile, ShowID: id, ShowName: name,
+		Message: "Updated episode progress for " + name,
+	}); err != nil {
+		return err
 	}
-	if e = tx.Commit(); e != nil {
-		return e
+	if err = tx.Commit(); err != nil {
+		return err
 	}
-	jsonResponse(w, 200, map[string]any{"updated": n})
+	jsonResponse(w, 200, map[string]any{"updated": updated})
 	return nil
 }

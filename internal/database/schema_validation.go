@@ -135,6 +135,13 @@ func ValidateSchema(ctx context.Context, db Querier) error {
 		}
 		rows.Close()
 	}
+	if version >= 12 {
+		rows, err := db.QueryContext(ctx, "SELECT id,downloaded FROM episodes LIMIT 0")
+		if err != nil {
+			return fmt.Errorf("database global episode download state is incomplete: %w", err)
+		}
+		rows.Close()
+	}
 	profileQuery := "SELECT id,display_name,avatar,created_at FROM profiles LIMIT 0"
 	if version >= 7 {
 		profileQuery = "SELECT id,display_name,avatar,created_at,locale FROM profiles LIMIT 0"
