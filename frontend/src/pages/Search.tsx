@@ -539,14 +539,14 @@ export function SearchPage() {
                         </span>
                         <div className="torrent-result-body">
                           <h4>{result.name}</h4>
-                          {(result.confidence || result.previously_bad) && (
+                          {((result.confidence && result.confidence !== "rejected") || result.previously_bad) && (
                             <div className="torrent-confidence-row">
-                              {result.confidence && (
+                              {result.confidence && result.confidence !== "rejected" && (
                                 <span className={`badge confidence-${result.confidence}`}>
                                   {t(`torrentConfidence.${result.confidence}`, {
                                     defaultValue: result.confidence.charAt(0).toUpperCase() + result.confidence.slice(1),
                                   })}
-                                  {result.confidence !== "rejected" && result.verification
+                                  {result.verification
                                     ? ` · ${t(`torrentConfidence.${result.verification}`, {
                                         defaultValue: result.verification === "verified" ? "Verified" : "Unverified",
                                       })}`
@@ -602,7 +602,6 @@ export function SearchPage() {
                               disabled={
                                 !settings.data?.downloader_configured ||
                                 !result.sendable ||
-                                result.confidence === "rejected" ||
                                 sending !== null ||
                                 sent.includes(result.id)
                               }
