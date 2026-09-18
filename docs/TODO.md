@@ -6,7 +6,7 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 `feature/torrent-automation-confidence`
 
-Status: torrent automation request-restraint and final usability follow-ups are implemented and fully validated; branch is ready for review.
+Status: torrent automation running-show list and historical-backfill guard are implemented; final validation is pending.
 
 ### Evaluation and search metadata
 
@@ -32,6 +32,7 @@ Status: torrent automation request-restraint and final usability follow-ups are 
 - [x] Add an `Automation` tab inside Torrent Search; automation/download policy is deployment-global, not profile-owned.
 - [x] Add minimal global controls: enable automatic downloads, preferred quality, minimum seeders, release delay, and bounded retry behavior. High confidence remains an invariant rather than a tunable lower threshold; verification state depends on the available transport.
 - [x] Keep per-show automation deployment-global and explicit opt-in. Only enrolled shows are searched; notifications remain profile-owned and are not part of download enrollment.
+- [x] Default the Automation show list to currently `Running` shows from My Shows; when searching, allow any matching My Shows entry. Keep automated discovery release-oriented by excluding episodes outside the bounded recent retry window (hard maximum 7 days), so old seasons are never backfilled.
 - [x] Keep existing search/download capability toggles backend-authoritative; automation stops before submission if downloading becomes disabled mid-run.
 - [x] Prevent duplicate grabs and serialize decisions per episode while keeping overall work bounded/cancellable.
 - [x] Treat `no suitable result` as a normal outcome, not an operational error, and retry later within a bounded window rather than accepting a weak match.
