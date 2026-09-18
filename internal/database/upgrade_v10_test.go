@@ -40,7 +40,7 @@ func TestVersionNineUpgradeAddsTorrentMediaProfiles(t *testing.T) {
 		t.Fatalf("media profile table unavailable after upgrade: %v", err)
 	}
 	var version int
-	if err = db.QueryRow("PRAGMA user_version").Scan(&version); err != nil || version != 11 {
+	if err = db.QueryRow("PRAGMA user_version").Scan(&version); err != nil || version != Version {
 		t.Fatalf("unexpected schema version %d err=%v", version, err)
 	}
 }

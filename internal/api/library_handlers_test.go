@@ -29,6 +29,11 @@ func TestSharedMetadataAndPersonalEpisodeState(t *testing.T) {
 		t.Fatal("personal episode state leaked")
 	}
 	expect(t, request(t, h, "POST", "/api/shows/"+id+"/bulk", map[string]any{"season": 1, "downloaded": true}, one), 200)
+	w = request(t, h, "GET", "/api/calendar?from=2026-01-01&to=2026-02-01", nil, zero)
+	expect(t, w, 200)
+	if !strings.Contains(w.Body.String(), `"downloaded":1`) {
+		t.Fatal("global downloaded state was not visible to another profile")
+	}
 	expect(t, request(t, h, "DELETE", "/api/shows/"+id, nil, zero), 200)
 	expect(t, request(t, h, "GET", "/api/shows/"+id, nil, one), 200)
 	if tv.calls.Load() != 2 {

@@ -29,7 +29,10 @@ func TestClearWatchHistoryPreservesDownloadsAndOtherProfiles(t *testing.T) {
 	expect(t, request(t, h, "DELETE", "/api/shows/"+id+"/watch-history", nil, &http.Cookie{Name: "tally_profile", Value: "profile-member"}), 404)
 	expect(t, request(t, h, "DELETE", "/api/shows/"+id+"/watch-history", nil), 200)
 	var watched, downloaded, other int
-	if err := s.DB.QueryRow("SELECT SUM(watched),SUM(downloaded) FROM profile_episode_state WHERE profile_id='profile-admin'").Scan(&watched, &downloaded); err != nil {
+	if err := s.DB.QueryRow("SELECT SUM(watched) FROM profile_episode_state WHERE profile_id='profile-admin'").Scan(&watched); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.DB.QueryRow("SELECT SUM(downloaded) FROM episodes WHERE show_id=?", id).Scan(&downloaded); err != nil {
 		t.Fatal(err)
 	}
 	_ = s.DB.QueryRow("SELECT SUM(watched) FROM profile_episode_state WHERE profile_id='profile-member'").Scan(&other)

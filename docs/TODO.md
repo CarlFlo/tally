@@ -38,6 +38,15 @@ Status: per-show automation enrollment is in progress; final validation is pendi
 - [x] Avoid duplicate qBittorrent submissions after ambiguous/time-out responses by reconciling against the selected infohash where possible.
 - [x] Expose Torrent automation as its own independent scheduler job with a default 15-minute cadence and normal scheduler controls/history.
 
+### Global episode download state
+
+- [x] Move authoritative downloaded state to the shared episode record while keeping watched state profile-owned.
+- [x] Migrate existing data conservatively: if any profile previously marked an episode downloaded, preserve it as globally downloaded.
+- [x] Make single-episode and bulk downloaded toggles immediately visible to every profile that follows the show.
+- [x] Keep watched toggles and watch-history clearing isolated to the acting profile.
+- [x] Exclude globally downloaded episodes from torrent automation discovery.
+- [ ] Add schema-v12 upgrade/backup coverage and durable documentation for the global-download/profile-watch invariant.
+
 ### Per-show automation enrollment
 
 - [ ] Change show automation to explicit opt-in: the global automation switch remains the master control, but only shows explicitly enrolled for automatic downloads are searched by the scheduler.

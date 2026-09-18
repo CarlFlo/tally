@@ -30,7 +30,7 @@ func TestVersionTenUpgradeAddsPendingMagnetVerificationState(t *testing.T) {
 		t.Fatal("magnet verification foreign key unexpectedly accepted a missing run")
 	}
 	var version int
-	if err = db.QueryRow("PRAGMA user_version").Scan(&version); err != nil || version != 11 {
+	if err = db.QueryRow("PRAGMA user_version").Scan(&version); err != nil || version != Version {
 		t.Fatalf("unexpected schema version %d err=%v", version, err)
 	}
 	rows, err := db.Query("SELECT run_id,infohash,status,attempts,last_checked_at,completed_at,assessment,size_profile,error FROM torrent_magnet_verifications LIMIT 0")
