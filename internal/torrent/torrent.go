@@ -11,6 +11,7 @@ type SearchQuery struct {
 	MinSeeders       int
 	MinSize, MaxSize int64
 	Include, Exclude string
+	NoRetry          bool
 }
 
 type SearchResult struct {
