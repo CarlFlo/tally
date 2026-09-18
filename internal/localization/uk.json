@@ -3,7 +3,7 @@
     "locale": "uk",
     "name": "Українська",
     "direction": "ltr",
-    "catalogVersion": 21
+    "catalogVersion": 22
   },
   "common": {
     "save": "Зберегти",
@@ -928,7 +928,7 @@
     "specials": "Спецвипуски",
     "unwatchSeason": "Позначити сезон як непереглянутий",
     "watchSeason": "Позначити сезон як переглянутий",
-    "clearDownloadedSeason": "Очистити позначки завантаження сезону",
+    "clearDownloadedSeason": "Зняти позначку завантаженого сезону",
     "markDownloadedSeason": "Позначити сезон як завантажений",
     "noEpisodes": "Жодного епізоду ще не оголошено.",
     "viewTVmaze": "Переглянути на TVmaze",
@@ -1036,6 +1036,8 @@
     "removePrompt": "Вилучити «{{name}}» лише з qBittorrent чи також видалити завантажені файли з диска?",
     "removeTorrentOnly": "Вилучити лише торрент",
     "removeTorrentAndFiles": "Вилучити торрент і файли",
-    "removedWithFiles": "Торрент і завантажені файли вилучено"
+    "removedWithFiles": "Торрент і завантажені файли вилучено",
+    "connecting": "Підключення до торрент-клієнта…",
+    "unavailable": "Стан торрент-клієнта недоступний."
   }
 }
