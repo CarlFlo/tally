@@ -13,7 +13,7 @@ import (
 	"github.com/CarlFlo/tally/internal/database"
 )
 
-const DecisionEngineVersion = "2"
+const DecisionEngineVersion = "3"
 
 type AutomationRunStatus string
 

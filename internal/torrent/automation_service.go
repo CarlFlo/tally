@@ -41,6 +41,7 @@ type automationCandidate struct {
 	Result      SearchResult
 	Assessment  ReleaseAssessment
 	SizeProfile SizeProfileEvaluation
+	ReleaseAge  ReleaseAgeEvaluation
 }
 
 func (s *AutomationService) Run(ctx context.Context) (int, error) {
@@ -135,7 +136,7 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 
 	valid := make([]automationCandidate, 0, len(results))
 	rejected, magnetOnly, previouslyBad, unusable := 0, 0, 0, 0
-	belowSeeders, keywordFiltered, groupFiltered, uploaderFiltered, nonHigh, sizeRateFiltered := 0, 0, 0, 0, 0, 0
+	belowSeeders, keywordFiltered, groupFiltered, uploaderFiltered, nonHigh, sizeRateFiltered, releaseDelayFiltered := 0, 0, 0, 0, 0, 0, 0
 	for _, result := range results {
 		if result.Seeders < caps.Automation.MinSeeders {
 			belowSeeders++
@@ -177,6 +178,11 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 			nonHigh++
 			continue
 		}
+		releaseAge := EvaluateReleaseAge(result.Published, s.now(), time.Duration(caps.Automation.ReleaseDelayMinutes)*time.Minute)
+		if releaseAge.Known && !releaseAge.Ready {
+			releaseDelayFiltered++
+			continue
+		}
 		sizeProfile := EvaluateSizeProfile(result.Size, episode.Runtime, caps.Automation, mediaProfile.Effective)
 		if sizeProfile.Known && !sizeProfile.InActiveRange {
 			sizeRateFiltered++
@@ -189,7 +195,7 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 		if result.URL == "" && ValidMagnet(result.Magnet) {
 			magnetOnly++
 		}
-		valid = append(valid, automationCandidate{Result: result, Assessment: assessment, SizeProfile: sizeProfile})
+		valid = append(valid, automationCandidate{Result: result, Assessment: assessment, SizeProfile: sizeProfile, ReleaseAge: releaseAge})
 	}
 	rankAutomationCandidates(valid, caps.Automation)
 	if len(valid) > caps.Automation.MaxCandidates {
@@ -200,7 +206,7 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 		Data: map[string]any{
 			"rejected": rejected, "below_min_seeders": belowSeeders, "keyword_filtered": keywordFiltered,
 			"group_filtered": groupFiltered, "uploader_filtered": uploaderFiltered, "non_high_confidence": nonHigh,
-			"size_rate_filtered": sizeRateFiltered, "magnet_only": magnetOnly, "unusable": unusable, "previously_bad": previouslyBad,
+			"size_rate_filtered": sizeRateFiltered, "release_delay_filtered": releaseDelayFiltered, "magnet_only": magnetOnly, "unusable": unusable, "previously_bad": previouslyBad,
 			"shortlisted": len(valid), "candidates": candidateAuditRows(valid, caps.Automation),
 		},
 	})
@@ -556,7 +562,7 @@ func candidateAuditRows(items []automationCandidate, config settings.TorrentAuto
 			"uploader": item.Result.Uploader, "seeders": item.Result.Seeders, "size": item.Result.Size,
 			"confidence": item.Assessment.Confidence, "parsed": item.Assessment.Parsed,
 			"preferences": AutomationPreferenceSignals(item.Result, item.Assessment.Parsed, config),
-			"size_profile": item.SizeProfile,
+			"size_profile": item.SizeProfile, "release_age": item.ReleaseAge,
 		})
 	}
 	return rows
