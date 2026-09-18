@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 22
+    "catalogVersion": 23
   },
   "common": {
     "save": "Save",
@@ -401,6 +401,7 @@
     "pausedFailures": "Paused after {{count}} consecutive failures.",
     "retryNow": "Retry now",
     "runNow": "Run now",
+    "toggleSchedule": "Toggle automatic schedule for {{name}}",
     "resumeSchedule": "Resume schedule",
     "job": "Job",
     "allResults": "All results",
@@ -586,6 +587,9 @@
     "saved": "Schedule saved",
     "enabled": "{{name}} enabled",
     "disabled": "{{name}} disabled",
+    "experimentalTitle": "Enable experimental job?",
+    "experimentalMessage": "{{name}} is an experimental feature. It may change and can perform automatic actions in the background. Only enable it if you understand and accept that behavior.",
+    "experimentalEnableAnyway": "Yes, I understand, enable anyway",
     "save": "Save schedule",
     "paused": "Paused after {{count}} consecutive failures. Resume from System → Jobs when ready.",
     "checking": "Checking schedule…",
@@ -663,8 +667,6 @@
     "previousRunsTab": "Previous Runs",
     "eyebrow": "STRONG SIGNALS BEFORE IT MOVES",
     "description": "Control how Tally matches, sizes, verifies, and selects releases before handing them to your torrent client.",
-    "enable": "Enable automatic torrent downloads",
-    "enableHelp": "This is the server-wide master switch. Only shows enrolled below are searched automatically.",
     "saved": "Torrent automation settings saved",
     "selection": "Release selection",
     "selectionHelp": "Quality is a preference between valid releases; it does not increase or reduce confidence.",
@@ -812,7 +814,7 @@
   },
   "torrentInspection": {
     "notEpisodeScored": "No episode-specific confidence evaluation is available for this free-text result.",
-    "rejectedSummary": "This candidate conflicts with the expected release and should not be selected automatically.",
+    "manualReviewSummary": "The available metadata has concerns. Review them before deciding whether to download.",
     "highVerifiedSummary": "The release identity and torrent payload both match the expected episode.",
     "highUnverifiedSummary": "The release metadata strongly matches the expected episode, but the payload has not been inspected yet.",
     "mediumSummary": "The candidate is plausible but has enough uncertainty to require review.",
