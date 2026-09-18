@@ -50,6 +50,12 @@ Status: runtime-aware size profiling and automatic magnet fallback are in progre
 - [x] Persist these automation rules in the global settings snapshot so Previous Runs can explain exactly which filters/trust rules affected each historical decision.
 - [x] Add deterministic tests for keyword filters, reset/default behavior, group whitelist/priorities, uploader metadata present/missing, preferred-provider ranking, trusted-source ranking, and the separation of trust/preference from confidence.
 
+### Sonarr-informed selection refinements
+
+- [x] Treat the existing release delay as a hold window from the first qualifying Jackett `pubDate`, while retaining the episode-air-time guard and keeping missing timestamps neutral.
+- [x] Once the delay window matures, evaluate all currently acceptable candidates so a newer better release can win without needing its own full delay.
+- [x] Record releases held by the delay window in Previous Runs and version the changed decision engine.
+
 ### Runtime-aware size profiles and magnet automation
 
 - [x] Add configurable MB/minute ranges for live-action and animated shows, surfaced as compact dual range sliders in Torrent Automation.
