@@ -1,6 +1,8 @@
 import { dateTimeFormatter, displayLocale } from "./dateFormatting";
 import { i18n } from "./i18n";
 
+export const isExperimentalJob = (key: string) => key === "torrent_automation";
+
 export const jobName = (key: string) =>
   key === "metadata"
     ? i18n.t("jobs.metadata")
