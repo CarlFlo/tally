@@ -83,6 +83,39 @@ test("profile settings use browser history and signing out stays signed out with
   ).toBeVisible();
 });
 
+test("refresh paints the active profile theme before bootstrap finishes", async ({ page }) => {
+  await selectProfileByName(page, "My profile");
+  const bootstrap = await (await page.request.get("/api/bootstrap")).json();
+  const previousTheme = bootstrap.preferences.theme;
+  const previousLocalTheme = await page.evaluate(() =>
+    localStorage.getItem("tally-theme"),
+  );
+  const saved = await page.request.patch("/api/preferences", {
+    headers: { "X-Tally-CSRF": "1" },
+    data: { theme: "dark" },
+  });
+  expect(saved.ok()).toBe(true);
+  await page.evaluate(() => localStorage.setItem("tally-theme", "light"));
+  let themeBeforeBootstrap = "";
+  await page.route("**/api/bootstrap", async (route) => {
+    themeBeforeBootstrap = await page.evaluate(
+      () => document.documentElement.dataset.theme || "",
+    );
+    await route.continue();
+  });
+  await page.reload();
+  expect(themeBeforeBootstrap).toBe("dark");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.request.patch("/api/preferences", {
+    headers: { "X-Tally-CSRF": "1" },
+    data: { theme: previousTheme },
+  });
+  await page.evaluate((theme) => {
+    if (theme) localStorage.setItem("tally-theme", theme);
+    else localStorage.removeItem("tally-theme");
+  }, previousLocalTheme);
+});
+
 test("library, calendar, episode state, profiles, jobs and responsive layout", async ({
   page,
 }) => {

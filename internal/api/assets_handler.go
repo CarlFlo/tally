@@ -31,6 +31,21 @@ func (s *Server) assets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Cache-Control", "private, no-cache")
+	w.Header().Add("Vary", "Cookie")
+	page = []byte(strings.Replace(string(page), `data-theme="__TALLY_THEME__"`, `data-theme="`+s.requestTheme(r)+`"`, 1))
 	_, _ = w.Write(page)
+}
+
+func (s *Server) requestTheme(r *http.Request) string {
+	theme := s.browserTheme(r)
+	if session, err := s.Auth.Resolve(r); err == nil && session.Profile != "" {
+		if value, ok := s.readPreferences(r, session.Profile)["theme"].(string); ok {
+			theme = value
+		}
+	}
+	if theme != "light" && theme != "dark" && theme != "system" {
+		return "system"
+	}
+	return theme
 }

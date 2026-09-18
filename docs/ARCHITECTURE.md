@@ -51,6 +51,8 @@ Sensitive administrator demotion/deletion re-authenticates the acting administra
 
 React Router owns page navigation. The authenticated application shell, query cache, header, and live-event connection remain mounted while route content changes normally. Do not force full application remounts to solve local state problems.
 
+The server places the active profile's validated theme in the HTML before first paint; login and profile-picker pages use the browser appearance preference. The pre-paint bootstrap must preserve this server choice because local storage can be stale across profile changes. React continues to apply the bootstrap preference after loading.
+
 React Query owns server-read caching, deduplication, invalidation, and AbortSignals. Imperative actions that can be superseded use explicit latest-request ownership. Shared API transport is bounded so rapid navigation cannot create unbounded concurrent work or queues.
 
 Components clean up dialogs, listeners, observers, timers, subscriptions, and asynchronous work on unmount. Durable writes may complete after navigation, but callbacks from an abandoned page must not mutate or navigate the newly active page.
