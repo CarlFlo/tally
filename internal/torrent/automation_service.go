@@ -580,7 +580,16 @@ func (s *AutomationService) dueEpisodes(ctx context.Context, now time.Time, conf
 		LEFT JOIN torrent_show_policy p ON p.show_id=e.show_id
 		WHERE e.airstamp<>'' AND e.number>0
 		AND COALESCE(p.policy,'default') IN ('default','auto')
-		AND NOT EXISTS(SELECT 1 FROM torrent_automation_runs r WHERE r.episode_id=e.id AND r.status IN ('running','downloaded'))
+		AND NOT EXISTS(
+			SELECT 1
+			FROM torrent_automation_runs r
+			LEFT JOIN torrent_magnet_verifications m ON m.run_id=r.id
+			WHERE r.episode_id=e.id
+			AND (
+				r.status='running'
+				OR (r.status='downloaded' AND COALESCE(m.status,'')<>'rejected')
+			)
+		)
 		ORDER BY e.airstamp ASC LIMIT 100`)
 	if err != nil {
 		return nil, err
@@ -607,9 +616,22 @@ func (s *AutomationService) dueEpisodes(ctx context.Context, now time.Time, conf
 }
 
 func (s *AutomationService) retryReady(ctx context.Context, episodeID string, now time.Time, retryWindowHours int) (bool, error) {
-	rows, err := s.DB.QueryContext(ctx, `SELECT started_at FROM torrent_automation_runs
-		WHERE episode_id=? AND status NOT IN ('running','downloaded') AND started_at>=?
-		ORDER BY started_at DESC`, episodeID, now.Add(-time.Duration(retryWindowHours)*time.Hour).Unix())
+	rows, err := s.DB.QueryContext(ctx, `SELECT CASE
+			WHEN r.status='downloaded' AND m.status='rejected' THEN COALESCE(m.completed_at,r.started_at)
+			ELSE r.started_at
+		END AS retry_at
+		FROM torrent_automation_runs r
+		LEFT JOIN torrent_magnet_verifications m ON m.run_id=r.id
+		WHERE r.episode_id=?
+		AND (
+			r.status NOT IN ('running','downloaded')
+			OR (r.status='downloaded' AND m.status='rejected')
+		)
+		AND CASE
+			WHEN r.status='downloaded' AND m.status='rejected' THEN COALESCE(m.completed_at,r.started_at)
+			ELSE r.started_at
+		END >=?
+		ORDER BY retry_at DESC`, episodeID, now.Add(-time.Duration(retryWindowHours)*time.Hour).Unix())
 	if err != nil {
 		return false, err
 	}

@@ -407,6 +407,52 @@ func TestAutomationMagnetVerificationRejectsAmbiguousResolvedIdentity(t *testing
 	}
 }
 
+func TestRejectedPostMagnetVerificationCanRetryEpisodeAfterBackoff(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	client := &automationClient{
+		listed: true,
+		resolvedFiles: []TorrentFile{
+			{Path: "Example.Show.S01E02.mkv", Size: 2 * 1024 * 1024 * 1024},
+			{Path: "setup.exe", Size: 1024},
+		},
+	}
+	service := automationService(db, automationRequester{magnetOnly: true}, client, now)
+	if processed, err := service.Run(context.Background()); err != nil || processed != 1 {
+		t.Fatalf("initial magnet run failed: processed=%d err=%v", processed, err)
+	}
+	if processed, err := service.Run(context.Background()); err != nil || processed != 1 {
+		t.Fatalf("post verification did not reject: processed=%d err=%v", processed, err)
+	}
+	if processed, err := service.Run(context.Background()); err != nil || processed != 0 {
+		t.Fatalf("rejected post-check retried before backoff: processed=%d err=%v", processed, err)
+	}
+
+	if _, err := db.Exec(`UPDATE torrent_magnet_verifications SET completed_at=? WHERE status='rejected'`, now.Add(-31*time.Minute).Unix()); err != nil {
+		t.Fatal(err)
+	}
+	client.resolvedFiles = nil
+	client.listed = false
+	client.stopCalls = 0
+	client.removeCalls = 0
+	client.deleteFiles = false
+	client.magnetAdded = 0
+	if processed, err := service.Run(context.Background()); err != nil || processed != 1 {
+		t.Fatalf("episode did not retry after rejected post-check backoff: processed=%d err=%v", processed, err)
+	}
+	if client.magnetAdded != 1 {
+		t.Fatalf("retry did not submit another candidate: magnets=%d", client.magnetAdded)
+	}
+	runs, err := (AutomationStore{DB: db}).ListRuns(context.Background(), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runs) != 2 {
+		t.Fatalf("expected immutable rejected attempt plus retry run, got %d", len(runs))
+	}
+}
+
+
 func TestAutomationMagnetVerificationRejectsActualSizeOutsideSubmissionRange(t *testing.T) {
 	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
 	db := automationTestStore(t, now)
