@@ -52,7 +52,7 @@ func torrentFileFixture(name string) string {
 	return fmt.Sprintf("d4:infod6:lengthi2048e4:name%d:%s12:piece lengthi16384e6:pieces20:aaaaaaaaaaaaaaaaaaaaee", len(name), name)
 }
 
-func TestTorrentSearchAddsConfidenceOnlyForAuthoritativeEpisodeContext(t *testing.T) {
+func TestTorrentSearchEvaluatesConfidenceOnlyWhenResultIsExpanded(t *testing.T) {
 	s, handler, _ := testServer(t, "disabled")
 	seedTorrentEpisodeTarget(t, s)
 	jackett := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -74,8 +74,18 @@ func TestTorrentSearchAddsConfidenceOnlyForAuthoritativeEpisodeContext(t *testin
 	if err := json.Unmarshal(exact.Body.Bytes(), &exactOut); err != nil || len(exactOut.Results) != 1 {
 		t.Fatalf("unexpected exact search response: %s", exact.Body.String())
 	}
-	if exactOut.Results[0]["confidence"] != "high" || exactOut.Results[0]["verification"] != "unverified" {
-		t.Fatalf("exact followed episode did not receive preliminary confidence: %s", exact.Body.String())
+	if _, ok := exactOut.Results[0]["confidence"]; ok {
+		t.Fatalf("discovery eagerly evaluated confidence: %s", exact.Body.String())
+	}
+	exactID, _ := exactOut.Results[0]["id"].(string)
+	evaluation := request(t, handler, "GET", "/api/torrents/search/"+exactID+"/evaluation", nil)
+	expect(t, evaluation, 200)
+	var evaluated map[string]any
+	if err := json.Unmarshal(evaluation.Body.Bytes(), &evaluated); err != nil {
+		t.Fatal(err)
+	}
+	if evaluated["confidence"] != "high" || evaluated["verification"] != "unverified" {
+		t.Fatalf("expanded result did not receive preliminary confidence: %s", evaluation.Body.String())
 	}
 
 	freeText := request(t, handler, "POST", "/api/torrents/search", map[string]any{"query": "Example"})
@@ -87,7 +97,13 @@ func TestTorrentSearchAddsConfidenceOnlyForAuthoritativeEpisodeContext(t *testin
 		t.Fatalf("unexpected free-text search response: %s", freeText.Body.String())
 	}
 	if _, ok := freeOut.Results[0]["confidence"]; ok {
-		t.Fatalf("arbitrary free-text search received authoritative confidence: %s", freeText.Body.String())
+		t.Fatalf("arbitrary free-text discovery received authoritative confidence: %s", freeText.Body.String())
+	}
+	freeID, _ := freeOut.Results[0]["id"].(string)
+	freeEvaluation := request(t, handler, "GET", "/api/torrents/search/"+freeID+"/evaluation", nil)
+	expect(t, freeEvaluation, 200)
+	if strings.Contains(freeEvaluation.Body.String(), "\"confidence\"") {
+		t.Fatalf("arbitrary free-text evaluation received authoritative confidence: %s", freeEvaluation.Body.String())
 	}
 }
 
@@ -118,11 +134,21 @@ INSERT INTO external_ids(provider,kind,external_id,internal_id) VALUES('tvmaze',
 	if err := json.Unmarshal(response.Body.Bytes(), &out); err != nil || len(out.Results) != 1 {
 		t.Fatalf("unexpected response: %s", response.Body.String())
 	}
-	if out.Results[0]["confidence"] != "high" {
-		t.Fatalf("shared unfollowed metadata did not produce confidence: %s", response.Body.String())
+	if _, ok := out.Results[0]["confidence"]; ok {
+		t.Fatalf("shared metadata was evaluated during discovery: %s", response.Body.String())
 	}
-	if ratio, ok := out.Results[0]["mb_per_minute"].(float64); !ok || ratio < 49.9 || ratio > 50.1 {
-		t.Fatalf("unexpected MB/min ratio: %v", out.Results[0]["mb_per_minute"])
+	selectionID, _ := out.Results[0]["id"].(string)
+	evaluation := request(t, handler, "GET", "/api/torrents/search/"+selectionID+"/evaluation", nil)
+	expect(t, evaluation, 200)
+	var evaluated map[string]any
+	if err := json.Unmarshal(evaluation.Body.Bytes(), &evaluated); err != nil {
+		t.Fatal(err)
+	}
+	if evaluated["confidence"] != "high" {
+		t.Fatalf("shared unfollowed metadata did not produce confidence: %s", evaluation.Body.String())
+	}
+	if ratio, ok := evaluated["mb_per_minute"].(float64); !ok || ratio < 49.9 || ratio > 50.1 {
+		t.Fatalf("unexpected MB/min ratio: %v", evaluated["mb_per_minute"])
 	}
 	if tv.calls.Load() != 0 {
 		t.Fatalf("local shared metadata unnecessarily called TVMaze %d times", tv.calls.Load())
@@ -163,11 +189,21 @@ func TestTorrentFreeTextEpisodeResolvesTVMazeWithoutPersistingOrFollowing(t *tes
 	if err := json.Unmarshal(response.Body.Bytes(), &out); err != nil || len(out.Results) != 1 {
 		t.Fatalf("unexpected response: %s", response.Body.String())
 	}
-	if out.Results[0]["confidence"] != "high" {
-		t.Fatalf("TVMaze-resolved search did not receive confidence: %s", response.Body.String())
+	if tv.searchCalls.Load() != 0 || tv.episodeCalls.Load() != 0 {
+		t.Fatalf("manual discovery called TVMaze before expansion: search=%d episodes=%d", tv.searchCalls.Load(), tv.episodeCalls.Load())
 	}
-	if ratio, ok := out.Results[0]["mb_per_minute"].(float64); !ok || ratio < 59.9 || ratio > 60.1 {
-		t.Fatalf("unexpected TVMaze MB/min ratio: %v", out.Results[0]["mb_per_minute"])
+	selectionID, _ := out.Results[0]["id"].(string)
+	evaluation := request(t, handler, "GET", "/api/torrents/search/"+selectionID+"/evaluation", nil)
+	expect(t, evaluation, 200)
+	var evaluated map[string]any
+	if err := json.Unmarshal(evaluation.Body.Bytes(), &evaluated); err != nil {
+		t.Fatal(err)
+	}
+	if evaluated["confidence"] != "high" {
+		t.Fatalf("TVMaze-resolved evaluation did not receive confidence: %s", evaluation.Body.String())
+	}
+	if ratio, ok := evaluated["mb_per_minute"].(float64); !ok || ratio < 59.9 || ratio > 60.1 {
+		t.Fatalf("unexpected TVMaze MB/min ratio: %v", evaluated["mb_per_minute"])
 	}
 	if tv.searchCalls.Load() != 1 || tv.episodeCalls.Load() != 1 {
 		t.Fatalf("unexpected TVMaze calls: search=%d episodes=%d", tv.searchCalls.Load(), tv.episodeCalls.Load())
@@ -206,8 +242,11 @@ func TestTorrentFreeTextEpisodeStillSearchesWhenTVMazeResolutionFails(t *testing
 	if err := json.Unmarshal(response.Body.Bytes(), &out); err != nil || len(out.Results) != 1 {
 		t.Fatalf("manual Jackett search did not survive TVMaze failure: %s", response.Body.String())
 	}
-	if _, ok := out.Results[0]["confidence"]; ok {
-		t.Fatalf("failed metadata resolution should remain unscored: %s", response.Body.String())
+	selectionID, _ := out.Results[0]["id"].(string)
+	evaluation := request(t, handler, "GET", "/api/torrents/search/"+selectionID+"/evaluation", nil)
+	expect(t, evaluation, 200)
+	if strings.Contains(evaluation.Body.String(), "\"confidence\"") {
+		t.Fatalf("failed metadata resolution should remain unscored: %s", evaluation.Body.String())
 	}
 }
 
@@ -239,8 +278,14 @@ func TestTorrentFreeTextEpisodeLeavesAmbiguousTVMazeMatchesUnscored(t *testing.T
 	if err := json.Unmarshal(response.Body.Bytes(), &out); err != nil || len(out.Results) != 1 {
 		t.Fatalf("unexpected response: %s", response.Body.String())
 	}
-	if _, ok := out.Results[0]["confidence"]; ok {
-		t.Fatalf("ambiguous TVMaze match received authoritative confidence: %s", response.Body.String())
+	if tv.searchCalls.Load() != 0 || tv.episodeCalls.Load() != 0 {
+		t.Fatalf("ambiguous discovery called TVMaze early: search=%d episodes=%d", tv.searchCalls.Load(), tv.episodeCalls.Load())
+	}
+	selectionID, _ := out.Results[0]["id"].(string)
+	evaluation := request(t, handler, "GET", "/api/torrents/search/"+selectionID+"/evaluation", nil)
+	expect(t, evaluation, 200)
+	if strings.Contains(evaluation.Body.String(), "\"confidence\"") {
+		t.Fatalf("ambiguous TVMaze match received authoritative confidence: %s", evaluation.Body.String())
 	}
 	if tv.episodeCalls.Load() != 0 {
 		t.Fatalf("ambiguous show lookup should not fetch episodes, got %d calls", tv.episodeCalls.Load())
@@ -278,11 +323,10 @@ func TestTorrentPayloadEpisodeMismatchIsRejectedBeforeQBittorrent(t *testing.T) 
 	expect(t, search, 200)
 	var output struct {
 		Results []struct {
-			ID         string `json:"id"`
-			Confidence string `json:"confidence"`
+			ID string `json:"id"`
 		} `json:"results"`
 	}
-	if err := json.Unmarshal(search.Body.Bytes(), &output); err != nil || len(output.Results) != 1 || output.Results[0].Confidence != "high" {
+	if err := json.Unmarshal(search.Body.Bytes(), &output); err != nil || len(output.Results) != 1 || output.Results[0].ID == "" {
 		t.Fatalf("unexpected search response: %s", search.Body.String())
 	}
 	response := request(t, handler, "POST", "/api/torrents/send", map[string]string{"selection": output.Results[0].ID, "idempotency_key": "0123456789abcdef"})
