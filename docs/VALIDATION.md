@@ -26,9 +26,9 @@ Backend coverage includes authentication and sessions, profile isolation and rol
 
 Torrent coverage includes normalized Jackett metadata (including optional uploader/author data and simultaneous `.torrent` + magnet alternatives), release parsing/evaluation, confidence versus preference, keyword and allowlist filtering, trusted-source preference ranking, release-upload delay-window behavior, runtime-aware MB/minute profiles, live/animated classification and override, `.torrent` parsing and file-tree inspection, guarded magnet fallback, durable post-magnet qBittorrent file-list verification, unsafe magnet removal/hash blocking, hard rejections, bad-infohash handling, bounded candidate fallback, retry gating, duplicate prevention, capability no-op/re-check behavior, scheduler integration, and ambiguous client submission reconciliation by infohash.
 
-Browser coverage includes primary navigation, same-document lifecycle behavior, profile/login flows, localization, Calendar and show overlays, library state, settings, schedules/backups, notifications/logs, Jackett search, episode-aware torrent confidence, expandable torrent-result evaluation, qBittorrent submission, Torrent Automation filters/trust controls, Previous Runs/feedback, feature toggles and disabled routes, Downloads, responsive behavior, and persistence across reloads where relevant.
+Browser coverage includes primary navigation, same-document lifecycle behavior, profile/login flows, localization, Calendar and show overlays, global downloaded/profile-watched library state, settings, schedules/backups, notifications/logs, Jackett search, episode-aware torrent confidence, expandable torrent-result evaluation, qBittorrent submission, Torrent Automation filters/trust controls and per-show enrollment, Previous Runs/feedback, feature toggles and disabled routes, Downloads, responsive behavior, and persistence across reloads where relevant.
 
-Schema 11 is the current database version. Migration tests must continue to cover supported older schemas and backup restore/upgrade paths, including durable torrent automation runs, show policies, feedback, and bad-infohash state.
+Schema 12 is the current database version. Migration tests must continue to cover supported older schemas and backup restore/upgrade paths, including durable torrent automation runs, show policies, feedback, and bad-infohash state.
 
 External-service protocol tests use local fixtures or in-memory requesters. Validation must not contact or modify an operator's personal TVmaze alternatives, Jackett, qBittorrent, Discord, webhook, or OIDC services unless a task explicitly requires and authorizes an integration test.
 
@@ -48,13 +48,13 @@ Run `go test ./...` and `go vet ./...`. Use `go test -race ./...` for concurrenc
 
 Verify forward migration from supported earlier schemas, schema validation, pre-upgrade snapshot behavior, and backup round-trips for newly durable state. Restore tests should prove relational state survives cascades and that failed restores leave the current database usable.
 
-For torrent automation migrations, verify the run-history, feedback, bad-infohash, show-policy, persisted show type, per-show media-profile override, and pending/completed magnet post-verification state survive backup/restore and retain their constraints. Detailed-run retention may prune old runs, but bad-infohash state needed to prevent repeat loops must remain durable.
+For torrent automation migrations, verify the run-history, feedback, bad-infohash, explicit show enrollment, persisted show type, per-show media-profile override, pending/completed magnet post-verification state, and global episode downloaded state survive backup/restore and retain their constraints. Detailed-run retention may prune old runs, but bad-infohash state needed to prevent repeat loops must remain durable.
 
 ### Authentication and authorization
 
 Test backend enforcement directly; UI visibility is not an authorization boundary. Include negative cases for other profiles, non-administrators, stale or revoked sessions, and sensitive actions that require re-authentication.
 
-Global torrent automation configuration and per-show download policy are administrative deployment state. Read-only history may be visible according to the product route, but mutation endpoints must enforce their intended authorization independently of hidden controls.
+Global torrent automation configuration and per-show enrollment are administrative deployment state. Enrollment list reads are scoped to the current profile's My Shows, while the enrollment value itself is global because the downloader is shared. Mutation endpoints must enforce administrator authorization independently of hidden controls.
 
 ### External providers and torrent features
 
@@ -81,7 +81,8 @@ For automatic downloads, prove all of the following as applicable:
 - a failed shortlisted candidate can fall through to the next bounded candidate;
 - disabled search/download/automation capabilities cause a safe no-op and are re-checked before submission;
 - retry backoff does not silently lower the confidence standard;
-- an already downloaded episode is not submitted twice;
+- a globally downloaded episode is not considered for automation;
+- only explicitly enrolled shows are considered while the global automation switch is enabled;
 - ambiguous client errors are reconciled by the known infohash before retrying;
 - run history never persists credentials or authenticated provider URLs.
 

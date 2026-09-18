@@ -308,3 +308,6 @@ Runtime-normalized size is useful as a sanity signal because absolute episode si
 
 ### Durable follow-up is safer than blocking on eventual metadata
 A magnet side effect can succeed before its file metadata exists. Do not keep the initiating request open or busy-poll waiting for metadata. Persist a follow-up obligation keyed to the exact torrent/run, let the normal scheduler reconcile it later, and preserve the original decision separately from later evidence. Re-evaluate eventual payload evidence using the settings that were active when the side effect was authorized; changing settings afterward must not rewrite history or retroactively move the acceptance boundary.
+
+### Put shared outcomes on shared entities
+When several profiles observe one shared external system, store shared outcomes on the shared entity instead of duplicating them into profile state. Tally has one downloader/media environment, so whether an episode has been downloaded is deployment-global; whether a person has watched it remains profile-owned. Migration from a profile-scoped representation should conservatively preserve truth: if any profile recorded a shared outcome, promote that outcome globally rather than discarding it.

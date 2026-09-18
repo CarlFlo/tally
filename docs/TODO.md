@@ -6,7 +6,7 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 `feature/torrent-automation-confidence`
 
-Status: per-show automation enrollment is in progress; final validation is pending.
+Status: per-show automation enrollment and global episode download state are implemented; final validation is pending.
 
 ### Evaluation and search metadata
 
@@ -31,7 +31,7 @@ Status: per-show automation enrollment is in progress; final validation is pendi
 
 - [x] Add an `Automation` tab inside Torrent Search; automation/download policy is deployment-global, not profile-owned.
 - [x] Add minimal global controls: enable automatic downloads, preferred quality, minimum seeders, release delay, and bounded retry behavior. High confidence remains an invariant rather than a tunable lower threshold; verification state depends on the available transport.
-- [x] Add a global per-show download override UI using download-only choices: `Default`, `Auto-download`, or `Never auto-download`. Notifications remain profile-owned and are not part of this policy.
+- [x] Keep per-show automation deployment-global and explicit opt-in. Only enrolled shows are searched; notifications remain profile-owned and are not part of download enrollment.
 - [x] Keep existing search/download capability toggles backend-authoritative; automation stops before submission if downloading becomes disabled mid-run.
 - [x] Prevent duplicate grabs and serialize decisions per episode while keeping overall work bounded/cancellable.
 - [x] Treat `no suitable result` as a normal outcome, not an operational error, and retry later within a bounded window rather than accepting a weak match.
@@ -45,18 +45,19 @@ Status: per-show automation enrollment is in progress; final validation is pendi
 - [x] Make single-episode and bulk downloaded toggles immediately visible to every profile that follows the show.
 - [x] Keep watched toggles and watch-history clearing isolated to the acting profile.
 - [x] Exclude globally downloaded episodes from torrent automation discovery.
-- [ ] Add schema-v12 upgrade/backup coverage and durable documentation for the global-download/profile-watch invariant.
+- [x] Add schema-v12 upgrade/backup coverage and durable documentation for the global-download/profile-watch invariant.
 
 ### Per-show automation enrollment
 
-- [ ] Change show automation to explicit opt-in: the global automation switch remains the master control, but only shows explicitly enrolled for automatic downloads are searched by the scheduler.
-- [ ] Add one backend list endpoint for the current profile's My Shows with global automation enrollment and upcoming-episode state; avoid one request per show.
-- [ ] On `/search/automation`, add an enrolled-show section with a search field: empty search shows currently active/calendar shows with a known upcoming episode, while search spans all My Shows.
-- [ ] Allow enrollment to be toggled directly from the automation list with clear enabled/disabled state and responsive feedback.
-- [ ] Add the same enrollment toggle to the individual show page near the primary show actions; both surfaces must update the same global policy.
+- [x] Change show automation to explicit opt-in: the global automation switch remains the master control, but only shows explicitly enrolled for automatic downloads are searched by the scheduler.
+- [x] Add one backend list endpoint for the current profile's My Shows with global automation enrollment and upcoming-episode state; avoid one request per show.
+- [x] On `/search/automation`, add an enrolled-show section with a search field: empty search shows currently active/calendar shows with a known upcoming episode, while search spans all My Shows.
+- [x] Allow enrollment to be toggled directly from the automation list with clear enabled/disabled state and responsive feedback.
+- [x] Add the same enrollment toggle to the individual show page near the primary show actions; both surfaces must update the same global policy.
 - [ ] Remove the old three-choice Default / Auto-download / Never UI so the product presents one unambiguous on/off enrollment model; keep backend compatibility for legacy stored policies where practical.
-- [ ] Add backend/browser coverage for opt-in scheduling, inactive-show search, list/detail synchronization, authorization, and global master-disable behavior.
-- [ ] Localize the new English/Ukrainian UI, update durable automation documentation, and rerun the complete validation suite on the final branch head.
+- [x] Add backend/browser coverage for opt-in scheduling, inactive-show search, list/detail synchronization, authorization, and global master-disable behavior.
+- [x] Localize the new English/Ukrainian UI and update durable automation documentation.
+- [ ] Rerun the complete validation suite on the final branch head.
 
 ### Follow-up automation controls
 
@@ -156,7 +157,7 @@ Status: per-show automation enrollment is in progress; final validation is pendi
 
 The following are established capabilities rather than active TODO items:
 
-- Shared TV metadata with profile-owned follows, preferences, favorites, and episode state.
+- Shared TV metadata with profile-owned follows, preferences, favorites, and watched state; episode downloaded state is deployment-global.
 - Per-profile Password or No authentication, opaque profile IDs, transferable administrator roles, sessions, and actor re-authentication for sensitive administrator changes.
 - Calendar, library, discovery, show details, episode state, favorites, responsive themes, and profile-specific localization.
 - SQLite-backed application settings, schedules, jobs, statistics, logs, bell notifications, Webhook/Discord delivery, and live updates.
