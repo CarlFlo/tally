@@ -229,6 +229,25 @@ func automationService(db *database.Store, requester automationRequester, client
 	}
 }
 
+func updateAutomationConfig(t *testing.T, db *database.Store, mutate func(*settings.TorrentAutomation)) {
+	t.Helper()
+	ctx := context.Background()
+	store := settings.Store{DB: db}
+	var config settings.TorrentAutomation
+	revision, err := store.Load(ctx, "torrent_automation", &config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	config = config.Effective()
+	mutate(&config)
+	if err = settings.ValidateTorrentAutomation(config); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = store.Save(ctx, "torrent_automation", config, revision); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestAutomationRequiresExplicitShowEnrollment(t *testing.T) {
 	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
 	db := automationTestStore(t, now)
@@ -748,39 +767,122 @@ func TestAutomationNeverPolicySuppressesGlobalAutomation(t *testing.T) {
 	}
 }
 
-func TestAutomationRetryBackoffGatesRepeatedNoCandidateRuns(t *testing.T) {
+func TestAutomationRetryBackoffPersistsAcrossServiceRestart(t *testing.T) {
 	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
 	db := automationTestStore(t, now)
-	store := AutomationStore{DB: db}
-	runID, err := store.StartRun(context.Background(), AutomationRun{
-		ShowID: "show-a", EpisodeID: "episode-a", ShowName: "Example Show", Season: 1, Episode: 2,
-		Query: "Example Show S01E02", StartedAt: now.Add(-10 * time.Minute).Unix(),
+	updateAutomationConfig(t, db, func(config *settings.TorrentAutomation) {
+		config.MinSeeders = 100
+		config.RetryFirstMinutes = 30
+		config.RetrySecondMinutes = 120
+		config.RetryLaterMinutes = 360
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = store.FinishRun(context.Background(), runID, RunNoVerifiedCandidate, ReleaseAssessment{Verification: VerificationUnverified}, ""); err != nil {
-		t.Fatal(err)
-	}
 	searchCalls := 0
 	client := &automationClient{}
-	service := automationService(db, automationRequester{searchCalls: &searchCalls}, client, now)
-	processed, err := service.Run(context.Background())
-	if err != nil {
+	if processed, err := automationService(db, automationRequester{searchCalls: &searchCalls}, client, now).Run(context.Background()); err != nil || processed != 1 {
+		t.Fatalf("initial no-candidate run failed: processed=%d searches=%d err=%v", processed, searchCalls, err)
+	}
+
+	var attempts int
+	var nextSearch int64
+	if err := db.QueryRow("SELECT attempts,next_search_at FROM torrent_automation_episode_state WHERE episode_id='episode-a'").Scan(&attempts, &nextSearch); err != nil {
 		t.Fatal(err)
 	}
-	if processed != 0 || searchCalls != 0 {
-		t.Fatalf("retry ran before 30 minute backoff: processed=%d searches=%d", processed, searchCalls)
+	if attempts != 1 || nextSearch != now.Add(30*time.Minute).Unix() {
+		t.Fatalf("unexpected persisted retry state: attempts=%d next=%d", attempts, nextSearch)
 	}
-	if _, err = db.Exec("UPDATE torrent_automation_runs SET started_at=? WHERE id=?", now.Add(-31*time.Minute).Unix(), runID); err != nil {
+
+	restartedBeforeDue := automationService(db, automationRequester{searchCalls: &searchCalls}, client, now.Add(29*time.Minute))
+	if processed, err := restartedBeforeDue.Run(context.Background()); err != nil || processed != 0 || searchCalls != 1 {
+		t.Fatalf("restart bypassed persisted retry gate: processed=%d searches=%d err=%v", processed, searchCalls, err)
+	}
+
+	restartedAfterDue := automationService(db, automationRequester{searchCalls: &searchCalls}, client, now.Add(31*time.Minute))
+	if processed, err := restartedAfterDue.Run(context.Background()); err != nil || processed != 1 || searchCalls != 2 {
+		t.Fatalf("retry did not resume after durable backoff: processed=%d searches=%d err=%v", processed, searchCalls, err)
+	}
+	if err := db.QueryRow("SELECT attempts,next_search_at FROM torrent_automation_episode_state WHERE episode_id='episode-a'").Scan(&attempts, &nextSearch); err != nil {
 		t.Fatal(err)
 	}
-	processed, err = service.Run(context.Background())
-	if err != nil {
+	if attempts != 2 || nextSearch != now.Add(31*time.Minute).Add(120*time.Minute).Unix() {
+		t.Fatalf("second retry did not use configured backoff: attempts=%d next=%d", attempts, nextSearch)
+	}
+}
+
+func TestAutomationDiscoveryBudgetDefersBacklogAndPrioritizesRecentEpisodes(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	updateAutomationConfig(t, db, func(config *settings.TorrentAutomation) {
+		config.MinSeeders = 100
+		config.DiscoveryBudget = 2
+		config.PrioritizeRecent = true
+	})
+	for _, episode := range []struct {
+		id      string
+		number  int
+		airAgo  time.Duration
+	}{
+		{id: "episode-b", number: 3, airAgo: 2 * time.Hour},
+		{id: "episode-c", number: 4, airAgo: 30 * time.Minute},
+		{id: "episode-d", number: 5, airAgo: 45 * time.Minute},
+		{id: "episode-e", number: 6, airAgo: 3 * time.Hour},
+	} {
+		if _, err := db.Exec(`INSERT INTO episodes(id,show_id,season,number,name,airstamp) VALUES(?,?,?,?,?,?)`,
+			episode.id, "show-a", 1, episode.number, "Episode", now.Add(-episode.airAgo).UTC().Format(time.RFC3339)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	searchCalls := 0
+	searchNoRetry := false
+	queries := []string{}
+	requester := automationRequester{searchCalls: &searchCalls, searchNoRetry: &searchNoRetry, queries: &queries}
+	client := &automationClient{}
+	if processed, err := automationService(db, requester, client, now).Run(context.Background()); err != nil || processed != 2 {
+		t.Fatalf("budgeted run failed: processed=%d searches=%d err=%v", processed, searchCalls, err)
+	}
+	if searchCalls != 2 || !searchNoRetry {
+		t.Fatalf("automation discovery was not bounded/no-retry: searches=%d noRetry=%v", searchCalls, searchNoRetry)
+	}
+	if len(queries) != 2 || queries[0] != "Example Show S01E04" || queries[1] != "Example Show S01E05" {
+		t.Fatalf("recent episodes were not prioritized: %#v", queries)
+	}
+	var stateRows int
+	if err := db.QueryRow("SELECT COUNT(*) FROM torrent_automation_episode_state").Scan(&stateRows); err != nil {
 		t.Fatal(err)
 	}
-	if processed != 1 || searchCalls != 1 || client.added != 1 {
-		t.Fatalf("retry did not resume after backoff: processed=%d searches=%d added=%d", processed, searchCalls, client.added)
+	if stateRows != 2 {
+		t.Fatalf("deferred backlog was prematurely claimed: state rows=%d", stateRows)
+	}
+
+	if processed, err := automationService(db, requester, client, now).Run(context.Background()); err != nil || processed != 2 {
+		t.Fatalf("second budgeted run did not resume backlog: processed=%d searches=%d err=%v", processed, searchCalls, err)
+	}
+	if searchCalls != 4 {
+		t.Fatalf("second run exceeded or failed to use budget: searches=%d", searchCalls)
+	}
+	if len(queries) < 4 || queries[2] != "Example Show S01E02" || queries[3] != "Example Show S01E03" {
+		t.Fatalf("backlog did not continue in recency order: %#v", queries)
+	}
+}
+
+func TestAutomationCanPreferOldestDueBacklogWhenRecencyPriorityDisabled(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	updateAutomationConfig(t, db, func(config *settings.TorrentAutomation) {
+		config.MinSeeders = 100
+		config.DiscoveryBudget = 1
+		config.PrioritizeRecent = false
+	})
+	if _, err := db.Exec(`INSERT INTO episodes(id,show_id,season,number,name,airstamp) VALUES(?,?,?,?,?,?)`,
+		"episode-old", "show-a", 1, 1, "Older", now.Add(-6*time.Hour).UTC().Format(time.RFC3339)); err != nil {
+		t.Fatal(err)
+	}
+	queries := []string{}
+	if processed, err := automationService(db, automationRequester{queries: &queries}, &automationClient{}, now).Run(context.Background()); err != nil || processed != 1 {
+		t.Fatalf("oldest-first run failed: processed=%d err=%v", processed, err)
+	}
+	if len(queries) != 1 || queries[0] != "Example Show S01E01" {
+		t.Fatalf("oldest due episode was not selected: %#v", queries)
 	}
 }
 
