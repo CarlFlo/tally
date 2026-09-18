@@ -550,3 +550,86 @@
 .post-magnet-verification .decision-card {
   border-color: color-mix(in srgb, var(--accent) 24%, var(--border));
 }
+
+
+.automation-shows-card {
+  display: grid;
+  gap: 14px;
+}
+
+.automation-shows-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.automation-shows-heading h3 {
+  margin-bottom: 6px;
+}
+
+.automation-show-search {
+  margin: 0;
+}
+
+.automation-show-list {
+  display: grid;
+  border-top: 1px solid var(--border);
+}
+
+.automation-show-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 12px 2px;
+  border-bottom: 1px solid var(--border);
+}
+
+.automation-show-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.automation-show-copy > a {
+  color: var(--text);
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.automation-show-toggle {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.automation-shows-empty {
+  margin: 0;
+  padding: 8px 0 2px;
+}
+
+.show-automation-button[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--mint) 55%, var(--border));
+  color: var(--mint);
+}
+
+@media (max-width: 620px) {
+  .automation-shows-heading,
+  .automation-show-row {
+    align-items: stretch;
+  }
+
+  .automation-shows-heading {
+    flex-direction: column;
+  }
+
+  .automation-show-row {
+    flex-direction: column;
+  }
+
+  .automation-show-toggle {
+    align-self: flex-start;
+  }
+}

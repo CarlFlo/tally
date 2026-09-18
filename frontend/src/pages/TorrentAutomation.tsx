@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { api, Busy, ErrorState, useApp, useLocal } from "../lib";
 import { invalidateResources } from "../queryInvalidation";
 import { TorrentTabs } from "./TorrentTabs";
+import { AutomationShowEnrollmentList } from "../AutomationShowEnrollmentList";
 import "../torrent-selection.css";
 
 type AutomationConfig = {
@@ -273,6 +274,8 @@ export function TorrentAutomationPage() {
             })}
           </p>
         </section>
+
+        <AutomationShowEnrollmentList />
 
         <section className="panel settings-card">
           <h3>
