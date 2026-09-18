@@ -6,7 +6,7 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 `feature/torrent-automation-confidence`
 
-Status: torrent automation running-show list and historical-backfill guard are implemented and fully validated; branch is ready for review.
+Status: downloads initial-render and released-only episode-state follow-ups are implemented; final validation is pending.
 
 ### Evaluation and search metadata
 
@@ -44,6 +44,7 @@ Status: torrent automation running-show list and historical-backfill guard are i
 - [x] Move authoritative downloaded state to the shared episode record while keeping watched state profile-owned.
 - [x] Migrate existing data conservatively: if any profile previously marked an episode downloaded, preserve it as globally downloaded.
 - [x] Make single-episode and bulk downloaded toggles immediately visible to every profile that follows the show.
+- [x] Prevent unreleased episodes from being marked watched/downloaded; season bulk actions only affect the released subset and toggle that subset back off on the next click.
 - [x] Keep watched toggles and watch-history clearing isolated to the acting profile.
 - [x] Exclude globally downloaded episodes from torrent automation discovery.
 - [x] Add schema-v12 upgrade/backup coverage and durable documentation for the global-download/profile-watch invariant.
@@ -52,7 +53,7 @@ Status: torrent automation running-show list and historical-backfill guard are i
 
 - [x] Change show automation to explicit opt-in: the global automation switch remains the master control, but only shows explicitly enrolled for automatic downloads are searched by the scheduler.
 - [x] Add one backend list endpoint for the current profile's My Shows with global automation enrollment and upcoming-episode state; avoid one request per show.
-- [x] On `/search/automation`, add an enrolled-show section with a search field: empty search shows currently active/calendar shows with a known upcoming episode, while search spans all My Shows.
+- [x] On `/search/automation`, add an enrolled-show section with a search field: empty search shows currently `Running` My Shows, while search spans all My Shows.
 - [x] Allow enrollment to be toggled directly from the automation list with clear enabled/disabled state and responsive feedback.
 - [x] Add the same enrollment toggle to the individual show page near the primary show actions; both surfaces must update the same global policy.
 - [x] Remove the old three-choice Default / Auto-download / Never UI so the product presents one unambiguous on/off enrollment model; keep backend compatibility for legacy stored policies where practical.
@@ -143,6 +144,8 @@ Status: torrent automation running-show list and historical-backfill guard are i
 - [x] Add or refine browser regression coverage for rapid repeated Torrent Search tab navigation rather than masking any problem with cooldowns or forced reloads.
 
 ### Final usability/performance follow-up
+
+- [x] Keep the Downloads page frame/stats visible during the initial qBittorrent request and populate them in place instead of replacing a loading indicator with the page.
 
 - [x] Accept `torrent_automation` consistently in schedule save/manual trigger/job filters and keep manual execution operator-only.
 - [x] Defer free-text episode resolution, confidence, trust/history checks, and MB/min evaluation until a result is expanded or submitted.
