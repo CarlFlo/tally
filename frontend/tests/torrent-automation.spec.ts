@@ -227,7 +227,7 @@ test("previous runs explains verified decisions, accepts bad feedback and stays 
     query: "Example Show S01E02",
     status: "downloaded",
     confidence: "high",
-    verification: "verified",
+    verification: "unverified",
     selected_name: "Example.Show.S01E02.1080p.WEB-DL.mkv",
     selected_infohash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     settings_snapshot: {
@@ -337,9 +337,44 @@ test("previous runs explains verified decisions, accepts bad feedback and stays 
         occurred_at: 1_789_666_803,
       },
     ],
-    engine_version: "3",
+    engine_version: "4",
     started_at: 1_789_666_800,
     ended_at: 1_789_666_804,
+    post_verification: {
+      run_id: "run-browser",
+      infohash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      status: "verified",
+      attempts: 1,
+      last_checked_at: 1_789_666_905,
+      completed_at: 1_789_666_905,
+      assessment: {
+        confidence: "high",
+        verification: "verified",
+        payload: {
+          video_files: 1,
+          subtitle_files: 0,
+          executable_files: 0,
+          total_size: 2_147_483_648,
+          main_video_size: 2_147_483_648,
+          files: [
+            {
+              path: "Example.Show.S01E02.1080p.WEB-DL.mkv",
+              size: 2_147_483_648,
+            },
+          ],
+        },
+      },
+      size_profile: {
+        known: true,
+        runtime_minutes: 45,
+        mb_per_minute: 45.5,
+        active_profile: "live",
+        active_score: 92,
+        live_score: 92,
+        animated_score: 64,
+        in_active_range: true,
+      },
+    },
     duration_ms: 4_000,
     ...(markedBad
       ? {
@@ -381,7 +416,9 @@ test("previous runs explains verified decisions, accepts bad feedback and stays 
     page.getByRole("link", { name: "Previous Runs", exact: true }),
   ).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("heading", { name: "Example Show · S01E02" })).toBeVisible();
-  await expect(page.getByText("High · Verified", { exact: true })).toBeVisible();
+  await expect(page.getByText("High · Unverified", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Post-download verification" })).toBeVisible();
+  await expect(page.getByText("Magnet payload verified after submission", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Inspection" })).toBeVisible();
   await expect(page.locator(".size-score-pair .active").first()).toContainText("Live 92");
   await expect(page.locator(".size-score-pair .inactive").first()).toContainText("Animated 64");

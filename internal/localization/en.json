@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 15
+    "catalogVersion": 16
   },
   "common": {
     "save": "Save",
@@ -700,7 +700,7 @@
     "releaseDelay": "Minimum release age (minutes)",
     "retryWindow": "Retry window (hours)",
     "magnetsManual": "Magnets are a fallback",
-    "magnetsManualHelp": "Tally asks Jackett for an inspectable .torrent whenever possible. A magnet can be selected automatically only when the release is High confidence and passes identity, trust, history, seed, and MB/min checks; it remains Unverified in Previous Runs.",
+    "magnetsManualHelp": "Tally asks Jackett for an inspectable .torrent whenever possible. A magnet can be selected automatically only when the release is High confidence and passes identity, trust, history, seed, and MB/min checks. It starts Unverified; later automation runs inspect qBittorrent's resolved file list and remove unsafe, mismatched, or size-invalid payloads.",
     "sizeProfiles": "Episode size",
     "sizeProfilesHelp": "Filter implausibly small or large releases by MB per minute. Tally uses episode runtime when available, then show runtime; verified torrent contents replace Jackett's reported size when possible.",
     "liveActionProfile": "Live-action / normal TV",
@@ -775,7 +775,18 @@
     "liveRange": "Live-action size range",
     "animatedRange": "Animated size range",
     "noSuitableResult": "No suitable result",
-    "filterReleaseDelay": "younger than minimum release age"
+    "filterReleaseDelay": "younger than minimum release age",
+    "postVerification": "Post-download verification",
+    "postVerificationShort": "Post-check",
+    "postVerifyPending": "Waiting for magnet metadata",
+    "postVerifyVerified": "Magnet payload verified after submission",
+    "postVerifyRejected": "Magnet payload rejected and removed",
+    "postVerifyUnavailable": "Magnet payload could not be verified",
+    "verificationAttempts": "{{count}} checks",
+    "postStatusPending": "Pending",
+    "postStatusVerified": "Verified",
+    "postStatusRejected": "Rejected",
+    "postStatusUnavailable": "Unavailable"
   },
   "torrentInspection": {
     "notEpisodeScored": "No episode-specific confidence evaluation is available for this free-text result.",

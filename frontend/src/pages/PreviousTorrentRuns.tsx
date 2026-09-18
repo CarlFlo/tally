@@ -119,6 +119,20 @@ function runStatusLabel(t: TFunction, value: string) {
   return titleCase(value);
 }
 
+
+function postVerificationStatusLabel(t: TFunction, status: PostVerification["status"]) {
+  switch (status) {
+    case "verified":
+      return t("torrentRuns.postStatusVerified", { defaultValue: "Verified" });
+    case "rejected":
+      return t("torrentRuns.postStatusRejected", { defaultValue: "Rejected" });
+    case "unavailable":
+      return t("torrentRuns.postStatusUnavailable", { defaultValue: "Unavailable" });
+    default:
+      return t("torrentRuns.postStatusPending", { defaultValue: "Pending" });
+  }
+}
+
 function StatusIcon({ status }: { status?: string }) {
   if (status === "success" || status === "selected") return <CheckCircle2 size={17} />;
   if (status === "failed" || status === "rejected") return <XCircle size={17} />;
@@ -398,7 +412,7 @@ function RunInspection({ run }: { run: AutomationRun }) {
             <span
               className={`badge ${run.post_verification.status === "verified" ? "success" : run.post_verification.status === "rejected" ? "failed" : ""}`}
             >
-              {t("torrentRuns.postVerificationShort", { defaultValue: "Post-check" })} · {titleCase(run.post_verification.status)}
+              {t("torrentRuns.postVerificationShort", { defaultValue: "Post-check" })} · {postVerificationStatusLabel(t, run.post_verification.status)}
             </span>
           )}
         </div>
