@@ -19,9 +19,10 @@ import {
   useApp,
   useLocal,
 } from "../lib";
-import { jobName } from "../schedules";
+import { isExperimentalJob, jobName } from "../schedules";
 import { queryKeys } from "../queryKeys";
 import { invalidateResources } from "../queryInvalidation";
+import { ExperimentalJobConfirmation } from "../ExperimentalJobConfirmation";
 
 export function JobsPage() {
   const { t } = useTranslation();
@@ -38,6 +39,7 @@ export function JobsPage() {
   const settings = useLocal<any>("settings", "/settings");
   const operator = settings.data?.operator;
   const [busy, setBusy] = useState("");
+  const [experimentalEnable, setExperimentalEnable] = useState<any | null>(null);
   async function preference(key: string, value: string) {
     try {
       await api("/preferences", "PATCH", { [key]: value });
@@ -57,6 +59,38 @@ export function JobsPage() {
     } finally {
       setBusy("");
     }
+  }
+  async function toggleSchedule(job: any, enabled: boolean) {
+    setBusy(`toggle:${job.key}`);
+    try {
+      await api("/settings/scheduling", "PUT", {
+        key: job.key,
+        schedule: job.schedule,
+        enabled,
+        revision: job.revision,
+      });
+      notify(
+        t(enabled ? "schedule.enabled" : "schedule.disabled", {
+          name: jobName(job.key),
+        }),
+      );
+      await invalidateResources(cache, ["jobs", "schedules"]);
+      return true;
+    } catch (e) {
+      notify((e as Error).message, true);
+      await invalidateResources(cache, ["jobs", "schedules"]);
+      return false;
+    } finally {
+      setBusy("");
+    }
+  }
+
+  function requestScheduleToggle(job: any, enabled: boolean) {
+    if (enabled && !job.enabled && isExperimentalJob(job.key)) {
+      setExperimentalEnable(job);
+      return;
+    }
+    void toggleSchedule(job, enabled);
   }
   const preview = prefs.debug_mode
     ? prefs.debug_job_state || "normal"
@@ -190,6 +224,7 @@ export function JobsPage() {
                   className="button"
                   disabled={
                     busy === job.key ||
+                    busy === `toggle:${job.key}` ||
                     real.last_status === "running" ||
                     (job.key !== "metadata" && !operator)
                   }
@@ -198,6 +233,23 @@ export function JobsPage() {
                   {busy === job.key ? <Busy /> : <Play size={15} />}
                   {real.paused ? t("jobs.retryNow") : t("jobs.runNow")}
                 </button>
+                {operator && (
+                  <label className="toggle-setting compact-toggle job-schedule-toggle">
+                    <input
+                      type="checkbox"
+                      checked={!!real.enabled}
+                      disabled={busy === job.key || busy === `toggle:${job.key}`}
+                      aria-label={t("jobs.toggleSchedule", {
+                        defaultValue: "Toggle automatic schedule for {{name}}",
+                        name: jobName(job.key),
+                      })}
+                      onChange={(event) =>
+                        requestScheduleToggle(real, event.target.checked)
+                      }
+                    />
+                    {t("schedule.automatic")}
+                  </label>
+                )}
                 {!!real.paused && operator && (
                   <button
                     className="button"
@@ -211,6 +263,13 @@ export function JobsPage() {
           );
         })}
       </div>
+      {experimentalEnable && (
+        <ExperimentalJobConfirmation
+          jobKey={experimentalEnable.key}
+          onClose={() => setExperimentalEnable(null)}
+          onConfirm={() => toggleSchedule(experimentalEnable, true)}
+        />
+      )}
       <div className="section-heading run-heading">
         <h2>{t("jobs.history")}</h2>
         <div className="history-filters">
