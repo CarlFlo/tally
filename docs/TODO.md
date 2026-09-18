@@ -150,6 +150,16 @@ Status: final torrent automation usability/performance follow-up is implemented;
 - [x] Fix dual-range track/thumb alignment and use a two-column automation settings layout when viewport width permits.
 - [x] Replace identity-as-strength copy with configured MB/min fit and preferred-source evidence.
 
+### External request restraint
+
+- [ ] Add a hard per-run Jackett discovery budget so one 15-minute automation tick cannot fan out across a large backlog; process only a small bounded number of due episodes per run and leave the rest queued for later ticks.
+- [ ] Persist each episode's next eligible automation-search time explicitly, preserving the existing approximately 30 minute → 2 hour → 6 hour backoff within the retry window instead of relying only on historical-run reconstruction.
+- [ ] Make automated Jackett discovery deliberately conservative about retries: do not repeatedly retry transient failures inside one background run; prefer deferring the episode to a later scheduled run.
+- [ ] Ensure the automation worker selects only episodes whose persisted next-search time is due, ordered predictably, so backlog processing is gradual rather than bursty.
+- [ ] Keep deep candidate inspection bounded separately from discovery and ensure a single episode cannot cause unbounded Jackett torrent-file fetches; retain the existing shortlist cap and no-retry behavior for individual torrent metadata fetches.
+- [ ] Add deterministic tests proving a large backlog cannot exceed the per-run discovery budget, deferred episodes remain queued, retry timing survives restart, provider failures do not create request storms, and later scheduled runs resume work safely.
+- [ ] Document the background-network policy: automation should prefer postponing work over aggressively retrying external services, while keeping the existing shared provider rate limiting, Retry-After handling, circuit breaker, and request coalescing protections.
+
 ### Quality and documentation
 
 - [x] Add database migration for automation/run history state and keep it inside the normal backup/restore database path.
