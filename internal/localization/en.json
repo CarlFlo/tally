@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 13
+    "catalogVersion": 14
   },
   "common": {
     "save": "Save",
@@ -697,7 +697,7 @@
     "providerPlaceholder": "Use the provider names shown in search results",
     "verification": "Verification",
     "highVerifiedOnly": "Automatic downloads require High confidence. Tally prefers a retrievable .torrent and verifies its payload first; when only a magnet is usable, it may fall back to metadata-only selection after all other rules pass.",
-    "releaseDelay": "Release delay (minutes)",
+    "releaseDelay": "Minimum release age (minutes)",
     "retryWindow": "Retry window (hours)",
     "magnetsManual": "Magnets are a fallback",
     "magnetsManualHelp": "Tally asks Jackett for an inspectable .torrent whenever possible. A magnet can be selected automatically only when the release is High confidence and passes identity, trust, history, seed, and MB/min checks; it remains Unverified in Previous Runs.",
@@ -735,7 +735,7 @@
     "allowedUploaders": "Allowed uploaders",
     "preferredUploaders": "Preferred uploaders",
     "preferredProviders": "Preferred providers",
-    "releaseDelay": "Release delay",
+    "releaseDelay": "Minimum release age",
     "engine": "Decision engine",
     "infohash": "Infohash",
     "duration": "Duration",
@@ -774,7 +774,8 @@
     "runtime": "Runtime",
     "liveRange": "Live-action size range",
     "animatedRange": "Animated size range",
-    "noSuitableResult": "No suitable result"
+    "noSuitableResult": "No suitable result",
+    "filterReleaseDelay": "younger than minimum release age"
   },
   "torrentInspection": {
     "notEpisodeScored": "No episode-specific confidence evaluation is available for this free-text result.",
