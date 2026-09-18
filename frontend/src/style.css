@@ -4053,6 +4053,13 @@ td .table-error {
 .downloads-panel {
   padding: 0 20px;
 }
+.downloads-status-placeholder {
+  min-height: 110px;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  text-align: center;
+}
 .downloads-list {
   max-height: min(66vh, 720px);
   overflow-y: auto;
