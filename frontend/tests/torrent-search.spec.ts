@@ -417,3 +417,62 @@ test("downloads update controls immediately and confirm file deletion", async ({
     }
   }
 });
+
+
+test("downloads keep very large speed metrics inside their cards", async ({ page }) => {
+  await selectProfileByName(page, "My profile");
+
+  const savedResponse = await page.request.get("/api/settings/torrent");
+  expect(savedResponse.ok()).toBe(true);
+  const saved = await savedResponse.json();
+  let revision = saved.revision;
+  if (!saved.data.enabled) {
+    const enabled = await page.request.put("/api/settings/torrent", {
+      headers,
+      data: { data: { enabled: true }, revision },
+    });
+    expect(enabled.ok()).toBe(true);
+    revision = (await enabled.json()).revision;
+    await page.reload();
+  }
+
+  await page.route("**/api/torrents/downloads", (route) => {
+    if (route.request().method() !== "GET") return route.continue();
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        torrents: [],
+        stats: {
+          total: 0,
+          active: 0,
+          download_speed: 9_523_372_036_854_776,
+          upload_speed: 9_223_372_036_854_775,
+        },
+      }),
+    });
+  });
+
+  try {
+    await page.goto("/downloads");
+    await expect(page.getByText("8.5 PB/s", { exact: true })).toBeVisible();
+    await expect(page.getByText("8.2 PB/s", { exact: true })).toBeVisible();
+    const cards = page.locator(".downloads-stats .stat-card");
+    expect(
+      await cards.evaluateAll((items) =>
+        items.every((item) => item.scrollWidth <= item.clientWidth),
+      ),
+    ).toBe(true);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+  } finally {
+    if (saved.data.enabled !== true) {
+      const restore = await page.request.put("/api/settings/torrent", {
+        headers,
+        data: { data: saved.data, revision },
+      });
+      expect(restore.ok()).toBe(true);
+    }
+  }
+});
