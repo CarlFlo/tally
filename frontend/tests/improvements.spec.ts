@@ -200,6 +200,177 @@ test("discovery focus, inside clicks, queued add/undo, retry notice, favorites a
   expect(errors).toEqual([]);
 });
 
+test("show season state toggles only released episodes", async ({ page }) => {
+  await selectProfileByName(page, "My profile");
+
+  const now = Date.now();
+  const releasedStamp = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+  const futureStamp = new Date(now + 24 * 60 * 60 * 1000).toISOString();
+  const state = {
+    releasedWatched: false,
+    releasedDownloaded: false,
+  };
+  const bulkBodies: any[] = [];
+  const show = {
+    favorite: 0,
+    id: "future-state",
+    name: "Release State Show",
+    summary: "Fixture for release-state controls.",
+    image: "",
+    status: "Running",
+    premiered: "2026-01-01",
+    network: "Fixture",
+    genres: "[]",
+    rating: 0,
+    runtime: 45,
+    episode_count: 2,
+    watched_count: 0,
+    aired_count: 1,
+    aired_unwatched: 1,
+    next_episode: futureStamp.slice(0, 10),
+    last_checked_at: 0,
+    next_check_at: 0,
+  };
+  const episode = (
+    id: string,
+    number: number,
+    stamp: string,
+    watched: boolean,
+    downloaded: boolean,
+  ) => ({
+    favorite: 0,
+    id,
+    show_id: show.id,
+    show_name: show.name,
+    show_image: "",
+    name: id === "released-episode" ? "Released episode" : "Future episode",
+    summary: "",
+    season: 1,
+    season_episode_count: 2,
+    number,
+    airdate: stamp.slice(0, 10),
+    airstamp: stamp,
+    runtime: 45,
+    watched,
+    downloaded,
+    network: "Fixture",
+    type: "regular",
+  });
+
+  await page.route("**/api/shows/future-state", async (route) => {
+    if (route.request().method() !== "GET") return route.continue();
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        show: {
+          ...show,
+          watched_count: state.releasedWatched ? 1 : 0,
+          aired_unwatched: state.releasedWatched ? 0 : 1,
+        },
+        episodes: [
+          episode(
+            "released-episode",
+            1,
+            releasedStamp,
+            state.releasedWatched,
+            state.releasedDownloaded,
+          ),
+          episode("future-episode", 2, futureStamp, false, false),
+        ],
+        seasons: [],
+        external_ids: [],
+      }),
+    });
+  });
+  await page.route("**/api/shows/future-state/bulk", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    const body = route.request().postDataJSON();
+    bulkBodies.push(body);
+    if (typeof body.watched === "boolean") state.releasedWatched = body.watched;
+    if (typeof body.downloaded === "boolean") state.releasedDownloaded = body.downloaded;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ updated: 1 }),
+    });
+  });
+  await page.route("**/api/torrents/automation/shows/future-state", async (route) => {
+    if (route.request().method() !== "GET") return route.continue();
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ policy: "default", enabled: false }),
+    });
+  });
+
+  await page.goto("/shows/future-state");
+  await expect(page.getByRole("heading", { name: "Release State Show." })).toBeVisible();
+
+  const releasedRow = page.locator(".episode-row").filter({ hasText: "Released episode" });
+  const futureRow = page.locator(".episode-row").filter({ hasText: "Future episode" });
+  await expect(
+    releasedRow.getByRole("button", { name: "Mark watched", exact: true }),
+  ).toBeEnabled();
+  await expect(
+    futureRow.getByRole("button", { name: "Mark watched", exact: true }),
+  ).toBeDisabled();
+  await expect(
+    futureRow.getByRole("button", { name: "Mark downloaded", exact: true }),
+  ).toBeDisabled();
+
+  const watchedSeason = page.getByRole("button", {
+    name: "Mark season watched",
+    exact: true,
+  });
+  await watchedSeason.click();
+  await expect(
+    page.getByRole("button", { name: "Mark season unwatched", exact: true }),
+  ).toBeVisible();
+  expect(bulkBodies.at(-1)).toMatchObject({
+    season: 1,
+    aired_only: true,
+    watched: true,
+  });
+  await expect(
+    futureRow.getByRole("button", { name: "Mark watched", exact: true }),
+  ).toBeDisabled();
+
+  await page
+    .getByRole("button", { name: "Mark season unwatched", exact: true })
+    .click();
+  await expect(watchedSeason).toBeVisible();
+  expect(bulkBodies.at(-1)).toMatchObject({
+    season: 1,
+    aired_only: true,
+    watched: false,
+  });
+
+  const downloadedSeason = page.getByRole("button", {
+    name: "Mark season downloaded",
+    exact: true,
+  });
+  await downloadedSeason.click();
+  await expect(
+    page.getByRole("button", { name: "Unmark season downloaded", exact: true }),
+  ).toBeVisible();
+  expect(bulkBodies.at(-1)).toMatchObject({
+    season: 1,
+    aired_only: true,
+    downloaded: true,
+  });
+
+  await page
+    .getByRole("button", { name: "Unmark season downloaded", exact: true })
+    .click();
+  await expect(downloadedSeason).toBeVisible();
+  expect(bulkBodies.at(-1)).toMatchObject({
+    season: 1,
+    aired_only: true,
+    downloaded: false,
+  });
+});
+
 test("settings categories persist connections, schedules, debug previews and statistics limits", async ({
   page,
 }) => {
