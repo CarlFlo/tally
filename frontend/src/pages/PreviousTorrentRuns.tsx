@@ -65,6 +65,17 @@ type AutomationRun = {
 
 type RunsResponse = { runs: AutomationRun[] };
 
+type SizeProfile = {
+  known?: boolean;
+  runtime_minutes?: number;
+  mb_per_minute?: number;
+  active_profile?: "live" | "animated";
+  active_score?: number;
+  live_score?: number;
+  animated_score?: number;
+  in_active_range?: boolean;
+};
+
 const feedbackReasons = [
   "wrong_show",
   "wrong_episode",
@@ -105,6 +116,28 @@ function ConfidenceBadge({ run }: { run: AutomationRun }) {
 
 function joined(value: unknown) {
   return Array.isArray(value) && value.length ? value.join(", ") : "—";
+}
+
+function SizeScores({ profile }: { profile?: SizeProfile }) {
+  const { t } = useTranslation();
+  if (!profile?.known || typeof profile.mb_per_minute !== "number") return <span className="muted">—</span>;
+  const liveActive = profile.active_profile !== "animated";
+  return (
+    <div className="size-score-block">
+      <div className="size-score-pair">
+        <span className={liveActive ? "active" : "inactive"}>
+          {t("torrentRuns.liveScore", { defaultValue: "Live" })} {profile.live_score ?? "—"}
+        </span>
+        <span className={!liveActive ? "active" : "inactive"}>
+          {t("torrentRuns.animatedScore", { defaultValue: "Animated" })} {profile.animated_score ?? "—"}
+        </span>
+      </div>
+      <small>
+        {profile.mb_per_minute.toFixed(1)} MB/min
+        {profile.runtime_minutes ? ` · ${profile.runtime_minutes} min` : ""}
+      </small>
+    </div>
+  );
 }
 
 export function PreviousTorrentRunsPage() {
@@ -330,7 +363,9 @@ function DecisionData({ step }: { step: DecisionStep }) {
           {metric("group_filtered", t("torrentRuns.filterGroups", { defaultValue: "removed by group allowlist" }))}
           {metric("uploader_filtered", t("torrentRuns.filterUploaders", { defaultValue: "removed by uploader allowlist" }))}
           {metric("non_high_confidence", t("torrentRuns.filterConfidence", { defaultValue: "not High confidence" }))}
-          {metric("magnet_only", t("torrentRuns.filterMagnets", { defaultValue: "magnet-only" }))}
+          {metric("size_rate_filtered", t("torrentRuns.filterSizeRate", { defaultValue: "outside MB/min range" }))}
+          {metric("magnet_only", t("torrentRuns.filterMagnets", { defaultValue: "magnet fallback" }))}
+          {metric("unusable", t("torrentRuns.filterUnusable", { defaultValue: "no usable torrent or magnet" }))}
           {metric("previously_bad", t("torrentRuns.filterBad", { defaultValue: "previously marked bad" }))}
           {metric("shortlisted", t("torrentRuns.filterShortlisted", { defaultValue: "shortlisted" }))}
         </div>
@@ -345,6 +380,7 @@ function DecisionData({ step }: { step: DecisionStep }) {
                 <th>{t("torrentRuns.source", { defaultValue: "Source" })}</th>
                 <th>{t("torrentRuns.seeds", { defaultValue: "Seeds" })}</th>
                 <th>{t("torrentRuns.size", { defaultValue: "Size" })}</th>
+                <th>{t("torrentRuns.sizeFit", { defaultValue: "Size fit" })}</th>
                 <th>{t("torrentRuns.confidence", { defaultValue: "Confidence" })}</th>
               </tr>
             </thead>
@@ -373,6 +409,7 @@ function DecisionData({ step }: { step: DecisionStep }) {
                     </td>
                     <td>{candidate.seeders}</td>
                     <td>{candidate.size ? bytes(candidate.size) : "—"}</td>
+                    <td><SizeScores profile={candidate.size_profile as SizeProfile} /></td>
                     <td>{titleCase(candidate.confidence || "")}</td>
                   </tr>
                 );
@@ -380,6 +417,18 @@ function DecisionData({ step }: { step: DecisionStep }) {
             </tbody>
           </table>
         </div>
+      )}
+      {data.size_profile && (
+        <div className="decision-size-score">
+          <SizeScores profile={data.size_profile as SizeProfile} />
+        </div>
+      )}
+      {data.submission_type && (
+        <p className="muted small-text">
+          {data.submission_type === "magnet"
+            ? t("torrentRuns.magnetFallback", { defaultValue: "Magnet fallback · metadata-only" })
+            : t("torrentRuns.torrentVerified", { defaultValue: ".torrent payload path" })}
+        </p>
       )}
       {payload && (
         <div className="torrent-payload-summary">
@@ -417,6 +466,7 @@ function RunDetails({ run }: { run: AutomationRun }) {
   const { t } = useTranslation();
   const snapshot = run.settings_snapshot || {};
   const automation = snapshot.automation || {};
+  const mediaProfile = snapshot.show_media_profile || {};
   return (
     <>
       <div className="torrent-run-list-head">
@@ -426,6 +476,20 @@ function RunDetails({ run }: { run: AutomationRun }) {
       <dl className="torrent-run-detail-list">
         <div><dt>{t("torrentRuns.query", { defaultValue: "Query" })}</dt><dd>{run.query}</dd></div>
         <div><dt>{t("torrentRuns.showPolicy", { defaultValue: "Show policy" })}</dt><dd>{titleCase(snapshot.show_policy || "default")}</dd></div>
+        <div>
+          <dt>{t("torrentRuns.mediaProfile", { defaultValue: "Media type" })}</dt>
+          <dd>
+            {mediaProfile.mode === "auto"
+              ? t("torrentRuns.mediaProfileAuto", {
+                  defaultValue: "Auto · detected {{type}}",
+                  type: titleCase(mediaProfile.detected || mediaProfile.effective || "live"),
+                })
+              : titleCase(mediaProfile.effective || mediaProfile.mode || "live")}
+          </dd>
+        </div>
+        <div><dt>{t("torrentRuns.runtime", { defaultValue: "Runtime" })}</dt><dd>{snapshot.runtime_minutes ? `${snapshot.runtime_minutes} min` : "—"}</dd></div>
+        <div><dt>{t("torrentRuns.liveRange", { defaultValue: "Live-action size range" })}</dt><dd>{automation.live_min_mb_per_minute != null ? `${automation.live_min_mb_per_minute}–${automation.live_max_mb_per_minute} MB/min` : "—"}</dd></div>
+        <div><dt>{t("torrentRuns.animatedRange", { defaultValue: "Animated size range" })}</dt><dd>{automation.animated_min_mb_per_minute != null ? `${automation.animated_min_mb_per_minute}–${automation.animated_max_mb_per_minute} MB/min` : "—"}</dd></div>
         <div><dt>{t("torrentRuns.minSeeders", { defaultValue: "Minimum seeders" })}</dt><dd>{automation.min_seeders ?? "—"}</dd></div>
         <div><dt>{t("torrentRuns.quality", { defaultValue: "Preferred quality" })}</dt><dd>{automation.preferred_quality || "—"}</dd></div>
         <div><dt>{t("torrentRuns.includeKeywords", { defaultValue: "Include keywords" })}</dt><dd>{automation.include_keywords || "—"}</dd></div>

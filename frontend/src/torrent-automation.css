@@ -504,3 +504,44 @@
   box-shadow: 0 0 0 1px var(--border);
   pointer-events: auto;
 }
+
+
+.size-score-block {
+  display: grid;
+  gap: 3px;
+  min-width: 106px;
+}
+
+.size-score-pair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.size-score-pair span {
+  padding: 2px 5px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.size-score-pair span.active {
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--border));
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.size-score-pair span.inactive {
+  opacity: 0.38;
+}
+
+.size-score-block small {
+  color: var(--muted);
+  font-size: 0.67rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.decision-size-score {
+  margin-top: 10px;
+}
