@@ -179,6 +179,53 @@ test("episode search expands into a strengths and concerns evaluation", async ({
   expect(resetMedia.ok()).toBe(true);
 });
 
+test("automation show list defaults to Running status and search spans all My Shows", async ({
+  page,
+}) => {
+  await selectProfileByName(page, "My profile");
+  await page.route("**/api/torrents/automation/shows", async (route) => {
+    if (route.request().method() !== "GET") return route.continue();
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        shows: [
+          {
+            id: "running-no-schedule",
+            name: "Running Without Schedule",
+            status: "Running",
+            next_episode: "",
+            active: 0,
+            automation_enabled: 0,
+          },
+          {
+            id: "ended-future-date",
+            name: "Ended With Future Date",
+            status: "Ended",
+            next_episode: "2099-01-01",
+            active: 1,
+            automation_enabled: 0,
+          },
+        ],
+      }),
+    });
+  });
+
+  await page.goto("/search/automation");
+  await expect(
+    page.locator(".automation-show-row").filter({ hasText: "Running Without Schedule" }),
+  ).toBeVisible();
+  await expect(
+    page.locator(".automation-show-row").filter({ hasText: "Ended With Future Date" }),
+  ).toHaveCount(0);
+
+  const search = page.getByRole("textbox", { name: "Search My Shows" });
+  await search.fill("Ended With Future Date");
+  await expect(
+    page.locator(".automation-show-row").filter({ hasText: "Ended With Future Date" }),
+  ).toBeVisible();
+});
+
 test("automation page exposes release filters trust rules and disabled capability guards", async ({
   page,
 }) => {
