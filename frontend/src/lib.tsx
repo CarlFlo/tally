@@ -488,9 +488,13 @@ export function dateOnly(day: string) {
   }).format(date);
 }
 export function bytes(value: number) {
-  if (!value) return "—";
-  const n = Math.floor(Math.log(value) / Math.log(1024));
-  return `${(value / 1024 ** n).toFixed(n > 0 ? 1 : 0)} ${["B", "KB", "MB", "GB", "TB"][n]}`;
+  if (!Number.isFinite(value) || value <= 0) return "—";
+  const units = ["B", "KB", "MB", "GB", "TB", "PB", "EB"];
+  const n = Math.min(
+    units.length - 1,
+    Math.max(0, Math.floor(Math.log(value) / Math.log(1024))),
+  );
+  return `${(value / 1024 ** n).toFixed(n > 0 ? 1 : 0)} ${units[n]}`;
 }
 export function EpisodeDrawer({
   episode,
