@@ -14,19 +14,19 @@ func (s *Server) torrentEpisodeTarget(ctx context.Context, profileID, episodeID 
 		return nil, nil
 	}
 	var showID, showName, premiered string
-	var season, episode int
-	err := s.DB.QueryRowContext(ctx, `SELECT e.show_id,s.name,s.premiered,e.season,e.number
+	var season, episode, runtime int
+	err := s.DB.QueryRowContext(ctx, `SELECT e.show_id,s.name,s.premiered,e.season,e.number,COALESCE(NULLIF(e.runtime,0),NULLIF(s.runtime,0),0)
 		FROM episodes e
 		JOIN shows s ON s.id=e.show_id
 		JOIN profile_shows p ON p.show_id=e.show_id AND p.profile_id=?
-		WHERE e.id=?`, profileID, episodeID).Scan(&showID, &showName, &premiered, &season, &episode)
+		WHERE e.id=?`, profileID, episodeID).Scan(&showID, &showName, &premiered, &season, &episode, &runtime)
 	if err == sql.ErrNoRows {
 		return nil, bad("episode is no longer in your followed shows")
 	}
 	if err != nil {
 		return nil, err
 	}
-	return s.buildTorrentEpisodeTarget(ctx, showID, showName, premiered, season, episode)
+	return s.buildTorrentEpisodeTarget(ctx, showID, showName, premiered, season, episode, runtime)
 }
 
 func (s *Server) torrentEpisodeTargetFromQuery(ctx context.Context, profileID, query string) (*torrent.EpisodeTarget, error) {
@@ -50,8 +50,8 @@ func (s *Server) torrentEpisodeTargetFromQuery(ctx context.Context, profileID, q
 	return s.torrentEpisodeTarget(ctx, profileID, episodeID)
 }
 
-func (s *Server) buildTorrentEpisodeTarget(ctx context.Context, showID, showName, premiered string, season, episode int) (*torrent.EpisodeTarget, error) {
-	target := &torrent.EpisodeTarget{ShowTitle: showName, Season: season, Episode: episode}
+func (s *Server) buildTorrentEpisodeTarget(ctx context.Context, showID, showName, premiered string, season, episode, runtime int) (*torrent.EpisodeTarget, error) {
+	target := &torrent.EpisodeTarget{ShowTitle: showName, Season: season, Episode: episode, RuntimeMinutes: runtime}
 	if len(premiered) >= 4 {
 		target.Year, _ = strconv.Atoi(premiered[:4])
 	}

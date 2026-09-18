@@ -93,6 +93,9 @@ func (s *Server) torrentSearch(w http.ResponseWriter, r *http.Request, session a
 			"sendable": result.Magnet != "" || result.URL != "", "parsed": parsed,
 			"preferences": torrent.AutomationPreferenceSignals(result, parsed, automationConfig),
 		}
+		if target != nil && target.RuntimeMinutes > 0 && result.Size > 0 {
+			row["mb_per_minute"] = float64(result.Size) / (1024 * 1024) / float64(target.RuntimeMinutes)
+		}
 		if preliminary != nil {
 			row["confidence"] = preliminary.Confidence
 			row["verification"] = preliminary.Verification

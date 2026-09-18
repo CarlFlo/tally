@@ -11,6 +11,7 @@ type EpisodeTarget struct {
 	Year      int
 	Season    int
 	Episode   int
+	RuntimeMinutes int
 	TVDBID    string
 	TMDBID    string
 	IMDBID    string

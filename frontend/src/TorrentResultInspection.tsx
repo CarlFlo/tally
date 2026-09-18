@@ -12,6 +12,7 @@ export type TorrentInspectionResult = {
   uploader?: string;
   magnet: string;
   download_type: string;
+  mb_per_minute?: number;
   confidence?: "high" | "medium" | "low" | "rejected";
   verification?: "verified" | "unverified";
   reasons?: TorrentAssessmentReason[];
@@ -234,6 +235,12 @@ export function TorrentResultInspection({ result }: { result: TorrentInspectionR
         <div><dt>{t("torrentInspection.uploader", { defaultValue: "Uploader" })}</dt><dd>{result.uploader || "—"}</dd></div>
         <div><dt>{t("torrentInspection.provider", { defaultValue: "Provider" })}</dt><dd>{result.provider || "—"}</dd></div>
         <div><dt>{t("torrentInspection.size", { defaultValue: "Size" })}</dt><dd>{bytes(result.size)}</dd></div>
+        {typeof result.mb_per_minute === "number" && (
+          <div>
+            <dt>{t("torrentInspection.mbPerMinute", { defaultValue: "MB/min" })}</dt>
+            <dd>{result.mb_per_minute.toFixed(1)} MB/min</dd>
+          </div>
+        )}
         <div><dt>{t("torrentInspection.delivery", { defaultValue: "Delivery" })}</dt><dd>{result.download_type || "—"}</dd></div>
       </dl>
     </div>
