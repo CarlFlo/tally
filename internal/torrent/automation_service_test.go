@@ -400,6 +400,34 @@ func TestAutomationMagnetVerificationRejectsActualSizeOutsideSubmissionRange(t *
 	}
 }
 
+func TestAutomationMagnetVerificationBecomesUnavailableAfterPersistentMetadataErrors(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	client := &automationClient{listed: true, resolvedErr: errors.New("metadata unavailable")}
+	service := automationService(db, automationRequester{magnetOnly: true}, client, now)
+	if processed, err := service.Run(context.Background()); err != nil || processed != 1 {
+		t.Fatalf("initial magnet run failed: processed=%d err=%v", processed, err)
+	}
+	if _, err := db.Exec("UPDATE torrent_automation_runs SET started_at=? WHERE status='downloaded'", now.Add(-25*time.Hour).Unix()); err != nil {
+		t.Fatal(err)
+	}
+	if processed, err := service.Run(context.Background()); err != nil || processed != 1 {
+		t.Fatalf("expired metadata error did not complete unavailable follow-up: processed=%d err=%v", processed, err)
+	}
+	runs, err := (AutomationStore{DB: db}).ListRuns(context.Background(), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	verification := runs[0].PostVerification
+	if verification == nil || verification.Status != "unavailable" || !strings.Contains(verification.Error, "metadata unavailable") {
+		t.Fatalf("persistent metadata error was not recorded unavailable: %+v", verification)
+	}
+	if client.removeCalls != 0 {
+		t.Fatal("unavailable metadata must not delete the torrent without evidence")
+	}
+}
+
+
 func TestAutomationPrefersInspectableTorrentWhenMagnetAlsoExists(t *testing.T) {
 	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
 	db := automationTestStore(t, now)
