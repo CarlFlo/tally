@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 )
 
@@ -19,7 +20,16 @@ func Validate(ctx context.Context, db Querier) error {
 	}
 	defer rows.Close()
 	if rows.Next() {
-		return fmt.Errorf("SQLite foreign key check failed")
+		var table, parent string
+		var rowID sql.NullInt64
+		var foreignKeyID int
+		if err := rows.Scan(&table, &rowID, &parent, &foreignKeyID); err != nil {
+			return fmt.Errorf("SQLite foreign key check failed: %w", err)
+		}
+		if rowID.Valid {
+			return fmt.Errorf("SQLite foreign key check failed: table %s row %d references %s (constraint %d)", table, rowID.Int64, parent, foreignKeyID)
+		}
+		return fmt.Errorf("SQLite foreign key check failed: table %s references %s (constraint %d)", table, parent, foreignKeyID)
 	}
 	return rows.Err()
 }
