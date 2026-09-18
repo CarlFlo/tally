@@ -24,6 +24,7 @@ export const queryKeys = {
   inbox: (profileId?: string) =>
     profileId ? (["inbox", profileId] as const) : (["inbox"] as const),
   torrentHistory: () => ["torrent-history"] as const,
+  torrentSearchView: (profileId: string) => ["torrent-search-view", profileId] as const,
   torrentAutomationShows: () => ["torrent-automation-shows"] as const,
   torrentAutomationShow: (id: string) => ["torrent-automation-show", id] as const,
   torrentAutomationRuns: () => ["torrent-automation-runs"] as const,
