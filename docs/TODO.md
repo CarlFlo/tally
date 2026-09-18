@@ -54,10 +54,9 @@ Status: per-show automation enrollment and global episode download state are imp
 - [x] On `/search/automation`, add an enrolled-show section with a search field: empty search shows currently active/calendar shows with a known upcoming episode, while search spans all My Shows.
 - [x] Allow enrollment to be toggled directly from the automation list with clear enabled/disabled state and responsive feedback.
 - [x] Add the same enrollment toggle to the individual show page near the primary show actions; both surfaces must update the same global policy.
-- [ ] Remove the old three-choice Default / Auto-download / Never UI so the product presents one unambiguous on/off enrollment model; keep backend compatibility for legacy stored policies where practical.
+- [x] Remove the old three-choice Default / Auto-download / Never UI so the product presents one unambiguous on/off enrollment model; keep backend compatibility for legacy stored policies where practical.
 - [x] Add backend/browser coverage for opt-in scheduling, inactive-show search, list/detail synchronization, authorization, and global master-disable behavior.
 - [x] Localize the new English/Ukrainian UI and update durable automation documentation.
-- [ ] Rerun the complete validation suite on the final branch head.
 
 ### Follow-up automation controls
 
