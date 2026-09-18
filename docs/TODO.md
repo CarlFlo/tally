@@ -6,7 +6,7 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 `feature/torrent-automation-confidence`
 
-Status: torrent automation running-show list and historical-backfill guard are implemented; final validation is pending.
+Status: torrent automation running-show list and historical-backfill guard are implemented and fully validated; branch is ready for review.
 
 ### Evaluation and search metadata
 
