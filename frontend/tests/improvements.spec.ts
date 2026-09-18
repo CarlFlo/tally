@@ -165,7 +165,7 @@ test("discovery focus, inside clicks, queued add/undo, retry notice, favorites a
     .getByRole("button", { name: "Mark season downloaded", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Clear downloaded season", exact: true })
+    .getByRole("button", { name: "Unmark season downloaded", exact: true })
     .click();
   await expect(
     page.getByRole("button", { name: "Mark season downloaded", exact: true }),
