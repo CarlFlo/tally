@@ -19,7 +19,7 @@ func (s *Service) Trigger(kind, trigger, show string) (string, error) {
 func (s *Service) TriggerAndWait(ctx context.Context, kind, trigger, show string) (string, error) {
 	id, done, err := s.trigger(kind, trigger, show)
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 	select {
 	case runErr := <-done:
