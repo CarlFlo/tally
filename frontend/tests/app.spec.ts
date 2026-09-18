@@ -173,9 +173,9 @@ test("library, calendar, episode state, profiles, jobs and responsive layout", a
   await expect(
     page.getByRole("heading", { name: "Example Show." }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Watch season", exact: true }).click();
+  await page.getByRole("button", { name: "Mark season watched", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "Unwatch season" }),
+    page.getByRole("button", { name: "Mark season unwatched" }),
   ).toBeVisible();
   await page.locator(".episode-row").first().click();
   await page.getByRole("button", { name: "Search torrents" }).click();
