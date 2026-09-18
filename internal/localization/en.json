@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 21
+    "catalogVersion": 22
   },
   "common": {
     "save": "Save",
@@ -914,9 +914,9 @@
     "available": "Available",
     "upcoming": "Upcoming",
     "specials": "Specials",
-    "unwatchSeason": "Unwatch season",
-    "watchSeason": "Watch season",
-    "clearDownloadedSeason": "Clear downloaded season",
+    "unwatchSeason": "Mark season unwatched",
+    "watchSeason": "Mark season watched",
+    "clearDownloadedSeason": "Unmark season downloaded",
     "markDownloadedSeason": "Mark season downloaded",
     "noEpisodes": "No episodes have been announced yet.",
     "viewTVmaze": "View on TVmaze",
@@ -1024,6 +1024,8 @@
     "removePrompt": "Remove “{{name}}” from qBittorrent only, or also delete its downloaded files from disk?",
     "removeTorrentOnly": "Remove torrent only",
     "removeTorrentAndFiles": "Remove torrent and files",
-    "removedWithFiles": "Torrent and downloaded files removed"
+    "removedWithFiles": "Torrent and downloaded files removed",
+    "connecting": "Connecting to torrent client…",
+    "unavailable": "Torrent client status is unavailable."
   }
 }
