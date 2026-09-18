@@ -58,15 +58,15 @@ Status: post-magnet payload verification is in progress; final validation is pen
 
 ### Post-magnet payload verification
 
-- [ ] Persist automatic magnet submissions that still require payload verification so the check survives restarts.
-- [ ] Extend qBittorrent integration to read the resolved file list for a Tally-owned torrent by infohash.
-- [ ] Have the torrent-automation scheduler process pending magnet verifications before new discovery work, without long blocking polls.
-- [ ] Run the resolved qBittorrent file list through the same video/executable/sample/episode identity checks used for inspectable `.torrent` metadata.
-- [ ] Recalculate actual payload MB/min from the resolved file sizes and reject an out-of-range payload using the submission-time media profile/settings.
-- [ ] If post-verification fails, stop/remove the Tally-owned torrent with its partial files, globally block the exact infohash, and record the reason without rewriting the original immutable decision.
-- [ ] If post-verification succeeds, retain the original metadata-only decision and append durable follow-up verification state for Previous Runs.
-- [ ] Treat unresolved magnet metadata as pending/retryable; do not busy-poll or turn an empty file list into a false rejection.
-- [ ] Add migration/backup coverage, qBittorrent protocol tests, deterministic automation tests, Previous Runs UI/localization, and durable architecture/validation docs.
+- [x] Persist automatic magnet submissions that still require payload verification so the check survives restarts.
+- [x] Extend qBittorrent integration to read the resolved file list for a Tally-owned torrent by infohash.
+- [x] Have the torrent-automation scheduler process pending magnet verifications before new discovery work, without long blocking polls.
+- [x] Run the resolved qBittorrent file list through the same video/executable/sample/episode identity checks used for inspectable `.torrent` metadata.
+- [x] Recalculate actual payload MB/min from the resolved file sizes and reject an out-of-range payload using the submission-time media profile/settings.
+- [x] If post-verification fails, stop/remove the Tally-owned torrent with its partial files, globally block the exact infohash, and record the reason without rewriting the original immutable decision.
+- [x] If post-verification succeeds, retain the original metadata-only decision and append durable follow-up verification state for Previous Runs.
+- [x] Treat unresolved magnet metadata as pending/retryable; do not busy-poll or turn an empty file list into a false rejection.
+- [x] Add migration/backup coverage, qBittorrent protocol tests, deterministic automation tests, Previous Runs UI/localization, and durable architecture/validation docs.
 
 ### Runtime-aware size profiles and magnet automation
 

@@ -304,3 +304,7 @@ When a fix teaches a reusable lesson, capture the generalized prevention rule he
 When a provider offers both a `.torrent` and a magnet, keep both instead of collapsing them into one download field. Inspect the `.torrent` first because its file tree is stronger evidence. A missing or temporarily unavailable inspectable payload can justify a conservative metadata-only fallback, but a payload that was successfully inspected and failed identity or safety checks is stronger negative evidence and must not be bypassed by switching transports.
 
 Runtime-normalized size is useful as a sanity signal because absolute episode size means different things for a 20-minute episode and a 90-minute episode. Use the most specific runtime available, keep missing runtime/size neutral, and store separate media profiles when compression characteristics differ materially. Debug scores for inactive profiles can aid tuning without letting those inactive scores influence selection.
+
+
+### Durable follow-up is safer than blocking on eventual metadata
+A magnet side effect can succeed before its file metadata exists. Do not keep the initiating request open or busy-poll waiting for metadata. Persist a follow-up obligation keyed to the exact torrent/run, let the normal scheduler reconcile it later, and preserve the original decision separately from later evidence. Re-evaluate eventual payload evidence using the settings that were active when the side effect was authorized; changing settings afterward must not rewrite history or retroactively move the acceptance boundary.

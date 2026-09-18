@@ -150,3 +150,43 @@ UPDATE profiles SET display_name='Legacy profile' WHERE id='user0'`); err != nil
 		t.Fatal("source backup metadata was not preserved", restoredManifest)
 	}
 }
+
+func TestLiveRestorePreservesPendingMagnetVerification(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := database.Open(ctx, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	hash := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	if _, err = db.Exec(`INSERT INTO torrent_automation_runs(
+		id,show_id,episode_id,show_name,season,episode,query,status,confidence,verification,selected_name,selected_infohash,
+		settings_snapshot,decision_log,engine_version,started_at,ended_at,duration_ms
+	) VALUES('run-magnet','show-a','episode-a','Example Show',1,2,'Example Show S01E02','downloaded','high','unverified',
+		'Example.Show.S01E02.1080p.WEB-DL',?,'{}','[]','4',1,2,1000);
+	INSERT INTO torrent_magnet_verifications(run_id,infohash,status,attempts,last_checked_at,error)
+	VALUES('run-magnet',?,'pending',2,5,'waiting for metadata');`, hash, hash); err != nil {
+		t.Fatal(err)
+	}
+	service := Service{DB: db, DataDir: dir, Path: filepath.Join(dir, "backups"), Keep: 2}
+	filename, err := service.Create(ctx, "manual")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec("DELETE FROM torrent_magnet_verifications WHERE run_id='run-magnet'"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = service.RestoreArchive(ctx, archiveID(filename)); err != nil {
+		t.Fatal(err)
+	}
+	var status, restoredHash, message string
+	var attempts int
+	if err = db.QueryRow("SELECT status,infohash,attempts,error FROM torrent_magnet_verifications WHERE run_id='run-magnet'").
+		Scan(&status, &restoredHash, &attempts, &message); err != nil {
+		t.Fatal(err)
+	}
+	if status != "pending" || restoredHash != hash || attempts != 2 || message != "waiting for metadata" {
+		t.Fatalf("pending magnet verification was not restored: status=%q hash=%q attempts=%d error=%q", status, restoredHash, attempts, message)
+	}
+}

@@ -24,11 +24,11 @@ Treat isolated reruns as diagnostic evidence, not as permission to ignore reprod
 
 Backend coverage includes authentication and sessions, profile isolation and roles, migrations and schema validation, backup/restore, settings revisions, schedules/jobs, provider coordination, cancellation, rate limiting, torrent protocols and automation, localization, notifications, and failure paths.
 
-Torrent coverage includes normalized Jackett metadata (including optional uploader/author data and simultaneous `.torrent` + magnet alternatives), release parsing/evaluation, confidence versus preference, keyword and allowlist filtering, trusted-source preference ranking, release-upload delay-window behavior, runtime-aware MB/minute profiles, live/animated classification and override, `.torrent` parsing and file-tree inspection, guarded magnet fallback, hard rejections, bad-infohash handling, bounded candidate fallback, retry gating, duplicate prevention, capability no-op/re-check behavior, scheduler integration, and ambiguous client submission reconciliation by infohash.
+Torrent coverage includes normalized Jackett metadata (including optional uploader/author data and simultaneous `.torrent` + magnet alternatives), release parsing/evaluation, confidence versus preference, keyword and allowlist filtering, trusted-source preference ranking, release-upload delay-window behavior, runtime-aware MB/minute profiles, live/animated classification and override, `.torrent` parsing and file-tree inspection, guarded magnet fallback, durable post-magnet qBittorrent file-list verification, unsafe magnet removal/hash blocking, hard rejections, bad-infohash handling, bounded candidate fallback, retry gating, duplicate prevention, capability no-op/re-check behavior, scheduler integration, and ambiguous client submission reconciliation by infohash.
 
 Browser coverage includes primary navigation, same-document lifecycle behavior, profile/login flows, localization, Calendar and show overlays, library state, settings, schedules/backups, notifications/logs, Jackett search, episode-aware torrent confidence, expandable torrent-result evaluation, qBittorrent submission, Torrent Automation filters/trust controls, Previous Runs/feedback, feature toggles and disabled routes, Downloads, responsive behavior, and persistence across reloads where relevant.
 
-Schema 10 is the current database version. Migration tests must continue to cover supported older schemas and backup restore/upgrade paths, including durable torrent automation runs, show policies, feedback, and bad-infohash state.
+Schema 11 is the current database version. Migration tests must continue to cover supported older schemas and backup restore/upgrade paths, including durable torrent automation runs, show policies, feedback, and bad-infohash state.
 
 External-service protocol tests use local fixtures or in-memory requesters. Validation must not contact or modify an operator's personal TVmaze alternatives, Jackett, qBittorrent, Discord, webhook, or OIDC services unless a task explicitly requires and authorizes an integration test.
 
@@ -48,7 +48,7 @@ Run `go test ./...` and `go vet ./...`. Use `go test -race ./...` for concurrenc
 
 Verify forward migration from supported earlier schemas, schema validation, pre-upgrade snapshot behavior, and backup round-trips for newly durable state. Restore tests should prove relational state survives cascades and that failed restores leave the current database usable.
 
-For torrent automation migrations, verify the run-history, feedback, bad-infohash, show-policy, persisted show type, and per-show media-profile override state survive backup/restore and retain their constraints. Detailed-run retention may prune old runs, but bad-infohash state needed to prevent repeat loops must remain durable.
+For torrent automation migrations, verify the run-history, feedback, bad-infohash, show-policy, persisted show type, per-show media-profile override, and pending/completed magnet post-verification state survive backup/restore and retain their constraints. Detailed-run retention may prune old runs, but bad-infohash state needed to prevent repeat loops must remain durable.
 
 ### Authentication and authorization
 
@@ -68,7 +68,8 @@ For automatic downloads, prove all of the following as applicable:
 
 - every automatic candidate must be High confidence and non-rejected;
 - when Jackett exposes a retrievable `.torrent`, inspect it before submission and reject meaningful payload/identity failures rather than bypassing them with a magnet;
-- when no usable `.torrent` is available, High-confidence magnets may use the metadata-only fallback path and must remain explicitly Unverified;
+- when no usable `.torrent` is available, High-confidence magnets may use the metadata-only fallback path and the original decision must remain explicitly Unverified;
+- automatic magnet submissions must create durable post-verification state; later scheduler runs inspect qBittorrent's resolved file list without busy-polling, reuse submission-time runtime/media ranges, and stop/remove + hash-block rejected payloads;
 - release delay uses Jackett's reported upload time when available, holds until the first qualifying known release matures, and then evaluates all current candidates; unknown timestamps remain neutral;
 - runtime-aware MB/minute filtering uses episode runtime first, show runtime second, treats missing inputs as neutral, and uses separate live-action/animated ranges;
 - executable/script, sample-only, wrong-show/episode, unsupported pack, malformed metadata, and known-bad hashes are rejected;
