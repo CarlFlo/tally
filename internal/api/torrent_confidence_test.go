@@ -10,14 +10,36 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/CarlFlo/tally/internal/metadata"
 	"github.com/CarlFlo/tally/internal/settings"
 	"github.com/CarlFlo/tally/internal/torrent"
 )
 
+type torrentTargetTV struct {
+	results      []metadata.SearchResult
+	episodes     []metadata.Episode
+	searchCalls  atomic.Int32
+	episodeCalls atomic.Int32
+}
+
+func (f *torrentTargetTV) SearchShows(context.Context, string) ([]metadata.SearchResult, error) {
+	f.searchCalls.Add(1)
+	return f.results, nil
+}
+
+func (f *torrentTargetTV) GetShow(context.Context, string) (*metadata.Show, error) {
+	return nil, fmt.Errorf("unexpected GetShow call")
+}
+
+func (f *torrentTargetTV) GetEpisodes(context.Context, string) ([]metadata.Episode, error) {
+	f.episodeCalls.Add(1)
+	return f.episodes, nil
+}
+
 func seedTorrentEpisodeTarget(t *testing.T, s *Server) {
 	t.Helper()
 	if _, err := s.DB.Exec(`INSERT INTO shows(id,name,premiered) VALUES('show-confidence','Example Show','2026-01-01');
-INSERT INTO episodes(id,show_id,season,number,name) VALUES('episode-confidence','show-confidence',1,2,'Second');
+INSERT INTO episodes(id,show_id,season,number,name,runtime) VALUES('episode-confidence','show-confidence',1,2,'Second',45);
 INSERT INTO profile_shows(profile_id,show_id,added_at) VALUES('profile-admin','show-confidence',1);
 INSERT INTO external_ids(provider,kind,external_id,internal_id) VALUES('tvmaze','show','4242','show-confidence');`); err != nil {
 		t.Fatal(err)
@@ -64,6 +86,135 @@ func TestTorrentSearchAddsConfidenceOnlyForAuthoritativeEpisodeContext(t *testin
 	}
 	if _, ok := freeOut.Results[0]["confidence"]; ok {
 		t.Fatalf("arbitrary free-text search received authoritative confidence: %s", freeText.Body.String())
+	}
+}
+
+func TestTorrentFreeTextEpisodeUsesSharedUnfollowedMetadata(t *testing.T) {
+	s, handler, tv := testServer(t, "disabled")
+	if _, err := s.DB.Exec(`INSERT INTO shows(id,name,premiered,runtime) VALUES('show-shared','Shared Show','2025-01-01',50);
+INSERT INTO episodes(id,show_id,season,number,name,runtime) VALUES('episode-shared','show-shared',1,3,'Third',45);
+INSERT INTO external_ids(provider,kind,external_id,internal_id) VALUES('tvmaze','show','5151','show-shared');`); err != nil {
+		t.Fatal(err)
+	}
+	size := int64(45 * 50 * 1024 * 1024)
+	jackett := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, `<rss xmlns:torznab="http://torznab.com/schemas/2015/feed"><channel><item><title>Shared.Show.S01E03.1080p.WEB-DL-GROUP</title><guid>shared</guid><enclosure url="magnet:?xt=urn:btih:%s" length="%d"/><torznab:attr name="seeders" value="40"/></item></channel></rss>`, strings.Repeat("c", 40), size)
+	}))
+	defer jackett.Close()
+	if err := s.settingsStore().Ensure(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.settingsStore().Save(context.Background(), "search", settings.Search{BaseURL: jackett.URL, APIKey: "PRIVATE-KEY", Enabled: true}, 1); err != nil {
+		t.Fatal(err)
+	}
+
+	response := request(t, handler, "POST", "/api/torrents/search", map[string]any{"query": "Shared Show S01E03"})
+	expect(t, response, 200)
+	var out struct {
+		Results []map[string]any `json:"results"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &out); err != nil || len(out.Results) != 1 {
+		t.Fatalf("unexpected response: %s", response.Body.String())
+	}
+	if out.Results[0]["confidence"] != "high" {
+		t.Fatalf("shared unfollowed metadata did not produce confidence: %s", response.Body.String())
+	}
+	if ratio, ok := out.Results[0]["mb_per_minute"].(float64); !ok || ratio < 49.9 || ratio > 50.1 {
+		t.Fatalf("unexpected MB/min ratio: %v", out.Results[0]["mb_per_minute"])
+	}
+	if tv.calls.Load() != 0 {
+		t.Fatalf("local shared metadata unnecessarily called TVMaze %d times", tv.calls.Load())
+	}
+	var follows int
+	if err := s.DB.QueryRow("SELECT COUNT(*) FROM profile_shows WHERE show_id='show-shared'").Scan(&follows); err != nil {
+		t.Fatal(err)
+	}
+	if follows != 0 {
+		t.Fatal("free-text metadata resolution followed the local show")
+	}
+}
+
+func TestTorrentFreeTextEpisodeResolvesTVMazeWithoutPersistingOrFollowing(t *testing.T) {
+	s, handler, _ := testServer(t, "disabled")
+	tv := &torrentTargetTV{
+		results: []metadata.SearchResult{{Score: 1, Show: metadata.Show{ID: 9090, Name: "Remote Show", Premiered: "2024-02-01", Runtime: 50}}},
+		episodes: []metadata.Episode{{ID: 9904, Season: 2, Number: 4, Name: "Fourth", Runtime: 42}},
+	}
+	s.Metadata.Provider = tv
+	size := int64(42 * 60 * 1024 * 1024)
+	jackett := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, `<rss xmlns:torznab="http://torznab.com/schemas/2015/feed"><channel><item><title>Remote.Show.S02E04.1080p.WEB-DL-GROUP</title><guid>remote</guid><enclosure url="magnet:?xt=urn:btih:%s" length="%d"/><torznab:attr name="seeders" value="60"/></item></channel></rss>`, strings.Repeat("d", 40), size)
+	}))
+	defer jackett.Close()
+	if err := s.settingsStore().Ensure(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.settingsStore().Save(context.Background(), "search", settings.Search{BaseURL: jackett.URL, APIKey: "PRIVATE-KEY", Enabled: true}, 1); err != nil {
+		t.Fatal(err)
+	}
+
+	response := request(t, handler, "POST", "/api/torrents/search", map[string]any{"query": "Remote Show S02E04"})
+	expect(t, response, 200)
+	var out struct {
+		Results []map[string]any `json:"results"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &out); err != nil || len(out.Results) != 1 {
+		t.Fatalf("unexpected response: %s", response.Body.String())
+	}
+	if out.Results[0]["confidence"] != "high" {
+		t.Fatalf("TVMaze-resolved search did not receive confidence: %s", response.Body.String())
+	}
+	if ratio, ok := out.Results[0]["mb_per_minute"].(float64); !ok || ratio < 59.9 || ratio > 60.1 {
+		t.Fatalf("unexpected TVMaze MB/min ratio: %v", out.Results[0]["mb_per_minute"])
+	}
+	if tv.searchCalls.Load() != 1 || tv.episodeCalls.Load() != 1 {
+		t.Fatalf("unexpected TVMaze calls: search=%d episodes=%d", tv.searchCalls.Load(), tv.episodeCalls.Load())
+	}
+	var persisted, followed int
+	if err := s.DB.QueryRow("SELECT COUNT(*) FROM shows WHERE name='Remote Show'").Scan(&persisted); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.DB.QueryRow("SELECT COUNT(*) FROM profile_shows ps JOIN shows s ON s.id=ps.show_id WHERE s.name='Remote Show'").Scan(&followed); err != nil {
+		t.Fatal(err)
+	}
+	if persisted != 0 || followed != 0 {
+		t.Fatalf("TVMaze search context changed library state: persisted=%d followed=%d", persisted, followed)
+	}
+}
+
+func TestTorrentFreeTextEpisodeLeavesAmbiguousTVMazeMatchesUnscored(t *testing.T) {
+	s, handler, _ := testServer(t, "disabled")
+	tv := &torrentTargetTV{
+		results: []metadata.SearchResult{
+			{Score: 1, Show: metadata.Show{ID: 1001, Name: "Ambiguous Show", Premiered: "2020-01-01", Runtime: 45}},
+			{Score: 0.9, Show: metadata.Show{ID: 1002, Name: "Ambiguous Show", Premiered: "2022-01-01", Runtime: 45}},
+		},
+	}
+	s.Metadata.Provider = tv
+	jackett := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, `<rss xmlns:torznab="http://torznab.com/schemas/2015/feed"><channel><item><title>Ambiguous.Show.S01E01.1080p.WEB-DL-GROUP</title><guid>ambiguous</guid><enclosure url="magnet:?xt=urn:btih:%s" length="1073741824"/><torznab:attr name="seeders" value="20"/></item></channel></rss>`, strings.Repeat("e", 40))
+	}))
+	defer jackett.Close()
+	if err := s.settingsStore().Ensure(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.settingsStore().Save(context.Background(), "search", settings.Search{BaseURL: jackett.URL, APIKey: "PRIVATE-KEY", Enabled: true}, 1); err != nil {
+		t.Fatal(err)
+	}
+
+	response := request(t, handler, "POST", "/api/torrents/search", map[string]any{"query": "Ambiguous Show S01E01"})
+	expect(t, response, 200)
+	var out struct {
+		Results []map[string]any `json:"results"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &out); err != nil || len(out.Results) != 1 {
+		t.Fatalf("unexpected response: %s", response.Body.String())
+	}
+	if _, ok := out.Results[0]["confidence"]; ok {
+		t.Fatalf("ambiguous TVMaze match received authoritative confidence: %s", response.Body.String())
+	}
+	if tv.episodeCalls.Load() != 0 {
+		t.Fatalf("ambiguous show lookup should not fetch episodes, got %d calls", tv.episodeCalls.Load())
 	}
 }
 

@@ -39,7 +39,7 @@ func (s *Server) torrentSearch(w http.ResponseWriter, r *http.Request, session a
 		return err
 	}
 	if target == nil {
-		target, err = s.torrentEpisodeTargetFromQuery(r.Context(), session.Profile, in.Query)
+		target, err = s.torrentEpisodeTargetFromQuery(r.Context(), in.Query)
 		if err != nil {
 			return err
 		}
