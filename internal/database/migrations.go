@@ -45,7 +45,10 @@ var migration011 string
 //go:embed migration_012.sql
 var migration012 string
 
-const Version = 12
+//go:embed migration_013.sql
+var migration013 string
+
+const Version = 13
 
 func (s *Store) migrate(ctx context.Context, dir string, existing bool) error {
 	var e error
@@ -93,6 +96,8 @@ func (s *Store) migrate(ctx context.Context, dir string, existing bool) error {
 				_, e = tx.ExecContext(ctx, migration011)
 			case 12:
 				_, e = tx.ExecContext(ctx, migration012)
+			case 13:
+				_, e = tx.ExecContext(ctx, migration013)
 			default:
 				e = fmt.Errorf("no migration to schema %d", next)
 			}
