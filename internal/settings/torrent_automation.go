@@ -11,7 +11,8 @@ const (
 	TorrentQuality1080 = "1080p"
 	TorrentQuality2160 = "2160p"
 
-	TorrentAutomationRulesVersion = 1
+	TorrentAutomationRulesVersion         = 1
+	TorrentAutomationRequestPolicyVersion = 1
 )
 
 type TorrentAutomation struct {
@@ -33,8 +34,14 @@ type TorrentAutomation struct {
 	PreferredProviders  []string `json:"preferred_providers"`
 	LiveMinMBPerMinute      int `json:"live_min_mb_per_minute"`
 	LiveMaxMBPerMinute      int `json:"live_max_mb_per_minute"`
-	AnimatedMinMBPerMinute  int `json:"animated_min_mb_per_minute"`
-	AnimatedMaxMBPerMinute  int `json:"animated_max_mb_per_minute"`
+	AnimatedMinMBPerMinute  int  `json:"animated_min_mb_per_minute"`
+	AnimatedMaxMBPerMinute  int  `json:"animated_max_mb_per_minute"`
+	RequestPolicyVersion    int  `json:"request_policy_version"`
+	DiscoveryBudget         int  `json:"discovery_budget"`
+	RetryFirstMinutes       int  `json:"retry_first_minutes"`
+	RetrySecondMinutes      int  `json:"retry_second_minutes"`
+	RetryLaterMinutes       int  `json:"retry_later_minutes"`
+	PrioritizeRecent        bool `json:"prioritize_recent"`
 }
 
 func DefaultTorrentAutomation() TorrentAutomation {
@@ -51,6 +58,12 @@ func DefaultTorrentAutomation() TorrentAutomation {
 		LiveMaxMBPerMinute:       220,
 		AnimatedMinMBPerMinute:   4,
 		AnimatedMaxMBPerMinute:   140,
+		RequestPolicyVersion:     TorrentAutomationRequestPolicyVersion,
+		DiscoveryBudget:          5,
+		RetryFirstMinutes:        30,
+		RetrySecondMinutes:       120,
+		RetryLaterMinutes:        360,
+		PrioritizeRecent:         true,
 	}
 }
 
@@ -79,6 +92,17 @@ func (v TorrentAutomation) Effective() TorrentAutomation {
 	}
 	if v.AnimatedMaxMBPerMinute == 0 {
 		v.AnimatedMaxMBPerMinute = defaults.AnimatedMaxMBPerMinute
+	}
+	// Existing installations predate request-restraint controls. Seed the
+	// initial safe policy once, then preserve intentionally disabled recency
+	// prioritization and user-selected values afterwards.
+	if v.RequestPolicyVersion == 0 {
+		v.RequestPolicyVersion = TorrentAutomationRequestPolicyVersion
+		v.DiscoveryBudget = defaults.DiscoveryBudget
+		v.RetryFirstMinutes = defaults.RetryFirstMinutes
+		v.RetrySecondMinutes = defaults.RetrySecondMinutes
+		v.RetryLaterMinutes = defaults.RetryLaterMinutes
+		v.PrioritizeRecent = defaults.PrioritizeRecent
 	}
 	// Existing installations predate the release-selection rules. Seed the
 	// first rule set once, then preserve intentionally empty values afterwards.
@@ -115,6 +139,17 @@ func ValidateTorrentAutomation(v TorrentAutomation) error {
 	}
 	if v.MaxCandidates < 1 || v.MaxCandidates > 20 {
 		return fmt.Errorf("candidate inspection limit must be between 1 and 20")
+	}
+	if v.DiscoveryBudget < 1 || v.DiscoveryBudget > 25 {
+		return fmt.Errorf("automation search budget must be between 1 and 25 episodes per run")
+	}
+	if v.RetryFirstMinutes < 5 || v.RetryFirstMinutes > 1440 ||
+		v.RetrySecondMinutes < 5 || v.RetrySecondMinutes > 1440 ||
+		v.RetryLaterMinutes < 5 || v.RetryLaterMinutes > 1440 {
+		return fmt.Errorf("automation retry delays must be between 5 and 1440 minutes")
+	}
+	if v.RetryFirstMinutes > v.RetrySecondMinutes || v.RetrySecondMinutes > v.RetryLaterMinutes {
+		return fmt.Errorf("automation retry delays must not decrease")
 	}
 	for label, bounds := range map[string][2]int{
 		"live-action size rate": {v.LiveMinMBPerMinute, v.LiveMaxMBPerMinute},
