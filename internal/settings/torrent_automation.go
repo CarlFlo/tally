@@ -16,7 +16,6 @@ const (
 )
 
 type TorrentAutomation struct {
-	Enabled             bool     `json:"enabled"`
 	PreferredQuality    string   `json:"preferred_quality"`
 	MinSeeders          int      `json:"min_seeders"`
 	HighConfidenceOnly  bool     `json:"high_confidence_only"`
