@@ -91,8 +91,15 @@ type automationClient struct {
 	data           []byte
 	addErr         error
 	reconcile      bool
+	listed         bool
 	lastHash       string
 	downloadsCalls int
+	resolvedFiles  []TorrentFile
+	resolvedErr    error
+	resolvedCalls  int
+	stopCalls      int
+	removeCalls    int
+	deleteFiles    bool
 }
 
 func (c *automationClient) Name() string                          { return "test" }
@@ -113,14 +120,28 @@ func (c *automationClient) AddTorrent(_ context.Context, data []byte) error {
 }
 func (c *automationClient) Downloads(context.Context, string) (DownloadSnapshot, error) {
 	c.downloadsCalls++
-	if c.reconcile && c.lastHash != "" {
+	if (c.reconcile || c.listed) && c.lastHash != "" {
 		return DownloadSnapshot{Torrents: []Download{{Hash: c.lastHash, Category: TallyCategory}}}, nil
 	}
 	return DownloadSnapshot{}, nil
 }
-func (c *automationClient) Stop(context.Context, string) error         { return nil }
-func (c *automationClient) Start(context.Context, string) error        { return nil }
-func (c *automationClient) Remove(context.Context, string, bool) error { return nil }
+func (c *automationClient) ResolvedFiles(context.Context, string) ([]TorrentFile, error) {
+	c.resolvedCalls++
+	if c.resolvedErr != nil {
+		return nil, c.resolvedErr
+	}
+	return append([]TorrentFile(nil), c.resolvedFiles...), nil
+}
+func (c *automationClient) Stop(context.Context, string) error {
+	c.stopCalls++
+	return nil
+}
+func (c *automationClient) Start(context.Context, string) error { return nil }
+func (c *automationClient) Remove(_ context.Context, _ string, deleteFiles bool) error {
+	c.removeCalls++
+	c.deleteFiles = deleteFiles
+	return nil
+}
 
 func automationTorrentFixture(name string) string {
 	return fmt.Sprintf("d4:infod6:lengthi2048e4:name%d:%s12:piece lengthi16384e6:pieces20:aaaaaaaaaaaaaaaaaaaaee", len(name), name)
@@ -252,6 +273,130 @@ func TestAutomationAllowsHighConfidenceMagnetFallback(t *testing.T) {
 	}
 	if !foundMetadataOnly {
 		t.Fatalf("metadata-only fallback was not explicit: %+v", runs[0].DecisionLog)
+	}
+}
+
+
+func TestAutomationMagnetVerificationStaysPendingUntilFilesResolve(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	client := &automationClient{listed: true}
+	service := automationService(db, automationRequester{magnetOnly: true}, client, now)
+	if processed, err := service.Run(context.Background()); err != nil || processed != 1 {
+		t.Fatalf("initial magnet run failed: processed=%d err=%v", processed, err)
+	}
+	if processed, err := service.Run(context.Background()); err != nil || processed != 0 {
+		t.Fatalf("pending metadata should not count as completed verification: processed=%d err=%v", processed, err)
+	}
+	runs, err := (AutomationStore{DB: db}).ListRuns(context.Background(), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runs) != 1 || runs[0].PostVerification == nil || runs[0].PostVerification.Status != "pending" || runs[0].PostVerification.Attempts != 1 {
+		t.Fatalf("magnet verification was not kept pending: %+v", runs)
+	}
+	if client.removeCalls != 0 {
+		t.Fatal("pending magnet metadata was removed")
+	}
+}
+
+func TestAutomationMagnetVerificationAcceptsResolvedSafePayload(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	if _, err := db.Exec("UPDATE episodes SET runtime=40 WHERE id='episode-a'"); err != nil {
+		t.Fatal(err)
+	}
+	client := &automationClient{
+		listed: true,
+		resolvedFiles: []TorrentFile{{Path: "Example.Show.S01E02.1080p.WEB-DL.mkv", Size: 2 * 1024 * 1024 * 1024}},
+	}
+	service := automationService(db, automationRequester{magnetOnly: true, reportedSize: 2 * 1024 * 1024 * 1024}, client, now)
+	if processed, err := service.Run(context.Background()); err != nil || processed != 1 {
+		t.Fatalf("initial magnet run failed: processed=%d err=%v", processed, err)
+	}
+	if processed, err := service.Run(context.Background()); err != nil || processed != 1 {
+		t.Fatalf("resolved verification did not complete: processed=%d err=%v", processed, err)
+	}
+	runs, err := (AutomationStore{DB: db}).ListRuns(context.Background(), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	verification := runs[0].PostVerification
+	if verification == nil || verification.Status != "verified" || verification.Assessment == nil || verification.Assessment.Verification != VerificationVerified {
+		t.Fatalf("resolved safe payload was not verified: %+v", verification)
+	}
+	if verification.SizeProfile == nil || !verification.SizeProfile.Known || !verification.SizeProfile.InActiveRange {
+		t.Fatalf("resolved payload did not retain size evidence: %+v", verification)
+	}
+	if runs[0].Verification != VerificationUnverified {
+		t.Fatalf("original immutable magnet decision was rewritten: %+v", runs[0])
+	}
+	if client.removeCalls != 0 {
+		t.Fatal("verified magnet was removed")
+	}
+}
+
+func TestAutomationMagnetVerificationRejectsAndDeletesUnsafePayload(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	client := &automationClient{
+		listed: true,
+		resolvedFiles: []TorrentFile{
+			{Path: "Example.Show.S01E02.1080p.WEB-DL.mkv", Size: 2 * 1024 * 1024 * 1024},
+			{Path: "setup.exe", Size: 1024},
+		},
+	}
+	service := automationService(db, automationRequester{magnetOnly: true}, client, now)
+	if processed, err := service.Run(context.Background()); err != nil || processed != 1 {
+		t.Fatalf("initial magnet run failed: processed=%d err=%v", processed, err)
+	}
+	if processed, err := service.Run(context.Background()); err != nil || processed != 1 {
+		t.Fatalf("unsafe post verification did not complete: processed=%d err=%v", processed, err)
+	}
+	runs, err := (AutomationStore{DB: db}).ListRuns(context.Background(), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	verification := runs[0].PostVerification
+	if verification == nil || verification.Status != "rejected" || verification.Assessment == nil || !verification.Assessment.Rejected() {
+		t.Fatalf("unsafe payload was not rejected: %+v", verification)
+	}
+	if client.stopCalls != 1 || client.removeCalls != 1 || !client.deleteFiles {
+		t.Fatalf("unsafe magnet was not stopped and deleted: stop=%d remove=%d deleteFiles=%v", client.stopCalls, client.removeCalls, client.deleteFiles)
+	}
+	blocked, err := (AutomationStore{DB: db}).IsBadInfoHash(context.Background(), runs[0].SelectedInfoHash)
+	if err != nil || !blocked {
+		t.Fatalf("unsafe magnet hash was not globally blocked: blocked=%v err=%v", blocked, err)
+	}
+}
+
+func TestAutomationMagnetVerificationRejectsActualSizeOutsideSubmissionRange(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	if _, err := db.Exec("UPDATE episodes SET runtime=40 WHERE id='episode-a'"); err != nil {
+		t.Fatal(err)
+	}
+	client := &automationClient{
+		listed: true,
+		resolvedFiles: []TorrentFile{{Path: "Example.Show.S01E02.mkv", Size: 20 * 1024 * 1024}},
+	}
+	service := automationService(db, automationRequester{magnetOnly: true, reportedSize: 2 * 1024 * 1024 * 1024}, client, now)
+	if processed, err := service.Run(context.Background()); err != nil || processed != 1 {
+		t.Fatalf("initial magnet run failed: processed=%d err=%v", processed, err)
+	}
+	if processed, err := service.Run(context.Background()); err != nil || processed != 1 {
+		t.Fatalf("size post verification did not complete: processed=%d err=%v", processed, err)
+	}
+	runs, err := (AutomationStore{DB: db}).ListRuns(context.Background(), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	verification := runs[0].PostVerification
+	if verification == nil || verification.Status != "rejected" || verification.SizeProfile == nil || verification.SizeProfile.InActiveRange {
+		t.Fatalf("actual size outlier was not rejected: %+v", verification)
+	}
+	if client.removeCalls != 1 || !client.deleteFiles {
+		t.Fatal("actual size outlier was not removed with files")
 	}
 }
 

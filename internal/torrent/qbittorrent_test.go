@@ -165,6 +165,49 @@ func TestQBittorrentListsAndControlsTallyDownloads(t *testing.T) {
 	}
 }
 
+
+func TestQBittorrentReadsResolvedTorrentFiles(t *testing.T) {
+	hash := strings.Repeat("c", 40)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer "+testAPIKey {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		if r.Method != http.MethodGet || r.URL.Path != "/api/v2/torrents/files" || r.URL.Query().Get("hash") != hash {
+			http.NotFound(w, r)
+			return
+		}
+		fmt.Fprint(w, `[{"name":"Example.Show.S01E02/video.mkv","size":2147483648},{"name":"Example.Show.S01E02/subtitle.srt","size":2048}]`)
+	}))
+	defer server.Close()
+
+	client := &QBittorrent{Control: qbtControl(t), URL: server.URL, APIKey: testAPIKey}
+	files, err := client.ResolvedFiles(context.Background(), hash)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 2 || files[0].Path != "Example.Show.S01E02/video.mkv" || files[0].Size != 2147483648 {
+		t.Fatalf("unexpected resolved files: %+v", files)
+	}
+}
+
+func TestQBittorrentAllowsEmptyResolvedFileListWhileMagnetMetadataIsPending(t *testing.T) {
+	hash := strings.Repeat("d", 40)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v2/torrents/files" {
+			fmt.Fprint(w, `[]`)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer server.Close()
+	client := &QBittorrent{Control: qbtControl(t), URL: server.URL, APIKey: testAPIKey}
+	files, err := client.ResolvedFiles(context.Background(), hash)
+	if err != nil || len(files) != 0 {
+		t.Fatalf("empty unresolved file list should stay pending: files=%v err=%v", files, err)
+	}
+}
+
 func TestQBittorrentRejectsAuthenticationAndRedirectWithoutRetry(t *testing.T) {
 	for _, status := range []int{401, 403, 302} {
 		t.Run(fmt.Sprint(status), func(t *testing.T) {

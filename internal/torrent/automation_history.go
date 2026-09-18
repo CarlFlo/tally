@@ -243,7 +243,7 @@ func (s AutomationStore) BlockInfoHash(ctx context.Context, infohash, reason, so
 		reason = reason[:200]
 	}
 	_, err := s.DB.ExecContext(ctx, `INSERT INTO torrent_bad_hashes(infohash,reason,source_run_id,marked_by,created_at)
-		VALUES(?,?,?,'system',?) ON CONFLICT(infohash) DO NOTHING`, infohash, reason, sourceRunID, time.Now().Unix())
+		VALUES(?,?,?,NULL,?) ON CONFLICT(infohash) DO NOTHING`, infohash, reason, sourceRunID, time.Now().Unix())
 	return err
 }
 
