@@ -4,7 +4,7 @@ import { BackupArchives } from "./BackupArchives";
 import { BackupRetention } from "./BackupRetention";
 import { ScheduleEditor, type Schedule } from "./ScheduleEditor";
 
-const scheduleOrder = ["metadata", "maintenance", "backup"];
+const scheduleOrder = ["metadata", "torrent_automation", "maintenance", "backup"];
 
 export function SchedulingBackupsSettings() {
   const { t } = useTranslation();
