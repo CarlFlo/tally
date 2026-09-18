@@ -25,6 +25,7 @@ export function EpisodeRow({
   const [pending, setPending] = useState(false);
   const { boot, notify } = useApp();
   const cache = useQueryClient();
+  const isReleased = released(ep, boot.preferences.timezone);
   useEffect(() => {
     if (!pending) setEp(episode);
   }, [episode, pending]);
@@ -44,7 +45,7 @@ export function EpisodeRow({
   }
   return (
     <div
-      className={`episode-row ${ep.watched ? "episode-watched" : released(ep, boot.preferences.timezone) ? "episode-available" : "episode-upcoming"}`}
+      className={`episode-row ${ep.watched ? "episode-watched" : isReleased ? "episode-available" : "episode-upcoming"}`}
       onClick={onOpen}
     >
       <span className="episode-number">
@@ -67,7 +68,7 @@ export function EpisodeRow({
         <small className="episode-status">
           {ep.watched
             ? t("calendar.watched")
-            : released(ep, boot.preferences.timezone)
+            : isReleased
               ? t("calendar.available")
               : t("calendar.upcoming")}
         </small>
@@ -78,7 +79,7 @@ export function EpisodeRow({
         }
         aria-label={ep.downloaded ? t("calendar.markNotDownloaded") : t("calendar.markDownloaded")}
         aria-pressed={!!ep.downloaded}
-        disabled={pending}
+        disabled={pending || (!isReleased && !ep.downloaded)}
         onClick={(e) => {
           e.stopPropagation();
           void toggle("downloaded");
@@ -90,7 +91,7 @@ export function EpisodeRow({
         className={"icon-button state-icon " + (ep.watched ? "mint-text" : "")}
         aria-label={ep.watched ? t("calendar.markUnwatched") : t("calendar.markWatched")}
         aria-pressed={!!ep.watched}
-        disabled={pending}
+        disabled={pending || (!isReleased && !ep.watched)}
         onClick={(e) => {
           e.stopPropagation();
           void toggle("watched");
