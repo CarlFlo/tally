@@ -107,15 +107,17 @@ test("episode search expands into a strengths and concerns evaluation", async ({
     page.getByRole("textbox", { name: "Torrent search query" }),
   ).toHaveValue("Example Show S01E01");
   await expect(page.locator(".torrent-result")).toHaveCount(2);
-  await expect(page.locator(".torrent-result").first().locator(".confidence-high")).toContainText(
-    "High · Unverified",
-  );
+  await expect(page.locator(".torrent-result").first().locator(".confidence-high")).toHaveCount(0);
 
   await page.locator(".torrent-result").first().click();
   await expect(page.locator(".torrent-result-inspection")).toHaveCount(1);
   await expect(page.getByText("Final evaluation", { exact: true })).toBeVisible();
-  await expect(page.getByText("Correct show and episode", { exact: true })).toBeVisible();
+  await expect(page.locator(".torrent-result").first().locator(".confidence-high")).toContainText(
+    "High · Unverified",
+  );
+  await expect(page.getByText("Correct show and episode", { exact: true })).toHaveCount(0);
   await expect(page.getByText("90 seeders available", { exact: true })).toBeVisible();
+  await expect(page.getByText(/MB\/min is within the configured live-action range/)).toBeVisible();
   await expect(
     page.getByText("Magnet payload cannot be inspected before download", { exact: true }),
   ).toBeVisible();
