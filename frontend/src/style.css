@@ -4037,6 +4037,19 @@ td .table-error {
 .downloads-stats {
   margin-bottom: 22px;
 }
+.downloads-stats .stat-card {
+  min-width: 0;
+}
+.downloads-stats .stat-card > strong {
+  min-width: 0;
+  max-width: 100%;
+  padding-right: 42px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(18px, 2.2vw, 30px);
+  font-variant-numeric: tabular-nums;
+}
 .downloads-panel {
   padding: 0 20px;
 }
