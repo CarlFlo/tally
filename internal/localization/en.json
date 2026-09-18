@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 20
+    "catalogVersion": 21
   },
   "common": {
     "save": "Save",
@@ -707,7 +707,7 @@
     "animatedMax": "Animated maximum MB per minute",
     "sizeProfilesHint": "Auto-detected animated shows use the animated range. You can override a show's media type from its Show actions menu.",
     "showsTitle": "Shows in automation",
-    "showsHelp": "Only enrolled shows are searched automatically. With no search, this list shows My Shows that currently have an upcoming episode.",
+    "showsHelp": "Only enrolled shows are searched automatically. Without a search, this list shows currently running series from My Shows. Search to find any show in My Shows.",
     "enrolledCount_one": "{{count}} enrolled",
     "enrolledCount_other": "{{count}} enrolled",
     "searchShows": "Search My Shows",
@@ -717,7 +717,7 @@
     "enrolled": "Automated",
     "notEnrolled": "Off",
     "noShowMatches": "No My Shows match this search.",
-    "noActiveShows": "No My Shows currently have a known upcoming episode. Search above to find any show in your library.",
+    "noActiveShows": "No currently running shows are in My Shows. Search above to find any show in your library.",
     "showEnabled": "Automation enabled for {{name}}",
     "showDisabled": "Automation disabled for {{name}}",
     "showAutomationOn": "Automation on",
