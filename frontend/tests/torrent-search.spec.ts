@@ -178,7 +178,8 @@ test("torrent search navigation and filters follow the saved Jackett state", asy
     ).toBe(true);
 
     expect(searchRequests).toBe(1);
-    await page.goto("/calendar");
+    await sidebar.getByRole("link", { name: "Calendar", exact: true }).click();
+    await expect(page).toHaveURL(/\/calendar$/);
     await sidebar
       .getByRole("link", { name: "Torrent search", exact: true })
       .click();
