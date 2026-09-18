@@ -292,6 +292,61 @@ func TestTorrentFreeTextEpisodeLeavesAmbiguousTVMazeMatchesUnscored(t *testing.T
 	}
 }
 
+func TestManualTorrentSubmissionCanOverridePreliminaryMetadataRejection(t *testing.T) {
+	s, handler, _ := testServer(t, "disabled")
+	seedTorrentEpisodeTarget(t, s)
+	jackett := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/download" {
+			w.Write([]byte(torrentFileFixture("Example.Show.S01E02.mkv")))
+			return
+		}
+		fmt.Fprintf(w, `<rss xmlns:torznab="http://torznab.com/schemas/2015/feed"><channel><item><title>Example.Show.S01E02.1080p.WEB-DL.H264-GROUP</title><guid>one</guid><enclosure url="http://%s/download?apikey=PRIVATE-KEY" length="2048"/><torznab:attr name="tvmazeid" value="9999"/></item></channel></rss>`, r.Host)
+	}))
+	defer jackett.Close()
+	var clientRequests atomic.Int32
+	client := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		clientRequests.Add(1)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer client.Close()
+	ctx := context.Background()
+	if err := s.settingsStore().Ensure(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.settingsStore().Save(ctx, "search", settings.Search{BaseURL: jackett.URL, APIKey: "PRIVATE-KEY", Enabled: true}, 1); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Clients.Save(ctx, torrent.ClientUpdate{Adapter: "qbittorrent", Fields: map[string]string{"url": client.URL, "api_key": fixtureClientKey}}); err != nil {
+		t.Fatal(err)
+	}
+
+	search := request(t, handler, "POST", "/api/torrents/search", map[string]any{
+		"query": "Example Show S01E02", "episode_id": "episode-confidence",
+	})
+	expect(t, search, 200)
+	var output struct {
+		Results []struct {
+			ID string `json:"id"`
+		} `json:"results"`
+	}
+	if err := json.Unmarshal(search.Body.Bytes(), &output); err != nil || len(output.Results) != 1 {
+		t.Fatalf("unexpected search response: %s", search.Body.String())
+	}
+	evaluation := request(t, handler, "GET", "/api/torrents/search/"+output.Results[0].ID+"/evaluation", nil)
+	expect(t, evaluation, 200)
+	if !strings.Contains(evaluation.Body.String(), `"confidence":"rejected"`) {
+		t.Fatalf("fixture did not produce the intended preliminary rejection: %s", evaluation.Body.String())
+	}
+
+	response := request(t, handler, "POST", "/api/torrents/send", map[string]string{
+		"selection": output.Results[0].ID, "idempotency_key": "manual-override-0001",
+	})
+	expect(t, response, 200)
+	if clientRequests.Load() == 0 {
+		t.Fatal("manual override did not reach qBittorrent after the actual payload matched")
+	}
+}
+
 func TestTorrentPayloadEpisodeMismatchIsRejectedBeforeQBittorrent(t *testing.T) {
 	s, handler, _ := testServer(t, "disabled")
 	seedTorrentEpisodeTarget(t, s)
