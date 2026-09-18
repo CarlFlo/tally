@@ -271,6 +271,21 @@ test("library, calendar, episode state, profiles, jobs and responsive layout", a
   await expect(page.locator(".sidebar")).not.toHaveClass(/open/);
   await page.getByRole("button", { name: "Light", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("tally-theme")))
+    .toBe("light");
+  let themeBeforeBootstrap = "";
+  await page.route("**/api/bootstrap", async (route) => {
+    const response = await route.fetch();
+    themeBeforeBootstrap = await page.evaluate(
+      () => document.documentElement.dataset.theme || "",
+    );
+    await route.fulfill({ response });
+  });
+  await page.reload();
+  await page.unroute("**/api/bootstrap");
+  expect(themeBeforeBootstrap).toBe("light");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
