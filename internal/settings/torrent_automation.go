@@ -31,6 +31,10 @@ type TorrentAutomation struct {
 	AllowedUploaders    []string `json:"allowed_uploaders"`
 	PreferredUploaders  []string `json:"preferred_uploaders"`
 	PreferredProviders  []string `json:"preferred_providers"`
+	LiveMinMBPerMinute      int `json:"live_min_mb_per_minute"`
+	LiveMaxMBPerMinute      int `json:"live_max_mb_per_minute"`
+	AnimatedMinMBPerMinute  int `json:"animated_min_mb_per_minute"`
+	AnimatedMaxMBPerMinute  int `json:"animated_max_mb_per_minute"`
 }
 
 func DefaultTorrentAutomation() TorrentAutomation {
@@ -42,7 +46,11 @@ func DefaultTorrentAutomation() TorrentAutomation {
 		RetryWindowHours:    24,
 		MaxCandidates:       5,
 		RulesVersion:        TorrentAutomationRulesVersion,
-		ExcludeKeywords:     "cam telesync hardsub dubbed",
+		ExcludeKeywords:          "cam telesync hardsub dubbed",
+		LiveMinMBPerMinute:       8,
+		LiveMaxMBPerMinute:       220,
+		AnimatedMinMBPerMinute:   4,
+		AnimatedMaxMBPerMinute:   140,
 	}
 }
 
@@ -59,6 +67,18 @@ func (v TorrentAutomation) Effective() TorrentAutomation {
 	}
 	if v.MaxCandidates == 0 {
 		v.MaxCandidates = defaults.MaxCandidates
+	}
+	if v.LiveMinMBPerMinute == 0 {
+		v.LiveMinMBPerMinute = defaults.LiveMinMBPerMinute
+	}
+	if v.LiveMaxMBPerMinute == 0 {
+		v.LiveMaxMBPerMinute = defaults.LiveMaxMBPerMinute
+	}
+	if v.AnimatedMinMBPerMinute == 0 {
+		v.AnimatedMinMBPerMinute = defaults.AnimatedMinMBPerMinute
+	}
+	if v.AnimatedMaxMBPerMinute == 0 {
+		v.AnimatedMaxMBPerMinute = defaults.AnimatedMaxMBPerMinute
 	}
 	// Existing installations predate the release-selection rules. Seed the
 	// first rule set once, then preserve intentionally empty values afterwards.
@@ -95,6 +115,14 @@ func ValidateTorrentAutomation(v TorrentAutomation) error {
 	}
 	if v.MaxCandidates < 1 || v.MaxCandidates > 20 {
 		return fmt.Errorf("candidate inspection limit must be between 1 and 20")
+	}
+	for label, bounds := range map[string][2]int{
+		"live-action size rate": {v.LiveMinMBPerMinute, v.LiveMaxMBPerMinute},
+		"animated size rate":    {v.AnimatedMinMBPerMinute, v.AnimatedMaxMBPerMinute},
+	} {
+		if bounds[0] < 1 || bounds[1] > 500 || bounds[0] >= bounds[1] {
+			return fmt.Errorf("%s must use a 1-500 MB/min range with minimum below maximum", label)
+		}
 	}
 	if len(v.IncludeKeywords) > 500 || len(v.ExcludeKeywords) > 500 {
 		return fmt.Errorf("torrent keyword filters must be 500 characters or fewer")
