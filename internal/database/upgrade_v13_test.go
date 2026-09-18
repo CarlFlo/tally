@@ -21,7 +21,7 @@ func TestVersionTwelveUpgradePersistsAutomationRetryState(t *testing.T) {
 	if _, err = raw.Exec(`INSERT INTO shows(id,name) VALUES('show-a','Example Show');
 	INSERT INTO episodes(id,show_id,season,number,name,airstamp) VALUES('episode-a','show-a',1,2,'Second','2026-09-17T18:00:00Z');
 	INSERT INTO torrent_automation_runs(id,show_id,episode_id,show_name,season,episode,query,status,engine_version,started_at,ended_at)
-	VALUES('run-a','show-a','episode-a','Example Show',1,2,'Example Show S01E02','no_verified_candidate','4',?,?,?)`, started, started+1, started+1); err != nil {
+	VALUES('run-a','show-a','episode-a','Example Show',1,2,'Example Show S01E02','no_verified_candidate','4',?,?)`, started, started+1); err != nil {
 		t.Fatal(err)
 	}
 	if err = raw.Close(); err != nil {
