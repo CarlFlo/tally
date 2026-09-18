@@ -17,7 +17,7 @@ FROM jobs j ORDER BY key`)
 	}
 	addSchedulePreviews(schedule, s.Config.Timezone)
 	kind, status := r.URL.Query().Get("kind"), r.URL.Query().Get("status")
-	if kind != "" && kind != "all" && kind != "metadata" && kind != "maintenance" && kind != "backup" {
+	if kind != "" && kind != "all" && kind != "metadata" && kind != "torrent_automation" && kind != "maintenance" && kind != "backup" {
 		return bad("invalid job filter")
 	}
 	if status != "" && status != "all" && status != "success" && status != "failed" && status != "running" && status != "cancelled" && status != "interrupted" {
