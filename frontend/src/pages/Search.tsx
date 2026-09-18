@@ -42,10 +42,20 @@ type Result = TorrentInspectionResult & {
   evaluated?: boolean;
 };
 
+type SearchFilters = {
+  seeders: number;
+  minSize: string;
+  maxSize: string;
+  include: string;
+  exclude: string;
+  quality: string[];
+};
+
 type SearchView = {
   query: string;
   results: Result[];
   searched: boolean;
+  filters?: SearchFilters;
 };
 
 const QUALITY_GROUPS = [
@@ -103,16 +113,33 @@ export function SearchPage() {
   const [evaluatingResult, setEvaluatingResult] = useState<string | null>(null);
   const [evaluationErrors, setEvaluationErrors] = useState<Record<string, Error | undefined>>({});
   const [keys] = useState(new Map<string, string>());
-  const [seeders, setSeeders] = useState(0);
-  const [minSize, setMinSize] = useState("");
-  const [maxSize, setMaxSize] = useState("");
-  const [include, setInclude] = useState("");
-  const [exclude, setExclude] = useState("");
-  const [quality, setQuality] = useState<string[]>([]);
+  const [seeders, setSeeders] = useState(cachedView?.filters?.seeders ?? 0);
+  const [minSize, setMinSize] = useState(cachedView?.filters?.minSize ?? "");
+  const [maxSize, setMaxSize] = useState(cachedView?.filters?.maxSize ?? "");
+  const [include, setInclude] = useState(cachedView?.filters?.include ?? "");
+  const [exclude, setExclude] = useState(cachedView?.filters?.exclude ?? "");
+  const [quality, setQuality] = useState<string[]>(
+    cachedView?.filters?.quality ?? [],
+  );
   const [sort, setSort] = useState("seeders");
   const activeSearch = useRef<AbortController | null>(null);
   const activeEvaluation = useRef<AbortController | null>(null);
   const autoSearchStarted = useRef(false);
+  useEffect(() => {
+    cache.setQueryData<SearchView>(viewKey, (current) => ({
+      query: current?.query ?? "",
+      results: current?.results ?? [],
+      searched: current?.searched ?? false,
+      filters: {
+        seeders,
+        minSize,
+        maxSize,
+        include,
+        exclude,
+        quality,
+      },
+    }));
+  }, [cache, boot.profile?.id, seeders, minSize, maxSize, include, exclude, quality]);
   useEffect(
     () => () => {
       const searchController = activeSearch.current;
@@ -150,6 +177,14 @@ export function SearchPage() {
         query,
         results: data.results,
         searched: true,
+        filters: {
+          seeders,
+          minSize,
+          maxSize,
+          include,
+          exclude,
+          quality,
+        },
       });
       setExpandedResult(null);
       if (data.warnings.length) notify(data.warnings.join(" · "), true);
@@ -200,6 +235,14 @@ export function SearchPage() {
           query: cached?.query || query,
           results: next,
           searched: true,
+          filters: cached?.filters ?? {
+            seeders,
+            minSize,
+            maxSize,
+            include,
+            exclude,
+            quality,
+          },
         }));
         return next;
       });
