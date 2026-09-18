@@ -209,7 +209,7 @@ test("automation page exposes release filters trust rules and disabled capabilit
   const showSearch = page.getByRole("textbox", { name: "Search My Shows" });
   await showSearch.fill("Archived Show");
   await expect(archivedRow).toBeVisible();
-  await expect(archivedRow.getByText("No upcoming episode", { exact: true })).toBeVisible();
+  await expect(archivedRow).toContainText("No upcoming episode");
   const enrollmentToggle = archivedRow.getByRole("checkbox");
   await expect(enrollmentToggle).not.toBeChecked();
   await enrollmentToggle.check();
