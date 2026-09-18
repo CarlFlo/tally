@@ -104,6 +104,19 @@ func TestEvaluateSearchCandidateRejectsWrongEpisode(t *testing.T) {
 	}
 }
 
+func TestEvaluateSearchCandidateTreatsTitleMismatchAsAmbiguous(t *testing.T) {
+	assessment := EvaluateSearchCandidate(
+		SearchResult{Name: "Indexer.Alias.S01E02.1080p.WEB-DL.x264-GROUP"},
+		EpisodeTarget{ShowTitle: "Example Show", Season: 1, Episode: 2},
+	)
+	if assessment.Confidence != ConfidenceMedium || assessment.Rejected() {
+		t.Fatalf("release-title mismatch should remain reviewable metadata: %+v", assessment)
+	}
+	if hasReason(assessment.HardRejections, ReasonWrongShow) || !hasReason(assessment.Reasons, ReasonAmbiguousIdentity) {
+		t.Fatalf("release-title mismatch was incorrectly treated as a different show: %+v", assessment)
+	}
+}
+
 func TestEvaluateSearchCandidateRejectsConflictingExternalID(t *testing.T) {
 	assessment := EvaluateSearchCandidate(
 		SearchResult{Name: "Show.S01E02.1080p.WEB-DL.x264-GROUP", TVMazeID: "999"},
