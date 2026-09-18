@@ -437,11 +437,15 @@ func TestRejectedPostMagnetVerificationCanRetryEpisodeAfterBackoff(t *testing.T)
 	client.removeCalls = 0
 	client.deleteFiles = false
 	client.magnetAdded = 0
-	if processed, err := service.Run(context.Background()); err != nil || processed != 1 {
+	retryService := automationService(db, automationRequester{
+		magnetOnly: true,
+		magnetHash: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+	}, client, now)
+	if processed, err := retryService.Run(context.Background()); err != nil || processed != 1 {
 		t.Fatalf("episode did not retry after rejected post-check backoff: processed=%d err=%v", processed, err)
 	}
-	if client.magnetAdded != 1 {
-		t.Fatalf("retry did not submit another candidate: magnets=%d", client.magnetAdded)
+	if client.magnetAdded != 1 || client.lastHash != "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" {
+		t.Fatalf("retry did not submit a different candidate: magnets=%d hash=%q", client.magnetAdded, client.lastHash)
 	}
 	runs, err := (AutomationStore{DB: db}).ListRuns(context.Background(), 10)
 	if err != nil {
