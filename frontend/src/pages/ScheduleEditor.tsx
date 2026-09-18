@@ -3,11 +3,12 @@ import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Save } from "lucide-react";
 import { api, Busy, ErrorState, useApp } from "../lib";
-import { commonSchedules, jobDescription, jobName } from "../schedules";
+import { commonSchedules, isExperimentalJob, jobDescription, jobName } from "../schedules";
 import { useDebouncedValue } from "../useDebouncedValue";
 import { SchedulePreview, type Preview } from "./SchedulePreview";
 import { queryKeys } from "../queryKeys";
 import { invalidateResources } from "../queryInvalidation";
+import { ExperimentalJobConfirmation } from "../ExperimentalJobConfirmation";
 
 export type Schedule = {
   key: string;
@@ -28,6 +29,7 @@ export function ScheduleEditor({ job }: { job: Schedule }) {
   const [enabled, setEnabled] = useState(!!job.enabled);
   const [busy, setBusy] = useState(false);
   const [saveError, setSaveError] = useState<Error>();
+  const [confirmExperimental, setConfirmExperimental] = useState(false);
   const previewSpec = useDebouncedValue(spec, 350);
   const preview = useQuery<Preview>({
     queryKey: queryKeys.schedulePreview(previewSpec),
@@ -59,7 +61,7 @@ export function ScheduleEditor({ job }: { job: Schedule }) {
         key: job.key, schedule, enabled: automatic, revision: saved.revision,
       });
       setSaved({ ...saved, schedule, enabled: automatic, revision: result.revision });
-      await invalidateResources(cache, ["schedules"]);
+      await invalidateResources(cache, ["schedules", "jobs"]);
       notify(
         automatic !== !!saved.enabled
           ? t(automatic ? "schedule.enabled" : "schedule.disabled", {
@@ -67,9 +69,11 @@ export function ScheduleEditor({ job }: { job: Schedule }) {
             })
           : t("schedule.saved"),
       );
+      return true;
     } catch (error) {
       setEnabled(!!saved.enabled);
       setSaveError(error as Error);
+      return false;
     } finally {
       setBusy(false);
     }
@@ -85,7 +89,14 @@ export function ScheduleEditor({ job }: { job: Schedule }) {
       <fieldset disabled={busy}>
         <div className="schedule-heading">
           <div><h3>{jobName(job.key)}</h3><p>{jobDescription(job.key)}</p></div>
-          <label className="toggle-setting"><input type="checkbox" checked={enabled} onChange={(event) => void save(saved.schedule, event.target.checked)} />{t("schedule.automatic")}</label>
+          <label className="toggle-setting"><input type="checkbox" checked={enabled} onChange={(event) => {
+            const nextEnabled = event.target.checked;
+            if (nextEnabled && !saved.enabled && isExperimentalJob(job.key)) {
+              setConfirmExperimental(true);
+              return;
+            }
+            void save(saved.schedule, nextEnabled);
+          }} />{t("schedule.automatic")}</label>
         </div>
         <div className="schedule-editor-body">
           <div className="schedule-fields">
@@ -98,6 +109,13 @@ export function ScheduleEditor({ job }: { job: Schedule }) {
         {!!job.paused && <p className="error-box">{t("schedule.paused", { count: job.failures })}</p>}
       </fieldset>
       {saveError && <ErrorState error={saveError} />}
+      {confirmExperimental && (
+        <ExperimentalJobConfirmation
+          jobKey={job.key}
+          onClose={() => setConfirmExperimental(false)}
+          onConfirm={() => save(saved.schedule, true)}
+        />
+      )}
     </form>
   );
 }
