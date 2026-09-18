@@ -179,6 +179,40 @@ test("episode search expands into a strengths and concerns evaluation", async ({
   expect(resetMedia.ok()).toBe(true);
 });
 
+test("manual rejected confidence stays reviewable and downloadable", async ({
+  page,
+}) => {
+  await selectProfileByName(page, "My profile");
+  await ensureExampleShow(page);
+  await page.route(/\/api\/torrents\/search\/[^/]+\/evaluation$/, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        confidence: "rejected",
+        verification: "unverified",
+        hard_rejections: [{ code: "wrong_episode" }],
+      }),
+    });
+  });
+
+  await page.locator(".episode-row").first().click();
+  await page.getByRole("button", { name: "Search torrents" }).click();
+  await expect(page).toHaveURL(/\/search\?q=/);
+  const result = page.locator(".torrent-result").first();
+  await result.click();
+
+  await expect(
+    page.getByText(
+      "The available metadata has concerns. Review them before deciding whether to download.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(result.getByText("Rejected", { exact: true })).toHaveCount(0);
+  await expect(result.locator(".confidence-rejected")).toHaveCount(0);
+  await expect(result.getByRole("button", { name: "Download", exact: true })).toBeEnabled();
+});
+
 test("automation show list defaults to Running status and search spans all My Shows", async ({
   page,
 }) => {
@@ -246,7 +280,7 @@ test("automation page exposes release filters trust rules and disabled capabilit
   ).toHaveAttribute("aria-current", "page");
   await expect(
     page.getByText("Enable automatic torrent downloads", { exact: true }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(page.getByText("Shows in automation", { exact: true })).toBeVisible();
 
   const exampleRow = page.locator(".automation-show-row").filter({ hasText: "Example Show" });
@@ -337,6 +371,117 @@ test("automation page exposes release filters trust rules and disabled capabilit
   await page.goto("/search");
   await expect(page).toHaveURL(/\/calendar$/);
   await page.unroute("**/api/bootstrap");
+});
+
+test("experimental torrent automation schedule is confirmed and shared across jobs and settings", async ({
+  page,
+}) => {
+  await selectProfileByName(page, "My profile");
+  const headers = { "X-Tally-CSRF": "1" };
+  const schedulesResponse = await page.request.get("/api/settings/scheduling");
+  expect(schedulesResponse.ok()).toBe(true);
+  const schedules = (await schedulesResponse.json()) as Array<{
+    key: string;
+    schedule: string;
+    enabled: boolean | number;
+    revision: number;
+  }>;
+  const saved = schedules.find((job) => job.key === "torrent_automation");
+  if (!saved) throw new Error("Torrent automation schedule is missing");
+
+  if (saved.enabled) {
+    const disable = await page.request.put("/api/settings/scheduling", {
+      headers,
+      data: {
+        key: saved.key,
+        schedule: saved.schedule,
+        enabled: false,
+        revision: saved.revision,
+      },
+    });
+    expect(disable.ok()).toBe(true);
+  }
+
+  try {
+    await page.goto("/settings");
+    const settingsCard = page
+      .locator(".schedule-editor")
+      .filter({ hasText: "Torrent automation" });
+    const settingsToggle = settingsCard.getByRole("checkbox", {
+      name: "Run automatically",
+    });
+    await expect(settingsToggle).not.toBeChecked();
+    await settingsToggle.click();
+    await expect(
+      page.getByRole("dialog", { name: "Enable experimental job?" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(settingsToggle).not.toBeChecked();
+
+    await page.goto("/system/jobs");
+    const jobCard = page.locator(".job-card").filter({ hasText: "Torrent automation" });
+    const jobsToggle = jobCard.getByRole("checkbox", {
+      name: "Toggle automatic schedule for Torrent automation",
+    });
+    await expect(jobsToggle).not.toBeChecked();
+    await jobsToggle.click();
+    await expect(
+      page.getByRole("dialog", { name: "Enable experimental job?" }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", {
+        name: "Yes, I understand, enable anyway",
+        exact: true,
+      })
+      .click();
+    await expect(jobsToggle).toBeChecked();
+
+    await page.goto("/settings");
+    const linkedSettingsCard = page
+      .locator(".schedule-editor")
+      .filter({ hasText: "Torrent automation" });
+    const linkedSettingsToggle = linkedSettingsCard.getByRole("checkbox", {
+      name: "Run automatically",
+    });
+    await expect(linkedSettingsToggle).toBeChecked();
+    await linkedSettingsToggle.uncheck();
+    await expect(linkedSettingsToggle).not.toBeChecked();
+
+    await page.goto("/system/jobs");
+    await expect(
+      page
+        .locator(".job-card")
+        .filter({ hasText: "Torrent automation" })
+        .getByRole("checkbox", {
+          name: "Toggle automatic schedule for Torrent automation",
+        }),
+    ).not.toBeChecked();
+  } finally {
+    const currentResponse = await page.request.get("/api/settings/scheduling");
+    if (currentResponse.ok()) {
+      const currentSchedules = (await currentResponse.json()) as Array<{
+        key: string;
+        schedule: string;
+        enabled: boolean | number;
+        revision: number;
+      }>;
+      const current = currentSchedules.find((job) => job.key === saved.key);
+      if (
+        current &&
+        (current.schedule !== saved.schedule || !!current.enabled !== !!saved.enabled)
+      ) {
+        await page.request.put("/api/settings/scheduling", {
+          headers,
+          data: {
+            key: saved.key,
+            schedule: saved.schedule,
+            enabled: !!saved.enabled,
+            revision: current.revision,
+          },
+        });
+      }
+    }
+  }
 });
 
 test("torrent search tabs remain responsive under rapid repeated navigation", async ({
