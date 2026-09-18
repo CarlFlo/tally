@@ -44,6 +44,12 @@ For localization, storing a translation key and translating at render time is sa
 
 ## Navigation and frontend lifecycle
 
+### Apply persisted visual state before first paint
+
+Visual preferences that affect the whole page, such as theme, should not wait for asynchronous application bootstrap before being applied. Keep the server preference authoritative, but cache the last confirmed non-sensitive presentation value in the browser and apply it from the document head before the application bundle runs. Provide a matching critical background/color fallback so the browser never paints an unrelated default while assets or bootstrap data load.
+
+Regression coverage should verify the document has the cached visual state before the authoritative bootstrap response is released, then verify normal bootstrap reconciliation still wins afterward.
+
 ### Fix lifecycle bugs instead of masking navigation
 
 Cooldowns, global pointer locks, forced reloads, and temporary navigation disabling can hide symptoms while creating new failure modes. A route change should not require defensive blocking to remain safe.
