@@ -82,19 +82,21 @@ func Run(args []string) error {
 	b := &backup.Service{DB: db, DataDir: c.DataDir, Path: filepath.Join(c.DataDir, "backups"), Timezone: c.Timezone}
 
 	if command == "serve" {
-		serveErr := serve(ctx, c, db, b)
-		slog.Info("Shutdown: checkpointing database")
+		shutdownStarted, serveErr := serve(ctx, c, db, b)
+		if shutdownStarted.IsZero() {
+			shutdownStarted = time.Now()
+		}
+		slog.Info("Shutdown: finalizing database")
 		checkpointCtx, checkpointDone := context.WithTimeout(context.Background(), 3*time.Second)
 		if checkpointErr := db.Checkpoint(checkpointCtx, true); checkpointErr != nil {
 			slog.Warn("Shutdown: database checkpoint did not finish", "error", checkpointErr)
 		}
 		checkpointDone()
-		slog.Info("Shutdown: closing database")
 		closeErr := db.Close()
 		if closeErr != nil {
 			slog.Error("Shutdown: database close failed", "error", closeErr)
 		}
-		slog.Info("Tally stopped")
+		slog.Info("Tally stopped", "duration_ms", time.Since(shutdownStarted).Milliseconds())
 		if serveErr != nil {
 			return serveErr
 		}
