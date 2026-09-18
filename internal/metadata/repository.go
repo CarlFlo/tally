@@ -59,7 +59,7 @@ func (r Repository) Save(ctx context.Context, external string, show *Show, episo
 		if e != nil {
 			return "", e
 		}
-		_, e = tx.ExecContext(ctx, `INSERT INTO episodes VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET season=excluded.season,number=excluded.number,name=excluded.name,summary=excluded.summary,airdate=excluded.airdate,airstamp=excluded.airstamp,runtime=excluded.runtime,type=excluded.type`, eid, id, ep.Season, ep.Number, ep.Name, Plain(ep.Summary), ep.Airdate, ep.Airstamp, ep.Runtime, ep.Type)
+		_, e = tx.ExecContext(ctx, `INSERT INTO episodes(id,show_id,season,number,name,summary,airdate,airstamp,runtime,type) VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET season=excluded.season,number=excluded.number,name=excluded.name,summary=excluded.summary,airdate=excluded.airdate,airstamp=excluded.airstamp,runtime=excluded.runtime,type=excluded.type`, eid, id, ep.Season, ep.Number, ep.Name, Plain(ep.Summary), ep.Airdate, ep.Airstamp, ep.Runtime, ep.Type)
 		if e != nil {
 			return "", e
 		}
