@@ -184,7 +184,7 @@ func automationTestStore(t *testing.T, now time.Time) *database.Store {
 	if err = (settings.Store{DB: db}).Ensure(ctx); err != nil {
 		t.Fatal(err)
 	}
-	setAutomationSettings(t, db, true, true, true)
+	setAutomationSettings(t, db, true, true)
 	airstamp := now.Add(-time.Hour).UTC().Format(time.RFC3339)
 	if _, err = db.ExecContext(ctx, `INSERT INTO profiles(id,display_name,avatar,created_at,locale,auth_method) VALUES('profile-a','Alex','mint',1,'en','none');
 INSERT INTO shows(id,name,premiered) VALUES('show-a','Example Show','2026-01-01');
@@ -196,7 +196,7 @@ INSERT INTO torrent_show_policy(show_id,policy,updated_at) VALUES('show-a','auto
 	return db
 }
 
-func setAutomationSettings(t *testing.T, db *database.Store, automationEnabled, searchEnabled, downloadsEnabled bool) {
+func setAutomationSettings(t *testing.T, db *database.Store, searchEnabled, downloadsEnabled bool) {
 	t.Helper()
 	ctx := context.Background()
 	store := settings.Store{DB: db}
@@ -227,7 +227,6 @@ func setAutomationSettings(t *testing.T, db *database.Store, automationEnabled, 
 		t.Fatal(err)
 	}
 	automation = settings.DefaultTorrentAutomation()
-	automation.Enabled = automationEnabled
 	if _, err = store.Save(ctx, "torrent_automation", automation, automationRevision); err != nil {
 		t.Fatal(err)
 	}
@@ -734,19 +733,18 @@ func TestReleaseAgeMissingOrMalformedTimestampIsNeutral(t *testing.T) {
 	}
 }
 
-func TestAutomationNoOpsWhenRequiredCapabilityIsDisabled(t *testing.T) {
+func TestAutomationNoOpsWhenRequiredTorrentCapabilityIsDisabled(t *testing.T) {
 	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
 	for _, test := range []struct {
-		name                          string
-		automation, search, downloads bool
+		name              string
+		search, downloads bool
 	}{
-		{name: "automation", automation: false, search: true, downloads: true},
-		{name: "search", automation: true, search: false, downloads: true},
-		{name: "downloads", automation: true, search: true, downloads: false},
+		{name: "search", search: false, downloads: true},
+		{name: "downloads", search: true, downloads: false},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			db := automationTestStore(t, now)
-			setAutomationSettings(t, db, test.automation, test.search, test.downloads)
+			setAutomationSettings(t, db, test.search, test.downloads)
 			searchCalls := 0
 			client := &automationClient{}
 			processed, err := automationService(db, automationRequester{searchCalls: &searchCalls}, client, now).Run(context.Background())
