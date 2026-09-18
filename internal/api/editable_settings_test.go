@@ -101,13 +101,13 @@ func TestFavoritesEpisodeResetAndPersistentViewPreferences(t *testing.T) {
 	if downloaded != 0 || watched != 0 {
 		t.Fatal("states could not be cleared")
 	}
-	expect(t, request(t, h, "PATCH", "/api/preferences", map[string]any{"debug_mode": true, "request_limit": 50, "job_status_filter": "failed"}, owner), 200)
+	expect(t, request(t, h, "PATCH", "/api/preferences", map[string]any{"debug_mode": true, "request_limit": 50, "job_type_filter": "torrent_automation", "job_status_filter": "failed"}, owner), 200)
 	expect(t, request(t, h, "PATCH", "/api/preferences", map[string]any{"scan_limit": 100}, owner), 200)
 	var prefs map[string]any
 	var raw string
 	s.DB.QueryRow("SELECT data FROM profile_preferences WHERE profile_id='profile-admin'").Scan(&raw)
 	json.Unmarshal([]byte(raw), &prefs)
-	if prefs["request_limit"] != float64(50) || prefs["scan_limit"] != float64(100) || prefs["debug_mode"] != true {
+	if prefs["request_limit"] != float64(50) || prefs["scan_limit"] != float64(100) || prefs["debug_mode"] != true || prefs["job_type_filter"] != "torrent_automation" {
 		t.Fatal("preferences were not merged persistently")
 	}
 	expect(t, request(t, h, "GET", "/api/statistics?request_limit=1000", nil, owner), 400)
