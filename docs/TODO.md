@@ -6,7 +6,7 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 `feature/torrent-automation-confidence`
 
-Status: torrent automation request-restraint and final usability follow-ups are implemented; final validation is pending.
+Status: torrent automation request-restraint and final usability follow-ups are implemented and fully validated; branch is ready for review.
 
 ### Evaluation and search metadata
 
@@ -171,7 +171,7 @@ Status: torrent automation request-restraint and final usability follow-ups are 
 - [x] Update `ARCHITECTURE.md`, `DEVELOPMENT.md`, `VALIDATION.md`, and `LESSONS.md` where the durable manual-only torrent contract changes.
 - [x] Update English and Ukrainian localization for all follow-up filter/trust/result-evaluation UI.
 - [x] Update durable documentation for the automation filtering/trust model and its validation rules.
-- [ ] Run the complete required validation suite on the final branch head before the branch is considered ready.
+- [x] Run the complete required validation suite on the final branch head before the branch is considered ready.
 
 ## Current product foundations
 
