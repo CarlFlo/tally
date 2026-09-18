@@ -218,6 +218,13 @@ export function ShowPage() {
   );
   const active = season ?? seasons[0];
   const filtered = episodes.filter((e) => e.season === active);
+  const releasedInSeason = filtered.filter((e) =>
+    released(e, boot.preferences.timezone),
+  );
+  const releasedSeasonWatched =
+    releasedInSeason.length > 0 && releasedInSeason.every((e) => !!e.watched);
+  const releasedSeasonDownloaded =
+    releasedInSeason.length > 0 && releasedInSeason.every((e) => !!e.downloaded);
   const watched = episodes.filter((e) => !!e.watched).length;
   const aired = episodes.filter((e) => released(e, boot.preferences.timezone));
   const complete = episodes.length > 0 && watched === episodes.length;
@@ -338,31 +345,33 @@ export function ShowPage() {
         <div className="bulk-actions">
           <button
             className="button small"
-            disabled={busy || !filtered.length}
+            disabled={busy || !releasedInSeason.length}
             onClick={() =>
               bulk({
                 season: active,
-                watched: !filtered.every((e) => e.watched),
+                aired_only: true,
+                watched: !releasedSeasonWatched,
               })
             }
           >
             <Check size={16} />
-            {filtered.every((e) => e.watched)
+            {releasedSeasonWatched
               ? t("library.unwatchSeason")
               : t("library.watchSeason")}
           </button>
           <button
             className="button small"
-            disabled={busy || !filtered.length}
+            disabled={busy || !releasedInSeason.length}
             onClick={() =>
               bulk({
                 season: active,
-                downloaded: !filtered.every((e) => e.downloaded),
+                aired_only: true,
+                downloaded: !releasedSeasonDownloaded,
               })
             }
           >
             <Download size={16} />
-            {filtered.every((e) => e.downloaded)
+            {releasedSeasonDownloaded
               ? t("library.clearDownloadedSeason")
               : t("library.markDownloadedSeason")}
           </button>
