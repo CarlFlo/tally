@@ -39,6 +39,14 @@ func (s *Server) torrentSend(w http.ResponseWriter, r *http.Request, session aut
 	if e != nil {
 		return e
 	}
+	payload, e = s.resolveTorrentSelection(r.Context(), session.Profile, payload)
+	if e != nil {
+		return e
+	}
+	if encoded, encodeErr := encodeTorrentSelection(payload); encodeErr == nil {
+		selected.Data = encoded
+		s.selections.Store(in.Selection, selected)
+	}
 	result := payload.Result
 	if payload.Preliminary != nil && payload.Preliminary.Rejected() {
 		return bad("selected result does not match the requested episode")
