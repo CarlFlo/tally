@@ -45,6 +45,9 @@ func (s *Server) episodeState(w http.ResponseWriter, r *http.Request, session au
 	if err = tx.Commit(); err != nil {
 		return err
 	}
+	if in.Downloaded != nil && s.Events != nil {
+		s.Events.Publish("", "shows", "show", "calendar")
+	}
 	jsonResponse(w, 200, map[string]bool{"ok": true})
 	return nil
 }
