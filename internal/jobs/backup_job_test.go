@@ -86,3 +86,30 @@ func TestSuccessfulBackupPublishesBackupChange(t *testing.T) {
 		}
 	}
 }
+
+func TestTriggerAndWaitReturnsAfterBackupCompletion(t *testing.T) {
+	ctx := context.Background()
+	db, err := database.Open(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	recorder := &recordingBackup{}
+	service := New(ctx, db, config.Config{JobConcurrency: 1, JobRuntime: time.Second}, nil, nil, recorder)
+	defer service.Stop(context.Background())
+
+	id, err := service.TriggerAndWait(ctx, "backup", "manual_backup", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if id == "" || len(recorder.kinds) != 1 || recorder.kinds[0] != "manual" {
+		t.Fatalf("backup did not finish before return: id=%q kinds=%v", id, recorder.kinds)
+	}
+	var status string
+	if err = db.QueryRow("SELECT status FROM job_runs WHERE id=?", id).Scan(&status); err != nil {
+		t.Fatal(err)
+	}
+	if status != "success" {
+		t.Fatalf("job status=%q, want success", status)
+	}
+}

@@ -12,8 +12,26 @@ import (
 )
 
 func (s *Service) Trigger(kind, trigger, show string) (string, error) {
+	id, _, err := s.trigger(kind, trigger, show)
+	return id, err
+}
+
+func (s *Service) TriggerAndWait(ctx context.Context, kind, trigger, show string) (string, error) {
+	id, done, err := s.trigger(kind, trigger, show)
+	if err != nil {
+		return "", nil, err
+	}
+	select {
+	case runErr := <-done:
+		return id, runErr
+	case <-ctx.Done():
+		return id, ctx.Err()
+	}
+}
+
+func (s *Service) trigger(kind, trigger, show string) (string, <-chan error, error) {
 	if kind != "metadata" && kind != "maintenance" && kind != "backup" {
-		return "", fmt.Errorf("unknown job")
+		return "", nil, fmt.Errorf("unknown job")
 	}
 	key := kind
 	if show != "" {
@@ -22,21 +40,21 @@ func (s *Service) Trigger(kind, trigger, show string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.stopped {
-		return "", fmt.Errorf("application is shutting down")
+		return "", nil, fmt.Errorf("application is shutting down")
 	}
 	if trigger == "scheduled_refresh" {
 		var enabled, paused bool
 		if err := s.DB.QueryRow("SELECT enabled,paused FROM jobs WHERE key=?", kind).Scan(&enabled, &paused); err != nil || !enabled || paused {
-			return "", fmt.Errorf("job schedule is disabled or paused")
+			return "", nil, fmt.Errorf("job schedule is disabled or paused")
 		}
 	}
 	if _, ok := s.running[key]; ok {
-		return "", fmt.Errorf("this job is already running")
+		return "", nil, fmt.Errorf("this job is already running")
 	}
 	select {
 	case s.sem <- struct{}{}:
 	default:
-		return "", fmt.Errorf("all job slots are busy; try again shortly")
+		return "", nil, fmt.Errorf("all job slots are busy; try again shortly")
 	}
 	id := database.ID()
 	ctx, cancel := context.WithTimeout(s.ctx, s.Config.JobRuntime)
@@ -44,7 +62,7 @@ func (s *Service) Trigger(kind, trigger, show string) (string, error) {
 	if err != nil {
 		cancel()
 		<-s.sem
-		return "", err
+		return "", nil, err
 	}
 	if show == "" {
 		var spec string
@@ -56,6 +74,7 @@ func (s *Service) Trigger(kind, trigger, show string) (string, error) {
 		}
 	}
 	s.changed("jobs", "statistics")
+	done := make(chan error, 1)
 	s.running[key] = cancel
 	s.wg.Add(1)
 	go func() {
@@ -100,8 +119,10 @@ func (s *Service) Trigger(kind, trigger, show string) (string, error) {
 		if status == "success" && (kind == "backup" || trigger == "manual" || trigger == "manual_refresh") {
 			s.changedProfile("", "inbox")
 		}
+		done <- runErr
+		close(done)
 	}()
-	return id, nil
+	return id, done, nil
 }
 
 func (s *Service) Cancel(id string) bool {

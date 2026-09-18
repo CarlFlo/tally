@@ -26,7 +26,7 @@ func TestManualBackupJobCompletesForGeneratedAdministrator(t *testing.T) {
 
 	owner := &http.Cookie{Name: "tally_profile", Value: adminID}
 	started := request(t, h, "POST", "/api/backups", map[string]any{}, owner)
-	expect(t, started, http.StatusAccepted)
+	expect(t, started, http.StatusCreated)
 
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {

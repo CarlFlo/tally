@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 12
+    "catalogVersion": 13
   },
   "common": {
     "save": "Save",
@@ -291,7 +291,8 @@
     "retentionHelp": "Older automatic backups are removed <strong>after</strong> the next successful backup. Manual backups are kept until you remove them.",
     "automaticKeep": "Automatic backups to keep",
     "saveSettings": "Save settings",
-    "timezoneHelp": "Cron schedules use the server timezone: {{timezone}}."
+    "timezoneHelp": "Cron schedules use the server timezone: {{timezone}}.",
+    "created": "Backup created"
   },
   "danger": {
     "deleteAccount": "Delete my account",

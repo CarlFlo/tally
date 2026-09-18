@@ -54,7 +54,8 @@ export function BackupArchives() {
     setBusy(true);
     try {
       await api<{ id: string }>("/backups", "POST", {});
-      notify(t("backups.started"));
+      await archives.refetch();
+      notify(t("backups.created"));
     } catch (error) {
       notify((error as Error).message, true);
     } finally {
