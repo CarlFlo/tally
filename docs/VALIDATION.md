@@ -20,7 +20,7 @@ A complete branch check includes:
 
 Treat isolated reruns as diagnostic evidence, not as permission to ignore reproducible failures. The latest branch-head run, not an earlier green commit, is the final readiness signal.
 
-CI runs the full check for every push. For pull requests from the same repository, that push run is the authoritative check and the duplicate pull-request job is skipped; fork pull requests still run the full check through the `pull_request` event.
+CI runs the full check for every push. For pull requests from the same repository, that push run is the authoritative check and the duplicate pull-request job is skipped; fork pull requests still run the full check through the `pull_request` event. Before merging a same-repository branch, verify that the `Checks` push run for the exact final branch HEAD concluded `success`; the skipped pull-request run is deduplication only and must never be treated as a green validation result.
 
 ## What the automated suite covers
 
