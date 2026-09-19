@@ -160,8 +160,9 @@ function App() {
     };
   }, []);
   useEffect(() => {
+    if (!boot) return;
     const theme =
-      (boot?.profile ? boot.preferences?.theme : boot?.browser_theme) ||
+      (boot.profile ? boot.preferences?.theme : boot.browser_theme) ||
       "system";
     document.documentElement.dataset.theme = theme;
     try {

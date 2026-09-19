@@ -46,7 +46,7 @@ For localization, storing a translation key and translating at render time is sa
 
 ### Apply persisted visual state before first paint
 
-Visual preferences that affect the whole page, such as theme, should not wait for asynchronous application bootstrap before being applied. Keep the server preference authoritative, but cache the last confirmed non-sensitive presentation value in the browser and apply it from the document head before the application bundle runs. Provide a matching critical background/color fallback so the browser never paints an unrelated default while assets or bootstrap data load.
+Visual preferences that affect the whole page, such as theme, should not wait for asynchronous application bootstrap before being applied. Keep the server preference authoritative, but cache the last confirmed non-sensitive presentation value in the browser and apply it from the document head before the application bundle runs. Provide a matching critical background/color fallback so the browser never paints an unrelated default while assets or bootstrap data load. During hydration, leave that early choice in place until authoritative bootstrap data actually arrives; an initial effect with empty data must not replace it with a default.
 
 Regression coverage should verify the document has the cached visual state before the authoritative bootstrap response is released, then verify normal bootstrap reconciliation still wins afterward.
 

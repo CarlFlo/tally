@@ -37,6 +37,7 @@ if errorlevel 1 (
 
 set "BUILD_LOG=%TEMP%\tally-build-%RANDOM%.log"
 set "DEPLOY_LOG=%TEMP%\tally-deploy-%RANDOM%.log"
+set "PUSH_LOG=%TEMP%\tally-push-%RANDOM%.log"
 
 echo.
 echo Building Docker image...
@@ -110,4 +111,36 @@ echo Branch: %BRANCH%
 echo Commit: %COMMIT%
 echo URL:    %APP_URL%
 echo.
+
+choice /C YN /N /M "Push this image to Docker Hub? [y/n]: "
+if errorlevel 2 goto :done
+
+echo.
+echo Pushing image to Docker Hub...
+docker compose push >"%PUSH_LOG%" 2>&1
+if errorlevel 1 (
+    echo.
+    echo ========================================
+    echo  Docker Hub push failed
+    echo ========================================
+    echo.
+    type "%PUSH_LOG%"
+    del "%PUSH_LOG%" >nul 2>&1
+    echo.
+    pause
+    exit /b 1
+)
+
+del "%PUSH_LOG%" >nul 2>&1
+
+echo.
+echo ========================================
+echo  Docker Hub push complete
+echo ========================================
+echo.
+echo Branch: %BRANCH%
+echo Commit: %COMMIT%
+echo.
+
+:done
 pause

@@ -83,37 +83,44 @@ test("profile settings use browser history and signing out stays signed out with
   ).toBeVisible();
 });
 
-test("refresh paints the active profile theme before bootstrap finishes", async ({ page }) => {
+test("document load paints the active profile theme before bootstrap finishes", async ({ page }) => {
   await selectProfileByName(page, "My profile");
   const bootstrap = await (await page.request.get("/api/bootstrap")).json();
   const previousTheme = bootstrap.preferences.theme;
-  const previousLocalTheme = await page.evaluate(() =>
-    localStorage.getItem("tally-theme"),
-  );
   const saved = await page.request.patch("/api/preferences", {
     headers: { "X-Tally-CSRF": "1" },
     data: { theme: "dark" },
   });
   expect(saved.ok()).toBe(true);
-  await page.evaluate(() => localStorage.setItem("tally-theme", "light"));
-  let themeBeforeBootstrap = "";
+  await page.addInitScript(() => localStorage.setItem("tally-theme", "light"));
+  let releaseBootstrap!: () => void;
+  const heldBootstrap = new Promise<void>((resolve) => {
+    releaseBootstrap = resolve;
+  });
   await page.route("**/api/bootstrap", async (route) => {
-    themeBeforeBootstrap = await page.evaluate(
-      () => document.documentElement.dataset.theme || "",
+    const response = await route.fetch();
+    await heldBootstrap;
+    await route.fulfill({ response });
+  });
+  try {
+    await page.goto("/calendar", { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".startup")).toBeVisible();
+    await page.evaluate(() =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
     );
-    await route.continue();
-  });
-  await page.reload();
-  expect(themeBeforeBootstrap).toBe("dark");
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await page.request.patch("/api/preferences", {
-    headers: { "X-Tally-CSRF": "1" },
-    data: { theme: previousTheme },
-  });
-  await page.evaluate((theme) => {
-    if (theme) localStorage.setItem("tally-theme", theme);
-    else localStorage.removeItem("tally-theme");
-  }, previousLocalTheme);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    releaseBootstrap();
+    await expect(page.locator(".startup")).toHaveCount(0);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  } finally {
+    releaseBootstrap();
+    await page.request.patch("/api/preferences", {
+      headers: { "X-Tally-CSRF": "1" },
+      data: { theme: previousTheme },
+    });
+  }
 });
 
 test("library, calendar, episode state, profiles, jobs and responsive layout", async ({

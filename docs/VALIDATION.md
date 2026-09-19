@@ -4,7 +4,7 @@ This file describes the current verification baseline and what must be checked f
 
 ## Current baseline
 
-The last completed full baseline was verified on 2026-09-17 for `feature/torrent-search-downloads`. The current `feature/torrent-automation-confidence` branch must complete the same full check before it is considered ready.
+The last recorded full baseline was verified on 2026-09-17 for `feature/torrent-search-downloads`. Run the complete check on the latest branch head before treating a newer branch as ready.
 
 A complete branch check includes:
 

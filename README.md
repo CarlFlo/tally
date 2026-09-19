@@ -22,32 +22,24 @@ Torrent search and torrent downloading are separate features and can be enabled 
 
 ## Quick start
 
-Docker Compose is the recommended way to run Tally.
+```yaml
+services:
+  tally:
+    image: lappenhappen/tally:latest
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    volumes:
+      - tally-config:/config
 
-```sh
-git clone https://github.com/CarlFlo/tally.git
-cd tally
-cp .env.example .env
-docker compose up -d --build
+volumes:
+  tally-config:
 ```
-
-Open **http://localhost:8080**.
-
-The included Compose setup stores persistent data in the `tally-config` volume and listens on localhost by default.
-
-For access from other devices on your LAN, change this in `.env`:
-
-```env
-APP_BIND=0.0.0.0
-```
-
-You should also set the deployment timezone, for example:
-
-```env
-TZ=Europe/Stockholm
-```
-
-Most application settings are managed from the Tally web interface rather than environment variables.
 
 ## Integrations
 
@@ -58,8 +50,6 @@ Tally works without torrent integrations. When wanted, configure them under **Se
 - **Notifications:** webhook or Discord destinations
 - **Scheduling:** background job schedules
 - **Backups:** schedule and retention policy
-
-TVmaze metadata does not require an API key.
 
 ## Recommended deployment
 
@@ -87,22 +77,3 @@ English and Ukrainian are bundled. Language is selected per profile, and missing
 Bundled locale files in `/config/locales` are managed by Tally and reconciled on startup. Custom translations should use their own unique locale filename; those files are validated and hot-reloaded without restarting Tally.
 
 See [docs/LOCALIZATION.md](docs/LOCALIZATION.md) for the locale format and translation workflow.
-
-## Build from source
-
-Requirements:
-
-- Go 1.27.1+
-- Node.js 24+
-
-```sh
-cd frontend
-npm ci
-npm run build
-cd ..
-go test ./...
-go build -o tally .
-./tally
-```
-
-For development details, see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). Architecture and validation notes are available in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/VALIDATION.md](docs/VALIDATION.md).
