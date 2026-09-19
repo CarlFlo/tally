@@ -146,19 +146,14 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
   ).find((job: any) => job.key === "metadata");
   await editor.getByLabel("Cron expression").fill("20 * * * *");
   await editor.getByLabel("Run automatically").setChecked(!stored.enabled);
-  await expect
-    .poll(
-      async () =>
-        (
-          await (await page.request.get("/api/settings/scheduling")).json()
-        ).find((job: any) => job.key === "metadata").enabled,
-    )
-    .toBe(stored.enabled ? 0 : 1);
-  expect(
-    (await (await page.request.get("/api/settings/scheduling")).json()).find(
-      (job: any) => job.key === "metadata",
-    ).schedule,
-  ).toBe(stored.schedule);
+  const stagedSchedule = (
+    await (await page.request.get("/api/settings/scheduling")).json()
+  ).find((job: any) => job.key === "metadata");
+  expect(!!stagedSchedule.enabled).toBe(!!stored.enabled);
+  expect(stagedSchedule.schedule).toBe(stored.schedule);
+  await expect(
+    page.getByRole("button", { name: "Save changes", exact: true }),
+  ).toBeVisible();
   await expect(editor.getByLabel("Cron expression")).toHaveValue("20 * * * *");
 
   const fieldsBox = await editor.locator(".schedule-fields").boundingBox();
