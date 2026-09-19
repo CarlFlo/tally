@@ -66,7 +66,7 @@ test("same-document navigation stays responsive with bounded resources during li
 
   await selectProfileByName(page, "My profile");
   await page.setViewportSize({ width: 1100, height: 740 });
-  await page.goto("/settings");
+  await page.goto("/admin/configuration/schedules");
   await expect(page.locator(".schedule-editor")).toHaveCount(4);
 
   // Bootstrap/localization loading is intentionally outside this test's scope.
@@ -111,29 +111,30 @@ test("same-document navigation stays responsive with bounded resources during li
     });
 
     for (const path of [
-      "/settings/torrent",
-      "/settings/search",
-      "/settings/notifications",
-      "/settings/bell",
-      "/settings",
+      "/admin/configuration/integrations/downloader",
+      "/admin/configuration/integrations/search",
+      "/admin/configuration/delivery",
+      "/admin/advanced/diagnostics",
+      "/admin/configuration/backups",
+      "/admin/configuration/schedules",
     ]) {
       await page.locator(`.settings-tabs a[href="${path}"]`).click();
       await expect(page).toHaveURL(path);
     }
 
     await page.getByRole("button", { name: "Open profile menu" }).click();
-    await page.locator('#profile-menu a[href="/system"]').click();
+    await page.locator('#profile-menu a[href="/admin/operations/jobs"]').click();
     for (const path of [
-      "/system/statistics",
-      "/system/logs",
-      "/system/jobs",
+      "/admin/operations/statistics",
+      "/admin/operations/logs",
+      "/admin/operations/jobs",
     ]) {
       await page.locator(`.system-tabs a[href="${path}"]`).click();
       await expect(page).toHaveURL(path);
     }
 
     await page.getByRole("button", { name: "Open profile menu" }).click();
-    await page.locator('#profile-menu a[href="/settings"]').click();
+    await page.locator('#profile-menu a[href="/admin/configuration/schedules"]').click();
     await expect(page.locator(".schedule-editor")).toHaveCount(4);
 
     if (cycle === 0) baseline = await eventListeners();
@@ -146,7 +147,7 @@ test("same-document navigation stays responsive with bounded resources during li
 
   await page.goBack();
   await page.goForward();
-  await page.locator('.settings-tabs a[href="/settings/search"]').click();
+  await page.locator('.settings-tabs a[href="/admin/configuration/integrations/search"]').click();
   await page
     .getByLabel("Jackett base URL", { exact: true })
     .fill("http://still-interactive.invalid");

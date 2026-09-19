@@ -107,7 +107,7 @@ test("profile language applies on save and persists per profile", async ({
 
   // A new profile still defaults to English, even while the administrator's
   // saved profile locale is the test locale.
-  await page.goto("/settings/profiles");
+  await page.goto("/admin/access/profiles");
   await page.getByRole("button", { name: "New profile", exact: true }).click();
   const createDialog = page.getByRole("dialog", {
     name: "A new personal space",

@@ -427,7 +427,7 @@ test("experimental torrent automation schedule is confirmed and shared across jo
   }
 
   try {
-    await page.goto("/settings");
+    await page.goto("/admin/configuration/schedules");
     const settingsCard = page
       .locator(".schedule-editor")
       .filter({ hasText: "Torrent automation" });
@@ -442,7 +442,7 @@ test("experimental torrent automation schedule is confirmed and shared across jo
     await page.getByRole("button", { name: "Cancel", exact: true }).click();
     await expect(settingsToggle).not.toBeChecked();
 
-    await page.goto("/system/jobs");
+    await page.goto("/admin/operations/jobs");
     const jobCard = page.locator(".job-card").filter({ hasText: "Torrent automation" });
     const jobsToggle = jobCard.getByRole("checkbox", {
       name: "Toggle automatic schedule for Torrent automation",
@@ -460,7 +460,7 @@ test("experimental torrent automation schedule is confirmed and shared across jo
       .click();
     await expect(jobsToggle).toBeChecked();
 
-    await page.goto("/settings");
+    await page.goto("/admin/configuration/schedules");
     const linkedSettingsCard = page
       .locator(".schedule-editor")
       .filter({ hasText: "Torrent automation" });
@@ -472,7 +472,7 @@ test("experimental torrent automation schedule is confirmed and shared across jo
     await expect(linkedSettingsToggle).not.toBeChecked();
     await page.getByRole("button", { name: "Save changes", exact: true }).click();
 
-    await page.goto("/system/jobs");
+    await page.goto("/admin/operations/jobs");
     await expect(
       page
         .locator(".job-card")

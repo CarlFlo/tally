@@ -25,7 +25,7 @@ test("populated System pages remain responsive across rapid navigation", async (
     requests: Array.from({ length: 100 }, (_, id) => ({ id, provider: "TVmaze", trigger: "scheduled_refresh", entity: `Show ${id}`, reason: "success", status_code: 200, duration_ms: 15, created_at: now - id * 60 })),
     next_scans: Array.from({ length: 100 }, (_, id) => ({ id, name: `Show ${id}`, next_check_at: now + id * 3600 })),
   } }));
-  await page.goto("/system/logs");
+  await page.goto("/admin/operations/logs");
   await expect(page.locator(".activity-entry")).toHaveCount(50);
   const started = Date.now();
   for (let i = 0; i < 40; i++) {

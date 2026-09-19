@@ -72,10 +72,12 @@ When a meaningful fix, investigation, refactor, or production problem reveals a 
 
 ## Finishing work
 
+- Once the task's active `TODO.md` items are complete, do a final test-impact review against the branch diff before merge. Check for stale assertions, fixtures, route expectations, localization catalog versions, and regression coverage introduced by the final changes.
 - Treat tests as part of the implementation. Update affected assertions/fixtures and add regression coverage when behavior changes.
 - For torrent automation changes, include deterministic coverage for explicit show enrollment, globally downloaded episode exclusion, release parsing/evaluation, payload inspection, runtime/size profiles, media classification/override, torrent-vs-magnet transport preference, durable post-magnet resolved-file checks, unsafe removal/hash blocking, candidate fallback, bad-infohash handling, retry gating, duplicate prevention, capability re-checks, ambiguous client reconciliation, and disabled/no-op states as applicable.
 - Browser coverage should exercise manual confidence, Automation settings, Previous Runs explainability/feedback, feature-disabled navigation, and responsive behavior when those surfaces change.
 - Run the checks required by `VALIDATION.md` for the changed surface and inspect unexplained failures before rerunning them.
+- Before merging a branch, verify the authoritative full CI push run for the exact final branch HEAD concluded successfully. A skipped same-repository pull-request run, an earlier green commit, or a focused rerun is not merge approval.
 - Update `TODO.md` to reflect the remaining state of work.
 - Update the relevant documentation when architecture, behavior, configuration, localization, validation expectations, or reusable lessons change.
 - Remove temporary/debug code before finishing.

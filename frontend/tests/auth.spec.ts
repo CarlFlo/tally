@@ -50,7 +50,7 @@ test("local sign-in follows browser history and switching requires sign-out", as
   await expect(page.locator(".session-row")).toHaveCount(initialSessionCount + 1);
   await secondDevice.close();
 
-  await page.goto("/settings/profiles");
+  await page.goto("/admin/access/profiles");
   const currentProfile = page
     .locator(".profile-settings-list > div")
     .filter({ hasText: "My profile" });

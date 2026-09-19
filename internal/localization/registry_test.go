@@ -163,6 +163,10 @@ func TestRegistryUpdatesOlderEnglishCatalog(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	expected, err := parse("en.json", embeddedEnglish)
+	if err != nil {
+		t.Fatal(err)
+	}
 	registry, err := New(dir, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -173,8 +177,8 @@ func TestRegistryUpdatesOlderEnglishCatalog(t *testing.T) {
 	if !ok {
 		t.Fatal("English locale was not available")
 	}
-	if catalog.Meta.CatalogVersion != 28 {
-		t.Fatalf("catalog version=%d, want 28", catalog.Meta.CatalogVersion)
+	if catalog.Meta.CatalogVersion != expected.status.CatalogVersion {
+		t.Fatalf("catalog version=%d, want bundled version %d", catalog.Meta.CatalogVersion, expected.status.CatalogVersion)
 	}
 	common, ok := catalog.Messages["common"].(map[string]any)
 	if !ok || common["save"] != "Save" {

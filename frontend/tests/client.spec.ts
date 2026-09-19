@@ -9,7 +9,7 @@ test("configure, test, save and use a shared torrent client with visible API key
   await selectProfileByName(page, "My profile");
   const initial = await (await page.request.get("/api/downloader")).json();
   const clientURL = initial.settings.fields.url;
-  await page.goto("/settings/torrent");
+  await page.goto("/admin/configuration/integrations/downloader");
   const card = page.locator(".client-settings");
   const featureToggle = page.locator(".feature-toggle-setting");
   await expect(
