@@ -107,6 +107,8 @@ Keep tests synchronized with behavior changes. A feature is not complete until o
 
 Browser fixtures for external integrations should provide local deterministic Jackett/qBittorrent behavior. Mock only the specific history/result state that would otherwise require nondeterministic timing; keep route, rendering, feedback, and responsive behavior real.
 
+Browser tests must not rely on filename ordering or state leaked from earlier tests. Tests that change durable shared/profile state should restore it when the change is not itself the subject of later coverage. Keep broad navigation/performance stress coverage consolidated by failure mode; use separate specs for distinct risks such as request cancellation, populated-view cost, authentication, or destructive backup/restore behavior.
+
 ## Deployment-specific limits
 
 HTTPS termination, reverse proxies, bind-mount permissions, network filesystems, and off-host backup storage depend on the operator's deployment. Filesystem watchers are designed for normal local filesystems; unusual NFS/SMB behavior may require a manual page revisit/refresh rather than hidden polling.
