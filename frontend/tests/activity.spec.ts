@@ -221,7 +221,7 @@ test("notification forms test Webhook and Discord locally, preserve settings whe
   const fixture = await (
     await page.request.get("/__fixture/notifications")
   ).json();
-  await page.goto("/settings/notifications");
+  await page.goto("/admin/configuration/delivery");
   await expect(
     page.getByRole("heading", { name: "Notification Services", exact: true }),
   ).toBeVisible();
