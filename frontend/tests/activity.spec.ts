@@ -122,6 +122,10 @@ test("show menus clear watched state, preserve downloads, support Shift removal 
     path: "../docs/screenshots/show-actions-mobile.png",
     fullPage: true,
   });
+  await page
+    .getByRole("menuitem", { name: "Remove show", exact: true })
+    .click({ modifiers: ["Shift"] });
+  await expect(page).toHaveURL(/\/shows$/);
 });
 
 test("login appearance persists on server, admin routes are private, and users can delete their own account", async ({
@@ -208,6 +212,12 @@ test("notification forms test Webhook and Discord locally, preserve settings whe
   page,
 }) => {
   await selectAdmin(page);
+  const originalNotifications = await (
+    await page.request.get("/api/settings/notifications")
+  ).json();
+  const originalPreferences = (
+    await (await page.request.get("/api/bootstrap")).json()
+  ).preferences;
   const fixture = await (
     await page.request.get("/__fixture/notifications")
   ).json();
@@ -351,4 +361,28 @@ test("notification forms test Webhook and Discord locally, preserve settings whe
   ).toHaveCount(0);
   await page.goto("/search");
   await expect(page.getByText("Always manual", { exact: true })).toHaveCount(0);
+
+  const currentNotifications = await (
+    await page.request.get("/api/settings/notifications")
+  ).json();
+  const restoreNotifications = await page.request.put(
+    "/api/settings/notifications",
+    {
+      headers,
+      data: {
+        data: originalNotifications.data,
+        revision: currentNotifications.revision,
+      },
+    },
+  );
+  expect(restoreNotifications.ok()).toBe(true);
+
+  const restorePreferences = await page.request.patch("/api/preferences", {
+    headers,
+    data: {
+      timezone: originalPreferences.timezone,
+      calendar_view: originalPreferences.calendar_view,
+    },
+  });
+  expect(restorePreferences.ok()).toBe(true);
 });
