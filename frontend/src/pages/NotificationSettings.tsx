@@ -124,9 +124,14 @@ function NotificationForm({ saved }: { saved: any }) {
     setBusy(true);
     setFeedback("");
     try {
+      const enabledChanged = normalized.enabled !== stored.enabled;
       await persist(normalized);
       setData(normalized);
-      notify(t("notifications.saved"));
+      notify(
+        enabledChanged
+          ? t(normalized.enabled ? "notifications.enabledNotice" : "notifications.disabledNotice")
+          : t("notifications.saved"),
+      );
     } catch (e) {
       setFeedback((e as Error).message);
     } finally {
