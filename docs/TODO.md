@@ -18,7 +18,7 @@ The following are established capabilities rather than active TODO items:
 - SQLite-backed application settings, schedules, jobs, statistics, logs, bell notifications, Webhook/Discord delivery, and live updates.
 - TVmaze metadata coordination with bounded requests, caching, retries, cancellation, rate limiting, and circuit protection.
 - Validated SQLite migrations, pre-upgrade snapshots, archive backups, retention, staged validation, and in-process restore.
-- Jackett discovery plus manual and guarded automated qBittorrent submission/download monitoring with operator-managed credentials.
+- Jackett discovery plus manual and guarded automated qBittorrent submission/download monitoring with operator-managed credentials and configurable episode-download completion marking.
 - Version-managed English and Ukrainian bundled locales plus validated hot-loaded custom locale files.
 
 ## Deferred scope

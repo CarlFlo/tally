@@ -36,6 +36,7 @@ type AutomationConfig = {
   retry_second_minutes: number;
   retry_later_minutes: number;
   prioritize_recent: boolean;
+  completion_percent: number;
 };
 
 type SavedAutomation = { data: AutomationConfig; revision: number };
@@ -452,6 +453,30 @@ export function TorrentAutomationPage() {
               defaultValue: "Auto-detected animated shows use the animated range. You can override a show's media type from its Show actions menu.",
             })}
           </p>
+        </section>
+
+        <section className="panel settings-card">
+          <h3>
+            <ShieldCheck size={19} />
+            {t("torrentAutomation.downloadCompletion", { defaultValue: "Mark downloaded" })}
+          </h3>
+          <p className="muted">
+            {t("torrentAutomation.downloadCompletionHelp", {
+              defaultValue:
+                "Mark a Tally-submitted episode as downloaded when qBittorrent reports this progress. Use a lower value if another service removes completed torrents before Tally's next automation check.",
+            })}
+          </p>
+          <label>
+            {t("torrentAutomation.completionPercent", { defaultValue: "Completion percentage" })}
+            <input
+              type="number"
+              min="1"
+              max="100"
+              value={data.completion_percent}
+              disabled={busy}
+              onChange={(event) => change({ completion_percent: Math.max(1, Math.min(100, Number(event.target.value))) })}
+            />
+          </label>
         </section>
 
         <section className="panel settings-card automation-rule-card">

@@ -118,13 +118,14 @@ type automationClient struct {
 	resolvedFiles  []TorrentFile
 	resolvedErr    error
 	downloadName   string
+	progress       float64
 	resolvedCalls  int
 	stopCalls      int
 	removeCalls    int
 	deleteFiles    bool
 }
 
-func (c *automationClient) Name() string                          { return "test" }
+func (c *automationClient) Name() string                         { return "test" }
 func (c *automationClient) TestConnection(context.Context) error { return nil }
 func (c *automationClient) AddMagnet(_ context.Context, magnet string) error {
 	c.magnetAdded++
@@ -147,7 +148,7 @@ func (c *automationClient) Downloads(context.Context, string) (DownloadSnapshot,
 		if name == "" {
 			name = "Example.Show.S01E02.1080p.WEB-DL"
 		}
-		return DownloadSnapshot{Torrents: []Download{{Hash: c.lastHash, Name: name, Category: TallyCategory}}}, nil
+		return DownloadSnapshot{Torrents: []Download{{Hash: c.lastHash, Name: name, Category: TallyCategory, Progress: c.progress}}}, nil
 	}
 	return DownloadSnapshot{}, nil
 }
@@ -349,7 +350,6 @@ func TestAutomationAllowsHighConfidenceMagnetFallback(t *testing.T) {
 	}
 }
 
-
 func TestAutomationMagnetVerificationStaysPendingUntilFilesResolve(t *testing.T) {
 	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
 	db := automationTestStore(t, now)
@@ -380,7 +380,7 @@ func TestAutomationMagnetVerificationAcceptsResolvedSafePayload(t *testing.T) {
 		t.Fatal(err)
 	}
 	client := &automationClient{
-		listed: true,
+		listed:        true,
 		resolvedFiles: []TorrentFile{{Path: "Example.Show.S01E02.1080p.WEB-DL.mkv", Size: 2 * 1024 * 1024 * 1024}},
 	}
 	service := automationService(db, automationRequester{magnetOnly: true, reportedSize: 2 * 1024 * 1024 * 1024}, client, now)
@@ -447,8 +447,8 @@ func TestAutomationMagnetVerificationRejectsAmbiguousResolvedIdentity(t *testing
 	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
 	db := automationTestStore(t, now)
 	client := &automationClient{
-		listed: true,
-		downloadName: "video",
+		listed:        true,
+		downloadName:  "video",
 		resolvedFiles: []TorrentFile{{Path: "video.mkv", Size: 2 * 1024 * 1024 * 1024}},
 	}
 	service := automationService(db, automationRequester{magnetOnly: true}, client, now)
@@ -521,7 +521,6 @@ func TestRejectedPostMagnetVerificationCanRetryEpisodeAfterBackoff(t *testing.T)
 	}
 }
 
-
 func TestAutomationMagnetVerificationRejectsActualSizeOutsideSubmissionRange(t *testing.T) {
 	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
 	db := automationTestStore(t, now)
@@ -529,7 +528,7 @@ func TestAutomationMagnetVerificationRejectsActualSizeOutsideSubmissionRange(t *
 		t.Fatal(err)
 	}
 	client := &automationClient{
-		listed: true,
+		listed:        true,
 		resolvedFiles: []TorrentFile{{Path: "Example.Show.S01E02.mkv", Size: 20 * 1024 * 1024}},
 	}
 	service := automationService(db, automationRequester{magnetOnly: true, reportedSize: 2 * 1024 * 1024 * 1024}, client, now)
@@ -578,7 +577,6 @@ func TestAutomationMagnetVerificationBecomesUnavailableAfterPersistentMetadataEr
 		t.Fatal("unavailable metadata must not delete the torrent without evidence")
 	}
 }
-
 
 func TestAutomationPrefersInspectableTorrentWhenMagnetAlsoExists(t *testing.T) {
 	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
@@ -844,9 +842,9 @@ func TestAutomationDiscoveryBudgetDefersBacklogAndPrioritizesRecentEpisodes(t *t
 		config.PrioritizeRecent = true
 	})
 	for _, episode := range []struct {
-		id      string
-		number  int
-		airAgo  time.Duration
+		id     string
+		number int
+		airAgo time.Duration
 	}{
 		{id: "episode-b", number: 3, airAgo: 2 * time.Hour},
 		{id: "episode-c", number: 4, airAgo: 30 * time.Minute},
@@ -919,9 +917,9 @@ func TestAutomationProviderFailureIsDeferredWithoutImmediateRetry(t *testing.T) 
 	searchCalls := 0
 	searchNoRetry := false
 	requester := automationRequester{
-		searchCalls: &searchCalls,
+		searchCalls:   &searchCalls,
 		searchNoRetry: &searchNoRetry,
-		searchErr: errors.New("temporary Jackett failure"),
+		searchErr:     errors.New("temporary Jackett failure"),
 	}
 	client := &automationClient{}
 	if processed, err := automationService(db, requester, client, now).Run(context.Background()); err == nil || processed != 0 {
@@ -946,8 +944,8 @@ func TestAutomationDeepInspectionRespectsCandidateLimit(t *testing.T) {
 	})
 	torrentCalls := 0
 	requester := automationRequester{
-		resultCount: 10,
-		torrentCalls: &torrentCalls,
+		resultCount:   10,
+		torrentCalls:  &torrentCalls,
 		beforeTorrent: func() error { return errors.New("torrent unavailable") },
 	}
 	processed, err := automationService(db, requester, &automationClient{}, now).Run(context.Background())
@@ -975,6 +973,29 @@ func TestAutomationDownloadedEpisodeIsNotSubmittedTwice(t *testing.T) {
 	}
 	if client.added != 1 {
 		t.Fatalf("duplicate torrent submission occurred: %d", client.added)
+	}
+}
+
+func TestAutomationMarksTrackedEpisodeDownloadedAtCompletionThreshold(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	client := &automationClient{}
+	service := automationService(db, automationRequester{}, client, now)
+	if processed, err := service.Run(context.Background()); err != nil || processed != 1 {
+		t.Fatalf("initial submission failed: processed=%d err=%v", processed, err)
+	}
+	updateAutomationConfig(t, db, func(config *settings.TorrentAutomation) { config.CompletionPercent = 75 })
+	client.listed = true
+	client.progress = 0.75
+	if processed, err := service.Run(context.Background()); err != nil || processed != 1 {
+		t.Fatalf("completion reconciliation failed: processed=%d err=%v", processed, err)
+	}
+	var downloaded int
+	if err := db.QueryRow("SELECT downloaded FROM episodes WHERE id='episode-a'").Scan(&downloaded); err != nil {
+		t.Fatal(err)
+	}
+	if downloaded != 1 {
+		t.Fatal("episode was not marked downloaded at the configured threshold")
 	}
 }
 
@@ -1018,7 +1039,7 @@ func TestAutomationReconcilesAmbiguousClientFailureByInfoHash(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if processed != 1 || client.added != 1 || client.downloadsCalls != 1 {
+	if processed != 1 || client.added != 1 || client.downloadsCalls != 2 {
 		t.Fatalf("client failure was not reconciled: processed=%d added=%d downloads=%d", processed, client.added, client.downloadsCalls)
 	}
 	runs, err := (AutomationStore{DB: db}).ListRuns(context.Background(), 10)

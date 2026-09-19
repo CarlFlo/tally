@@ -28,7 +28,7 @@ type AutomationService struct {
 
 type automationEpisode struct {
 	ID, ShowID, ShowName, Premiered, Airstamp, Policy string
-	Season, Episode, Runtime                           int
+	Season, Episode, Runtime                          int
 }
 
 type automationCapabilities struct {
@@ -54,6 +54,14 @@ func (s *AutomationService) Run(ctx context.Context) (int, error) {
 	}
 	processed := 0
 	if caps.Downloads.Enabled {
+		marked, markErr := s.processCompletedDownloads(ctx, caps.Automation.CompletionPercent)
+		if markErr != nil {
+			return processed, markErr
+		}
+		processed += marked
+		if marked > 0 {
+			s.publishChange()
+		}
 		verified, verifyErr := s.processPendingMagnetVerifications(ctx, caps.Automation)
 		if verifyErr != nil {
 			return processed, verifyErr
@@ -84,6 +92,17 @@ func (s *AutomationService) Run(ctx context.Context) (int, error) {
 	return processed, nil
 }
 
+func (s *AutomationService) processCompletedDownloads(ctx context.Context, completionPercent int) (int, error) {
+	client, err := s.Clients.Current(ctx)
+	if err != nil {
+		return 0, err
+	}
+	snapshot, err := client.Downloads(ctx, TallyCategory)
+	if err != nil {
+		return 0, err
+	}
+	return (EpisodeDownloadStore{DB: s.DB}).MarkCompleted(ctx, snapshot.Torrents, completionPercent)
+}
 
 const pendingMagnetVerificationMaxAge = 24 * time.Hour
 
@@ -163,8 +182,8 @@ func (s *AutomationService) processPendingMagnetVerifications(ctx context.Contex
 
 		var submission struct {
 			Automation       settings.TorrentAutomation `json:"automation"`
-			ShowMediaProfile ShowMediaProfile            `json:"show_media_profile"`
-			RuntimeMinutes   int                         `json:"runtime_minutes"`
+			ShowMediaProfile ShowMediaProfile           `json:"show_media_profile"`
+			RuntimeMinutes   int                        `json:"runtime_minutes"`
 		}
 		if err = json.Unmarshal(item.SettingsSnapshot, &submission); err != nil {
 			return completed, fmt.Errorf("stored magnet verification settings are invalid: %w", err)
@@ -402,7 +421,7 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 					if verifiedSize.Known && !verifiedSize.InActiveRange {
 						_ = store.AppendDecision(ctx, runID, DecisionStep{
 							Stage: "inspection", Status: "rejected", Summary: "Verified torrent size fell outside the active MB/min range",
-							Data: map[string]any{"rank": index + 1, "name": candidate.Result.Name, "size_profile": verifiedSize, "payload": assessment.Payload},
+							Data:       map[string]any{"rank": index + 1, "name": candidate.Result.Name, "size_profile": verifiedSize, "payload": assessment.Payload},
 							DurationMS: elapsedMS(inspectionStarted, s.now()),
 						})
 						continue
@@ -432,7 +451,7 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 			} else if !ValidMagnet(candidate.Result.Magnet) {
 				_ = store.AppendDecision(ctx, runID, DecisionStep{
 					Stage: "inspection", Status: "rejected", Summary: "Jackett torrent metadata could not be fetched and no magnet fallback is available",
-					Data: map[string]any{"rank": index + 1, "name": candidate.Result.Name, "reason": "metadata_fetch_failed"},
+					Data:       map[string]any{"rank": index + 1, "name": candidate.Result.Name, "reason": "metadata_fetch_failed"},
 					DurationMS: elapsedMS(inspectionStarted, s.now()),
 				})
 				continue
@@ -510,7 +529,7 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 		if clientErr != nil {
 			_ = store.AppendDecision(ctx, runID, DecisionStep{
 				Stage: "download", Status: "failed", Summary: "Torrent client submission failed",
-				Data: map[string]any{"name": candidate.Result.Name, "infohash": assessment.InfoHash, "submission_type": submissionType},
+				Data:       map[string]any{"name": candidate.Result.Name, "infohash": assessment.InfoHash, "submission_type": submissionType},
 				DurationMS: elapsedMS(downloadStarted, s.now()),
 			})
 			_ = finish(RunFailed, assessment, candidate.Result.Name)
@@ -707,7 +726,7 @@ func candidateAuditRows(items []automationCandidate, config settings.TorrentAuto
 			"rank": index + 1, "name": item.Result.Name, "provider": item.Result.Provider,
 			"uploader": item.Result.Uploader, "seeders": item.Result.Seeders, "size": item.Result.Size,
 			"confidence": item.Assessment.Confidence, "parsed": item.Assessment.Parsed,
-			"preferences": AutomationPreferenceSignals(item.Result, item.Assessment.Parsed, config),
+			"preferences":  AutomationPreferenceSignals(item.Result, item.Assessment.Parsed, config),
 			"size_profile": item.SizeProfile, "release_age": item.ReleaseAge,
 		})
 	}

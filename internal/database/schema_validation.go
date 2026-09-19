@@ -149,6 +149,13 @@ func ValidateSchema(ctx context.Context, db Querier) error {
 		}
 		rows.Close()
 	}
+	if version >= 14 {
+		rows, err := db.QueryContext(ctx, "SELECT infohash,episode_id,created_at FROM torrent_episode_downloads LIMIT 0")
+		if err != nil {
+			return fmt.Errorf("database torrent episode download tracking schema is incomplete: %w", err)
+		}
+		rows.Close()
+	}
 	profileQuery := "SELECT id,display_name,avatar,created_at FROM profiles LIMIT 0"
 	if version >= 7 {
 		profileQuery = "SELECT id,display_name,avatar,created_at,locale FROM profiles LIMIT 0"

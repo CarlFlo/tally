@@ -82,7 +82,7 @@ type AutomationRun struct {
 	EndedAt          *int64              `json:"ended_at,omitempty"`
 	DurationMS       int64               `json:"duration_ms"`
 	Feedback         *AutomationFeedback `json:"feedback,omitempty"`
-	PostVerification *MagnetVerification  `json:"post_verification,omitempty"`
+	PostVerification *MagnetVerification `json:"post_verification,omitempty"`
 }
 
 type AutomationFeedback struct {
@@ -155,7 +155,6 @@ func (s AutomationStore) SetShowMediaProfile(ctx context.Context, showID, mode s
 		ON CONFLICT(show_id) DO UPDATE SET profile=excluded.profile,updated_at=excluded.updated_at`, showID, mode, time.Now().Unix())
 	return err
 }
-
 
 func (s AutomationStore) QueueMagnetVerification(ctx context.Context, runID, infohash string) error {
 	infohash = normalizeInfoHash(infohash)
@@ -233,7 +232,6 @@ func (s AutomationStore) FinishMagnetVerification(ctx context.Context, runID, st
 	}
 	return nil
 }
-
 
 func (s AutomationStore) RejectMagnetVerification(ctx context.Context, runID string, assessment ReleaseAssessment, sizeProfile SizeProfileEvaluation, message string) error {
 	if len(message) > 500 {
@@ -385,7 +383,6 @@ func (s AutomationStore) AppendDecision(ctx context.Context, runID string, step 
 	return tx.Commit()
 }
 
-
 func (s AutomationStore) FinishMagnetRun(ctx context.Context, runID string, assessment ReleaseAssessment, selectedName string) error {
 	infohash := normalizeInfoHash(assessment.InfoHash)
 	if infohash == "" {
@@ -411,6 +408,11 @@ func (s AutomationStore) FinishMagnetRun(ctx context.Context, runID string, asse
 		VALUES(?,?,'pending')`, runID, infohash); err != nil {
 		return err
 	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO torrent_episode_downloads(infohash,episode_id,created_at)
+		SELECT ?,r.episode_id,? FROM torrent_automation_runs r JOIN episodes e ON e.id=r.episode_id WHERE r.id=?
+		ON CONFLICT(infohash) DO UPDATE SET episode_id=excluded.episode_id`, infohash, ended, runID); err != nil {
+		return err
+	}
 	return tx.Commit()
 }
 
@@ -420,7 +422,15 @@ func (s AutomationStore) FinishRun(ctx context.Context, runID string, status Aut
 	}
 	ended := time.Now().Unix()
 	infohash := strings.ToLower(strings.TrimSpace(assessment.InfoHash))
-	res, err := s.DB.ExecContext(ctx, `UPDATE torrent_automation_runs
+	if status == RunDownloaded && normalizeInfoHash(infohash) == "" {
+		return fmt.Errorf("downloaded automation run has no valid infohash")
+	}
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	res, err := tx.ExecContext(ctx, `UPDATE torrent_automation_runs
 		SET status=?,confidence=?,verification=?,selected_name=?,selected_infohash=?,ended_at=?,duration_ms=MAX(0,(?-started_at)*1000)
 		WHERE id=? AND status='running'`, status, assessment.Confidence, assessment.Verification, selectedName, infohash, ended, ended, runID)
 	if err != nil {
@@ -430,7 +440,14 @@ func (s AutomationStore) FinishRun(ctx context.Context, runID string, status Aut
 	if changed != 1 {
 		return fmt.Errorf("automation run is not running")
 	}
-	return nil
+	if status == RunDownloaded {
+		if _, err = tx.ExecContext(ctx, `INSERT INTO torrent_episode_downloads(infohash,episode_id,created_at)
+			SELECT ?,r.episode_id,? FROM torrent_automation_runs r JOIN episodes e ON e.id=r.episode_id WHERE r.id=?
+			ON CONFLICT(infohash) DO UPDATE SET episode_id=excluded.episode_id`, infohash, ended, runID); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 func validTerminalRunStatus(status AutomationRunStatus) bool {

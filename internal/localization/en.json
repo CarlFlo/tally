@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 27
+    "catalogVersion": 28
   },
   "common": {
     "save": "Save",
@@ -741,7 +741,10 @@
     "retrySecond": "Second retry delay (minutes)",
     "retryLater": "Later retry delay (minutes)",
     "retryPacingHelp": "These delays apply after unsuccessful or failed automated searches. Tally does not immediately retry Jackett inside the same background attempt.",
-    "maxCandidates": "Torrent candidates inspected per episode"
+    "maxCandidates": "Torrent candidates inspected per episode",
+    "downloadCompletion": "Mark downloaded",
+    "downloadCompletionHelp": "Mark a Tally-submitted episode as downloaded when qBittorrent reports this progress. Use a lower value if another service removes completed torrents before Tally's next automation check.",
+    "completionPercent": "Completion percentage"
   },
   "torrentRuns": {
     "eyebrow": "EVERY DECISION, EXPLAINED",

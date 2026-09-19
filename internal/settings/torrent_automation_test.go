@@ -52,7 +52,6 @@ func TestTorrentAutomationValidatesSizeProfileRanges(t *testing.T) {
 	}
 }
 
-
 func TestTorrentAutomationRequestPolicyDefaultsAreSeededOnce(t *testing.T) {
 	legacy := TorrentAutomation{PreferredQuality: TorrentQuality1080, RetryWindowHours: 24, MaxCandidates: 5}
 	effective := legacy.Effective()
@@ -84,5 +83,17 @@ func TestTorrentAutomationValidatesRequestRestraint(t *testing.T) {
 	config.RetrySecondMinutes = 60
 	if err := ValidateTorrentAutomation(config); err == nil {
 		t.Fatal("decreasing retry backoff was accepted")
+	}
+}
+
+func TestTorrentAutomationCompletionThresholdDefaultsAndValidates(t *testing.T) {
+	legacy := TorrentAutomation{PreferredQuality: TorrentQuality1080, RetryWindowHours: 24, MaxCandidates: 5}
+	if effective := legacy.Effective(); effective.CompletionPercent != 100 {
+		t.Fatalf("legacy completion threshold was not conservative: %+v", effective)
+	}
+	config := DefaultTorrentAutomation()
+	config.CompletionPercent = 101
+	if err := ValidateTorrentAutomation(config); err == nil {
+		t.Fatal("completion threshold above 100 was accepted")
 	}
 }

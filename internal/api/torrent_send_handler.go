@@ -48,6 +48,10 @@ func (s *Server) torrentSend(w http.ResponseWriter, r *http.Request, session aut
 		s.selections.Store(in.Selection, selected)
 	}
 	result := payload.Result
+	infoHash := result.InfoHash
+	if infoHash == "" {
+		infoHash = torrent.MagnetInfoHash(result.Magnet)
+	}
 	hash := auth.Digest(result.Magnet + "\x00" + result.URL)
 	id := database.ID()
 	res, e := s.DB.ExecContext(r.Context(), "INSERT INTO torrent_send_history VALUES(?,?,?,?,?,'pending','',?) ON CONFLICT(profile_id,idempotency_key) DO NOTHING", id, session.Profile, in.Key, hash, result.Name, time.Now().Unix())
@@ -89,7 +93,11 @@ func (s *Server) torrentSend(w http.ResponseWriter, r *http.Request, session aut
 			// concern cannot block an explicit user choice. Payload safety and
 			// show/episode identity checks remain authoritative.
 			base := torrent.ReleaseAssessment{Confidence: torrent.ConfidenceLow, Verification: torrent.VerificationUnverified}
-			_, e = torrent.VerifyTorrentForTarget(base, result, data, payload.Target)
+			assessment, verifyErr := torrent.VerifyTorrentForTarget(base, result, data, payload.Target)
+			e = verifyErr
+			if assessment.InfoHash != "" {
+				infoHash = assessment.InfoHash
+			}
 			inspectionRejected = e != nil
 		}
 		if e == nil {
@@ -112,6 +120,13 @@ func (s *Server) torrentSend(w http.ResponseWriter, r *http.Request, session aut
 			return bad(e.Error())
 		}
 		return remote(e)
+	}
+	// Only an explicit library episode can be marked later. A target inferred
+	// from free text may not belong to this deployment's library.
+	if payload.EpisodeID != "" && infoHash != "" {
+		if e = (torrent.EpisodeDownloadStore{DB: s.DB}).Track(r.Context(), infoHash, payload.EpisodeID); e != nil {
+			return e
+		}
 	}
 	jsonResponse(w, 200, map[string]string{"status": status})
 	return nil

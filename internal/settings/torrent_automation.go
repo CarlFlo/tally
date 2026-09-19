@@ -16,53 +16,55 @@ const (
 )
 
 type TorrentAutomation struct {
-	PreferredQuality    string   `json:"preferred_quality"`
-	MinSeeders          int      `json:"min_seeders"`
-	HighConfidenceOnly  bool     `json:"high_confidence_only"`
-	PreferSmaller       bool     `json:"prefer_smaller"`
-	ReleaseDelayMinutes int      `json:"release_delay_minutes"`
-	RetryWindowHours    int      `json:"retry_window_hours"`
-	MaxCandidates       int      `json:"max_candidates"`
-	RulesVersion        int      `json:"rules_version"`
-	IncludeKeywords     string   `json:"include_keywords"`
-	ExcludeKeywords     string   `json:"exclude_keywords"`
-	AllowedGroups       []string `json:"allowed_groups"`
-	PreferredGroups     []string `json:"preferred_groups"`
-	AllowedUploaders    []string `json:"allowed_uploaders"`
-	PreferredUploaders  []string `json:"preferred_uploaders"`
-	PreferredProviders  []string `json:"preferred_providers"`
-	LiveMinMBPerMinute      int `json:"live_min_mb_per_minute"`
-	LiveMaxMBPerMinute      int `json:"live_max_mb_per_minute"`
-	AnimatedMinMBPerMinute  int  `json:"animated_min_mb_per_minute"`
-	AnimatedMaxMBPerMinute  int  `json:"animated_max_mb_per_minute"`
-	RequestPolicyVersion    int  `json:"request_policy_version"`
-	DiscoveryBudget         int  `json:"discovery_budget"`
-	RetryFirstMinutes       int  `json:"retry_first_minutes"`
-	RetrySecondMinutes      int  `json:"retry_second_minutes"`
-	RetryLaterMinutes       int  `json:"retry_later_minutes"`
-	PrioritizeRecent        bool `json:"prioritize_recent"`
+	PreferredQuality       string   `json:"preferred_quality"`
+	MinSeeders             int      `json:"min_seeders"`
+	HighConfidenceOnly     bool     `json:"high_confidence_only"`
+	PreferSmaller          bool     `json:"prefer_smaller"`
+	ReleaseDelayMinutes    int      `json:"release_delay_minutes"`
+	RetryWindowHours       int      `json:"retry_window_hours"`
+	MaxCandidates          int      `json:"max_candidates"`
+	RulesVersion           int      `json:"rules_version"`
+	IncludeKeywords        string   `json:"include_keywords"`
+	ExcludeKeywords        string   `json:"exclude_keywords"`
+	AllowedGroups          []string `json:"allowed_groups"`
+	PreferredGroups        []string `json:"preferred_groups"`
+	AllowedUploaders       []string `json:"allowed_uploaders"`
+	PreferredUploaders     []string `json:"preferred_uploaders"`
+	PreferredProviders     []string `json:"preferred_providers"`
+	LiveMinMBPerMinute     int      `json:"live_min_mb_per_minute"`
+	LiveMaxMBPerMinute     int      `json:"live_max_mb_per_minute"`
+	AnimatedMinMBPerMinute int      `json:"animated_min_mb_per_minute"`
+	AnimatedMaxMBPerMinute int      `json:"animated_max_mb_per_minute"`
+	RequestPolicyVersion   int      `json:"request_policy_version"`
+	DiscoveryBudget        int      `json:"discovery_budget"`
+	RetryFirstMinutes      int      `json:"retry_first_minutes"`
+	RetrySecondMinutes     int      `json:"retry_second_minutes"`
+	RetryLaterMinutes      int      `json:"retry_later_minutes"`
+	PrioritizeRecent       bool     `json:"prioritize_recent"`
+	CompletionPercent      int      `json:"completion_percent"`
 }
 
 func DefaultTorrentAutomation() TorrentAutomation {
 	return TorrentAutomation{
-		PreferredQuality:    TorrentQuality1080,
-		MinSeeders:          5,
-		HighConfidenceOnly:  true,
-		ReleaseDelayMinutes: 20,
-		RetryWindowHours:    24,
-		MaxCandidates:       5,
-		RulesVersion:        TorrentAutomationRulesVersion,
-		ExcludeKeywords:          "cam telesync hardsub dubbed",
-		LiveMinMBPerMinute:       8,
-		LiveMaxMBPerMinute:       220,
-		AnimatedMinMBPerMinute:   4,
-		AnimatedMaxMBPerMinute:   140,
-		RequestPolicyVersion:     TorrentAutomationRequestPolicyVersion,
-		DiscoveryBudget:          5,
-		RetryFirstMinutes:        30,
-		RetrySecondMinutes:       120,
-		RetryLaterMinutes:        360,
-		PrioritizeRecent:         true,
+		PreferredQuality:       TorrentQuality1080,
+		MinSeeders:             5,
+		HighConfidenceOnly:     true,
+		ReleaseDelayMinutes:    20,
+		RetryWindowHours:       24,
+		MaxCandidates:          5,
+		RulesVersion:           TorrentAutomationRulesVersion,
+		ExcludeKeywords:        "cam telesync hardsub dubbed",
+		LiveMinMBPerMinute:     8,
+		LiveMaxMBPerMinute:     220,
+		AnimatedMinMBPerMinute: 4,
+		AnimatedMaxMBPerMinute: 140,
+		RequestPolicyVersion:   TorrentAutomationRequestPolicyVersion,
+		DiscoveryBudget:        5,
+		RetryFirstMinutes:      30,
+		RetrySecondMinutes:     120,
+		RetryLaterMinutes:      360,
+		PrioritizeRecent:       true,
+		CompletionPercent:      100,
 	}
 }
 
@@ -91,6 +93,9 @@ func (v TorrentAutomation) Effective() TorrentAutomation {
 	}
 	if v.AnimatedMaxMBPerMinute == 0 {
 		v.AnimatedMaxMBPerMinute = defaults.AnimatedMaxMBPerMinute
+	}
+	if v.CompletionPercent == 0 {
+		v.CompletionPercent = defaults.CompletionPercent
 	}
 	// Existing installations predate request-restraint controls. Seed the
 	// initial safe policy once, then preserve intentionally disabled recency
@@ -150,6 +155,9 @@ func ValidateTorrentAutomation(v TorrentAutomation) error {
 	if v.RetryFirstMinutes > v.RetrySecondMinutes || v.RetrySecondMinutes > v.RetryLaterMinutes {
 		return fmt.Errorf("automation retry delays must not decrease")
 	}
+	if v.CompletionPercent < 1 || v.CompletionPercent > 100 {
+		return fmt.Errorf("download completion percentage must be between 1 and 100")
+	}
 	for label, bounds := range map[string][2]int{
 		"live-action size rate": {v.LiveMinMBPerMinute, v.LiveMaxMBPerMinute},
 		"animated size rate":    {v.AnimatedMinMBPerMinute, v.AnimatedMaxMBPerMinute},
@@ -162,11 +170,11 @@ func ValidateTorrentAutomation(v TorrentAutomation) error {
 		return fmt.Errorf("torrent keyword filters must be 500 characters or fewer")
 	}
 	for label, values := range map[string][]string{
-		"release group allowlist": v.AllowedGroups,
+		"release group allowlist":  v.AllowedGroups,
 		"preferred release groups": v.PreferredGroups,
-		"uploader allowlist": v.AllowedUploaders,
-		"preferred uploaders": v.PreferredUploaders,
-		"preferred providers": v.PreferredProviders,
+		"uploader allowlist":       v.AllowedUploaders,
+		"preferred uploaders":      v.PreferredUploaders,
+		"preferred providers":      v.PreferredProviders,
 	} {
 		if len(values) > 50 {
 			return fmt.Errorf("%s may contain at most 50 entries", label)
