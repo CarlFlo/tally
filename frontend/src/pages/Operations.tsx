@@ -686,7 +686,7 @@ export function SettingsPage({
               onSave={() => void saveProfile()}
               statusLabel={t("common.unsavedChanges", { defaultValue: "Unsaved changes" })}
               revertLabel={t("common.revertChanges", { defaultValue: "Revert changes" })}
-              saveLabel={t("common.saveChanges", { defaultValue: "Save changes" })}
+              saveLabel={t("settings.saveProfile")}
             />
           </section>
           <section className="panel settings-card">
