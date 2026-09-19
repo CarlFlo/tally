@@ -46,13 +46,13 @@ func liveChanges(r *http.Request, session auth.Session) []liveUpdate {
 	if strings.HasPrefix(path, "/api/settings/") {
 		switch strings.TrimPrefix(path, "/api/settings/") {
 		case "search":
-			return []liveUpdate{update("", "editable-settings", "settings", "capabilities", "bootstrap")}
+			return []liveUpdate{update("", "editable-settings", "settings", "capabilities", "bootstrap", "logs")}
 		case "torrent":
-			return []liveUpdate{update("", "editable-settings", "settings", "capabilities", "bootstrap", "downloads")}
+			return []liveUpdate{update("", "editable-settings", "settings", "capabilities", "bootstrap", "downloads", "logs")}
 		case "notifications":
-			return []liveUpdate{update("", "editable-settings", "settings")}
+			return []liveUpdate{update("", "editable-settings", "settings", "logs")}
 		case "backups":
-			return []liveUpdate{update("", "editable-settings", "settings", "backups")}
+			return []liveUpdate{update("", "editable-settings", "settings", "backups", "logs")}
 		case "scheduling":
 			return []liveUpdate{update("", "schedules", "jobs", "logs")}
 		}
