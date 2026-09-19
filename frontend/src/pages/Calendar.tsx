@@ -51,7 +51,6 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
   const [date, setDate] = useState(today);
   const [view, setView] = useState(prefs.calendar_view || "month");
   const [group, setGroup] = useState<string[]>([]);
-  const [selected, setSelected] = useState<Episode | null>(null);
   const [filter, setFilter] = useState("all");
   const [expanded, setExpanded] = useState<string[]>([]);
   const calendarSection = useRef<HTMLElement | null>(null);
@@ -116,16 +115,10 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
   const all = episodes.data || [];
   const overlayEpisodeId =
     new URLSearchParams(location.search).get("episode") || undefined;
-  useEffect(() => {
-    if (!overlayEpisodeId) {
-      setSelected(null);
-      return;
-    }
-    const episode = all.find((item) => item.id === overlayEpisodeId);
-    if (episode) setSelected(episode);
-  }, [all, overlayEpisodeId]);
+  const selected = overlayEpisodeId
+    ? all.find((item) => item.id === overlayEpisodeId) || null
+    : null;
   function selectEpisode(episode: Episode) {
-    setSelected(episode);
     const params = new URLSearchParams(location.search);
     params.set("episode", episode.id);
     navigate(`${location.pathname}?${params.toString()}`, {
@@ -134,7 +127,6 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
   }
   function closeEpisode() {
     if (overlayEpisodeId) navigate(-1);
-    else setSelected(null);
   }
   const filtered = all.filter(
     (e) =>
