@@ -28,6 +28,25 @@ test("localization loading failure can be retried", async ({ page }) => {
 import { expect, test } from "@playwright/test";
 import { openProfile, selectProfileByName } from "./navigation";
 
+const headers = { "X-Tally-CSRF": "1" };
+
+test.afterEach(async ({ page }) => {
+  await selectProfileByName(page, "My profile");
+  const response = await page.request.get("/api/bootstrap");
+  expect(response.ok()).toBe(true);
+  const boot = await response.json();
+  if (boot.profile?.locale === "en") return;
+  const restore = await page.request.patch("/api/profile", {
+    headers,
+    data: {
+      name: boot.profile.display_name,
+      avatar: boot.profile.avatar,
+      locale: "en",
+    },
+  });
+  expect(restore.ok()).toBe(true);
+});
+
 test("profile language applies on save and persists per profile", async ({
   page,
 }) => {
@@ -70,9 +89,10 @@ test("profile language applies on save and persists per profile", async ({
   await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
 
   // Untranslated keys in this deliberately partial fixture still fall back to English.
+  // The staged save bar disappears once the profile is clean.
   await expect(
     page.getByRole("button", { name: "Save profile", exact: true }),
-  ).toBeVisible();
+  ).toHaveCount(0);
 
   await page.goto("/calendar");
   await expect(
