@@ -26,9 +26,12 @@ Torrent search and torrent downloading are separate features and can be enabled 
 services:
   tally:
     image: lappenhappen/tally:latest
+    container_name: tally
     restart: unless-stopped
     ports:
       - "8080:8080"
+    environment:
+      - TZ=Etc/UTC
     stop_grace_period: 30s
     security_opt:
       - no-new-privileges:true
