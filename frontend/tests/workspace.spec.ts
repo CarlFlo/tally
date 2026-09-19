@@ -198,9 +198,14 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
   await editor
     .getByRole("button", { name: "Save changes", exact: true })
     .click();
-  await expect(page.getByRole("status")).toContainText("Schedule saved");
+  await expect(page.getByRole("status")).toContainText(
+    stored.enabled ? "Metadata sync disabled" : "Metadata sync enabled",
+  );
   await page.reload();
   await expect(editor.getByLabel("Cron expression")).toHaveValue("20 * * * *");
+  await expect(editor.getByLabel("Run automatically")).toBeChecked({
+    checked: !Boolean(stored.enabled),
+  });
   await page.screenshot({
     path: "../docs/screenshots/compact-schedules.png",
     fullPage: true,
