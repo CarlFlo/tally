@@ -31,12 +31,18 @@ services:
     ports:
       - "8080:8080"
     environment:
+      - PUID=1000
+      - PGID=1000
       - TZ=Etc/UTC
     stop_grace_period: 30s
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
     volumes:
       - tally-config:/config
 

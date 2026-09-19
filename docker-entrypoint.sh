@@ -1,0 +1,28 @@
+#!/bin/sh
+set -eu
+
+case "${PUID:-10001}" in
+  ''|*[!0-9]*) echo "PUID must be a numeric user id" >&2; exit 64 ;;
+esac
+case "${PGID:-10001}" in
+  ''|*[!0-9]*) echo "PGID must be a numeric group id" >&2; exit 64 ;;
+esac
+
+PUID="${PUID:-10001}"
+PGID="${PGID:-10001}"
+
+group_name="tally"
+user_name="tally"
+if ! getent group "$PGID" >/dev/null 2>&1; then
+  addgroup -g "$PGID" "$group_name"
+else
+  group_name="$(getent group "$PGID" | cut -d: -f1)"
+fi
+if ! getent passwd "$PUID" >/dev/null 2>&1; then
+  adduser -D -H -u "$PUID" -G "$group_name" "$user_name"
+else
+  user_name="$(getent passwd "$PUID" | cut -d: -f1)"
+fi
+
+chown "$PUID:$PGID" /config
+exec su-exec "$PUID:$PGID" "$@"
