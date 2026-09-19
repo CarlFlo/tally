@@ -460,7 +460,7 @@ test("settings categories persist connections, schedules, debug previews and sta
     .getByRole("link", { name: "Torrent search", exact: true })
     .last()
     .click();
-  await expect(page).toHaveURL(/\/settings\/search$/);
+  await expect(page).toHaveURL(/\/admin\/configuration\/integrations\/search$/);
   await page
     .getByLabel("Jackett base URL", { exact: true })
     .fill("http://127.0.0.1:1");

@@ -129,7 +129,6 @@ export function JobsPage() {
     <div className="page">
       <div className="page-heading">
         <div>
-          <span className="eyebrow">{t("jobs.eyebrow")}</span>
           <h1>
             {t("jobs.title")}<span className="accent">.</span>
           </h1>

@@ -339,7 +339,6 @@ export function TorrentAutomationPage() {
     <div className="page torrent-automation-page">
       <PageHeader
         className="torrent-automation-heading"
-        eyebrow={t("torrentAutomation.eyebrow", { defaultValue: "STRONG SIGNALS BEFORE IT MOVES" })}
         title={t("search.title")}
         description={t("torrentAutomation.description", {
           defaultValue:

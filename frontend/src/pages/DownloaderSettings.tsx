@@ -91,17 +91,22 @@ export function DownloaderSettings() {
 
   return (
     <>
-      <section className="panel settings-card feature-toggle-setting">
-        <label className="toggle-setting">
-          <input
-            type="checkbox"
-            checked={featureEnabled}
-            disabled={toggleBusy}
-            onChange={(event) => void toggle(event.target.checked)}
-          />
-          {t("downloader.enable")}
-        </label>
-        <p className="muted small-text">{t("downloader.toggleHelp")}</p>
+      <section className="panel settings-card feature-toggle-setting integration-toggle-setting">
+        <div className="section-heading">
+          <div>
+            <h2>{t("settings.torrentClient")}</h2>
+            <p className="muted">{t("downloader.toggleHelp")}</p>
+          </div>
+          <label className="toggle-setting">
+            <input
+              type="checkbox"
+              checked={featureEnabled}
+              disabled={toggleBusy}
+              onChange={(event) => void toggle(event.target.checked)}
+            />
+            {t("downloader.enable")}
+          </label>
+        </div>
       </section>
       <section className="panel settings-card client-settings">
         <h3>

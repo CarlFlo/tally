@@ -10,7 +10,7 @@ test("profile settings use browser history and signing out stays signed out with
     page.getByRole("heading", { name: "Your calendar." }),
   ).toBeVisible();
   await openProfile(page);
-  await expect(page).toHaveURL(/\/profile$/);
+  await expect(page).toHaveURL(/\/account$/);
   await expect(
     page.getByRole("heading", { name: "My profile." }),
   ).toBeVisible();
@@ -29,15 +29,15 @@ test("profile settings use browser history and signing out stays signed out with
     page.getByRole("heading", { name: "Your calendar." }),
   ).toBeVisible();
   await page.goForward();
-  await expect(page).toHaveURL(/\/profile$/);
+  await expect(page).toHaveURL(/\/account$/);
   await page.getByRole("link", { name: "Security", exact: true }).click();
-  await expect(page).toHaveURL(/\/profile\/security$/);
+  await expect(page).toHaveURL(/\/account\/security$/);
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "Authentication", exact: true }),
   ).toBeVisible();
   await page.goBack();
-  await expect(page).toHaveURL(/\/profile$/);
+  await expect(page).toHaveURL(/\/account$/);
   await expect(
     page.getByRole("textbox", { name: "Display name" }),
   ).toBeVisible();
@@ -61,7 +61,7 @@ test("profile settings use browser history and signing out stays signed out with
       .locator("#profile-menu")
       .getByRole("button", { name: "Sign out", exact: true }),
   ).toBeEnabled();
-  await expect(page).toHaveURL(/\/profile$/);
+  await expect(page).toHaveURL(/\/account$/);
   await page.unroute("**/api/auth/logout");
   await signOut(page);
   await expect(page).toHaveURL(/\/login$/);
@@ -270,7 +270,7 @@ test("library, calendar, episode state, profiles, jobs and responsive layout", a
   await page.reload();
   await expect(page.locator(".header-profile strong")).toHaveText("Alex");
   await openProfile(page);
-  await expect(page).toHaveURL(/\/profile$/);
+  await expect(page).toHaveURL(/\/account$/);
   await expect(page.getByRole("textbox", { name: "Display name" })).toHaveValue(
     "Alex",
   );
@@ -279,7 +279,7 @@ test("library, calendar, episode state, profiles, jobs and responsive layout", a
   await expect(page.locator(".agenda-episode").first()).toBeVisible();
   await openProfileMenu(page);
   await page.getByRole("link", { name: "System", exact: true }).click();
-  await expect(page).toHaveURL(/\/system\/jobs$/);
+  await expect(page).toHaveURL(/\/admin\/operations\/jobs$/);
   await page
     .locator(".job-card")
     .filter({ has: page.getByRole("heading", { name: "Metadata sync" }) })
@@ -307,7 +307,7 @@ test("library, calendar, episode state, profiles, jobs and responsive layout", a
     fullPage: true,
   });
   await openProfile(page);
-  await expect(page).toHaveURL(/\/profile$/);
+  await expect(page).toHaveURL(/\/account$/);
   await expect(page.locator(".sidebar")).not.toHaveClass(/open/);
   await page.getByRole("button", { name: "Light", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");

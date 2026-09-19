@@ -23,9 +23,6 @@ export function LogsPage({ personal = false }: { personal?: boolean }) {
     <div className="page logs-page">
       <div className="page-heading">
         <div>
-          <span className="eyebrow">
-            {personal ? t("logs.personalEyebrow") : t("logs.systemEyebrow")}
-          </span>
           <h1>
             {t("nav.logs")}<span className="accent">.</span>
           </h1>

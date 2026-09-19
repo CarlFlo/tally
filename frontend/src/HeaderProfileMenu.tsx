@@ -29,17 +29,17 @@ export function HeaderProfileMenu() {
           id="profile-menu"
           aria-label={t("profile.menu")}
         >
-          <NavLink to="/profile">
+          <NavLink to="/account">
             <UserRound size={17} />
             {t("profile.menuLink")}
           </NavLink>
           {!!profile.is_admin && (
             <>
-              <NavLink to="/system">
+              <NavLink to="/admin/operations/jobs">
                 <Server size={17} />
                 {t("nav.system")}
               </NavLink>
-              <NavLink to="/settings">
+              <NavLink to="/admin/configuration/schedules">
                 <Settings size={17} />
                 {t("nav.settings")}
               </NavLink>

@@ -49,13 +49,13 @@ function profileAuth(profile: AuthProfile): AuthMethod {
 function DeploymentSettingsNav() {
   const { t } = useTranslation();
   const tabs = [
-    { path: "/settings", label: t("settings.schedulingBackups"), icon: <HardDrive size={17} /> },
-    { path: "/settings/torrent", label: t("settings.torrentClient"), icon: <Download size={17} /> },
-    { path: "/settings/search", label: t("settings.torrentSearch"), icon: <Globe size={17} /> },
-    { path: "/settings/notifications", label: t("settings.notifications"), icon: <Bell size={17} /> },
-    { path: "/settings/bell", label: t("settings.bell"), icon: <Bell size={17} /> },
-    { path: "/settings/debug", label: t("settings.debug"), icon: <Activity size={17} /> },
-    { path: "/settings/profiles", label: t("settings.profiles"), icon: <Laptop size={17} /> },
+    { path: "/admin/configuration/schedules", label: t("settings.schedules"), icon: <HardDrive size={17} /> },
+    { path: "/admin/configuration/backups", label: t("settings.backups"), icon: <HardDrive size={17} /> },
+    { path: "/admin/configuration/integrations/downloader", label: t("settings.torrentClient"), icon: <Download size={17} /> },
+    { path: "/admin/configuration/integrations/search", label: t("settings.torrentSearch"), icon: <Globe size={17} /> },
+    { path: "/admin/configuration/delivery", label: t("settings.notifications"), icon: <Bell size={17} /> },
+    { path: "/admin/advanced/diagnostics", label: t("settings.debug"), icon: <Activity size={17} /> },
+    { path: "/admin/access/profiles", label: t("settings.profiles"), icon: <Laptop size={17} /> },
   ];
   return (
     <nav className="settings-tabs" aria-label={t("settings.deploymentNav")}>
@@ -129,7 +129,6 @@ export function ProfilesSettingsPage() {
     <div className="page settings-page">
       <PageHeader
         title={t("settings.title")}
-        eyebrow={t("settings.sharedEyebrow")}
         description={t("settings.sharedDescription")}
       />
       <DeploymentSettingsNav />
