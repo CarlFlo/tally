@@ -3,10 +3,14 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 23
+    "catalogVersion": 27
   },
   "common": {
     "save": "Save",
+    "unsavedChanges": "Unsaved changes",
+    "revertChanges": "Revert changes",
+    "saveChanges": "Save changes",
+    "unsavedNavigation": "You have unsaved changes. Leave this page without saving?",
     "cancel": "Cancel",
     "delete": "Delete",
     "confirm": "Confirm",
@@ -668,6 +672,10 @@
     "eyebrow": "STRONG SIGNALS BEFORE IT MOVES",
     "description": "Control how Tally matches, sizes, verifies, and selects releases before handing them to your torrent client.",
     "saved": "Torrent automation settings saved",
+    "revert": "Revert changes",
+    "unsavedChanges": "Unsaved changes",
+    "saveChanges": "Save changes",
+    "navigationWarning": "You have unsaved changes. Leave this page without saving?",
     "selection": "Release selection",
     "selectionHelp": "Quality is a preference between valid releases; it does not increase or reduce confidence.",
     "preferredQuality": "Preferred quality",

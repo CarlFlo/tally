@@ -422,7 +422,7 @@ test("settings categories persist connections, schedules, debug previews and sta
     .getByLabel("Webhook URL", { exact: true })
     .fill("http://127.0.0.1:1/fixture-webhook");
   await page
-    .getByRole("button", { name: "Save settings", exact: true })
+    .getByRole("button", { name: "Save changes", exact: true })
     .click();
   const savedNotice = page.getByRole("status");
   await expect(savedNotice).toContainText("Notification settings saved");
@@ -431,6 +431,11 @@ test("settings categories persist connections, schedules, debug previews and sta
   await expect(savedNotice).toHaveCount(0, { timeout: 1000 });
 
   await page.getByRole("switch", { name: "Enable all notifications" }).check();
+  await expect(
+    page.getByRole("switch", { name: "Enable all notifications" }),
+  ).toBeChecked();
+  await expect(page.getByRole("button", { name: "Save changes", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
   const enabledNotice = page.getByRole("status");
   await expect(enabledNotice).toContainText("Notifications enabled");
   await expect(enabledNotice).toHaveCount(0, { timeout: 3000 });
@@ -444,6 +449,10 @@ test("settings categories persist connections, schedules, debug previews and sta
   await page
     .getByRole("switch", { name: "Enable all notifications" })
     .uncheck();
+  await expect(
+    page.getByRole("switch", { name: "Enable all notifications" }),
+  ).not.toBeChecked();
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(page.getByRole("status")).toContainText(
     "All notifications disabled",
   );
@@ -459,7 +468,7 @@ test("settings categories persist connections, schedules, debug previews and sta
     .getByLabel("API key", { exact: true })
     .fill("plain-fixture-key");
   await page
-    .getByRole("button", { name: "Save Jackett", exact: true })
+    .getByRole("button", { name: "Save changes", exact: true })
     .click();
   await expect(page.getByRole("status")).toContainText("Jackett settings saved");
   await page
@@ -493,7 +502,7 @@ test("settings categories persist connections, schedules, debug previews and sta
     .fill("15 8 * * 1-5");
   await schedule.getByRole("checkbox", { name: "Run automatically" }).uncheck();
   await schedule
-    .getByRole("button", { name: "Save schedule", exact: true })
+    .getByRole("button", { name: "Save changes", exact: true })
     .click();
   await expect(page.getByRole("status")).toContainText("Schedule saved");
   await page.reload();

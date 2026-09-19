@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { invalidateResources } from "../queryInvalidation";
 import { api, useApp } from "../lib";
+import { UnsavedChangesBar, useUnsavedChangesWarning } from "../UnsavedChangesBar";
+import "../unsaved-changes.css";
 
 const categoryGroups = [
   {
@@ -22,33 +24,41 @@ const categoryGroups = [
   },
 ] as const;
 
+function normalizedCategories(categories: string[]) {
+  return [...new Set(categories)].sort();
+}
+
 export function BellNotificationSettings() {
   const { t } = useTranslation();
   const { boot, notify } = useApp();
   const cache = useQueryClient();
   const [selected, setSelected] = useState(boot.preferences.bell_categories);
-  const [busy, setBusy] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const hasChanges =
+    JSON.stringify(normalizedCategories(selected)) !==
+    JSON.stringify(normalizedCategories(boot.preferences.bell_categories));
+  useUnsavedChangesWarning(hasChanges, busy, t("common.unsavedNavigation"));
   useEffect(() => {
     if (!busy) setSelected(boot.preferences.bell_categories);
   }, [boot.preferences.bell_categories, busy]);
-  async function toggle(key: string, enabled: boolean) {
-    const previous = selected;
-    const next = enabled
-      ? [...selected, key]
-      : selected.filter((item) => item !== key);
-    setSelected(next);
-    setBusy(key);
+  function toggle(key: string, enabled: boolean) {
+    setSelected((current) => enabled
+      ? [...current.filter((item) => item !== key), key]
+      : current.filter((item) => item !== key));
+  }
+  async function save() {
+    setBusy(true);
     try {
-      await api("/preferences", "PATCH", { bell_categories: next });
+      await api("/preferences", "PATCH", { bell_categories: selected });
       await invalidateResources(cache, ["bootstrap", "inbox"]);
     } catch (error) {
-      setSelected(previous);
       notify((error as Error).message, true);
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   }
   return (
+    <>
     <section className="panel settings-card bell-settings">
       <h3>
         <BellRing size={19} />
@@ -67,8 +77,8 @@ export function BellNotificationSettings() {
                 <input
                   type="checkbox"
                   checked={selected.includes(key)}
-                  disabled={busy !== null}
-                  onChange={(event) => void toggle(key, event.target.checked)}
+                  disabled={busy}
+                  onChange={(event) => toggle(key, event.target.checked)}
                 />
                 <span>
                   <strong>{t(`bell.${key}`)}</strong>
@@ -80,5 +90,15 @@ export function BellNotificationSettings() {
         ))}
       </div>
     </section>
+    <UnsavedChangesBar
+      hasChanges={hasChanges}
+      busy={busy}
+      onRevert={() => setSelected(boot.preferences.bell_categories)}
+      onSave={() => void save()}
+      statusLabel={t("common.unsavedChanges")}
+      revertLabel={t("common.revertChanges")}
+      saveLabel={t("common.saveChanges")}
+    />
+    </>
   );
 }

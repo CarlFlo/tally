@@ -1,12 +1,14 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Bell, Save, Send } from "lucide-react";
+import { Bell, Send } from "lucide-react";
 import { api, Busy, ErrorState, useApp, useLocal } from "../lib";
 import { NotificationFields } from "./NotificationFields";
 import { useLatestRequest } from "../useLatestRequest";
 import { invalidateResources } from "../queryInvalidation";
 import { queryKeys } from "../queryKeys";
 import { useTranslation } from "react-i18next";
+import { UnsavedChangesBar, useUnsavedChangesWarning } from "../UnsavedChangesBar";
+import "../unsaved-changes.css";
 import {
   displayNotificationTime,
   notificationErrors,
@@ -70,6 +72,12 @@ function NotificationForm({ saved }: { saved: any }) {
   const toggleMessage = savedValid
     ? ""
     : t("notifications.saveBeforeEnable");
+  const hasChanges = JSON.stringify(normalized) !== JSON.stringify(stored);
+  useUnsavedChangesWarning(
+    hasChanges,
+    busy,
+    t("common.unsavedNavigation", { defaultValue: "You have unsaved changes. Leave this page without saving?" }),
+  );
   useEffect(() => {
     setTimeText(
       displayNotificationTime(data.delivery_time, boot.preferences.time_format),
@@ -105,23 +113,11 @@ function NotificationForm({ saved }: { saved: any }) {
     await invalidateResources(cache, ["settings"]);
   }
   async function toggle(enabled: boolean) {
-    const previous = stored;
-    setStored({ ...stored, enabled });
-    setBusy(true);
+    change("enabled", enabled);
     setFeedback("");
-    try {
-      await persist({ ...stored, enabled });
-      change("enabled", enabled);
-      notify(t(enabled ? "notifications.enabledNotice" : "notifications.disabledNotice"));
-    } catch (e) {
-      setStored(previous);
-      setFeedback((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
   }
-  async function save(event: FormEvent) {
-    event.preventDefault();
+  async function save(event?: FormEvent) {
+    event?.preventDefault();
     if (Object.keys(errors).length) {
       return;
     }
@@ -149,17 +145,17 @@ function NotificationForm({ saved }: { saved: any }) {
         </div>
         <span title={toggleMessage}>
           <label
-            className={`toggle-setting notification-master${stored.enabled ? " is-enabled" : ""}`}
+            className={`toggle-setting notification-master${data.enabled ? " is-enabled" : ""}`}
           >
             <input
               type="checkbox"
               role="switch"
               aria-label={t("notifications.enableAll")}
-              checked={stored.enabled}
+              checked={data.enabled}
               disabled={busy || !savedValid}
               onChange={(e) => void toggle(e.target.checked)}
             />
-            {stored.enabled ? t("notifications.alertsOn") : t("notifications.alertsOff")}
+            {data.enabled ? t("notifications.alertsOn") : t("notifications.alertsOff")}
           </label>
         </span>
       </div>
@@ -180,10 +176,6 @@ function NotificationForm({ saved }: { saved: any }) {
           </p>
         )}
         <div className="notification-buttons">
-          <button className="button primary" disabled={busy}>
-            <Save size={17} />
-            {t("notifications.saveSettings")}
-          </button>
           <button
             className="button"
             type="button"
@@ -216,6 +208,19 @@ function NotificationForm({ saved }: { saved: any }) {
           </button>
         </div>
       </form>
+      <UnsavedChangesBar
+        hasChanges={hasChanges}
+        busy={busy}
+        onRevert={() => {
+          setData(stored);
+          setTimeText(displayNotificationTime(stored.delivery_time, boot.preferences.time_format));
+          setFeedback("");
+        }}
+        onSave={() => void save()}
+        statusLabel={t("common.unsavedChanges", { defaultValue: "Unsaved changes" })}
+        revertLabel={t("common.revertChanges", { defaultValue: "Revert changes" })}
+        saveLabel={t("common.saveChanges", { defaultValue: "Save changes" })}
+      />
     </section>
   );
 }

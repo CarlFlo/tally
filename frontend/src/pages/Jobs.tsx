@@ -24,6 +24,36 @@ import { queryKeys } from "../queryKeys";
 import { invalidateResources } from "../queryInvalidation";
 import { ExperimentalJobConfirmation } from "../ExperimentalJobConfirmation";
 
+function JobScheduleToggle({
+  job,
+  operator,
+  busy,
+  onToggle,
+}: {
+  job: any;
+  operator: boolean;
+  busy: string;
+  onToggle: (enabled: boolean) => void;
+}) {
+  const { t } = useTranslation();
+  const enabled = !!job.enabled;
+  return (
+    <label className={`job-schedule-toggle${enabled ? " is-scheduled" : ""}`}>
+      <input
+        type="checkbox"
+        checked={enabled}
+        disabled={!operator || busy === job.key || busy === `toggle:${job.key}`}
+        aria-label={t("jobs.toggleSchedule", {
+          defaultValue: "Toggle automatic schedule for {{name}}",
+          name: jobName(job.key),
+        })}
+        onChange={(event) => onToggle(event.target.checked)}
+      />
+      <span>{enabled ? t("jobs.scheduled") : t("jobs.off")}</span>
+    </label>
+  );
+}
+
 export function JobsPage() {
   const { t } = useTranslation();
   const { boot, notify } = useApp();
@@ -167,15 +197,12 @@ export function JobsPage() {
                     <SlidersHorizontal size={21} />
                   )}
                 </span>
-                <span className={"badge " + (job.paused ? "failed" : "")}>
-                  {!job.enabled
-                    ? t("jobs.off")
-                    : job.paused
-                      ? t("jobs.paused")
-                      : job.last_status === "running"
-                        ? t("jobs.running")
-                        : t("jobs.scheduled")}
-                </span>
+                <JobScheduleToggle
+                  job={job}
+                  operator={!!operator}
+                  busy={busy}
+                  onToggle={(enabled) => requestScheduleToggle(real, enabled)}
+                />
               </div>
               <h3>{jobName(job.key)}</h3>
               <p>
@@ -233,23 +260,6 @@ export function JobsPage() {
                   {busy === job.key ? <Busy /> : <Play size={15} />}
                   {real.paused ? t("jobs.retryNow") : t("jobs.runNow")}
                 </button>
-                {operator && (
-                  <label className="toggle-setting compact-toggle job-schedule-toggle">
-                    <input
-                      type="checkbox"
-                      checked={!!real.enabled}
-                      disabled={busy === job.key || busy === `toggle:${job.key}`}
-                      aria-label={t("jobs.toggleSchedule", {
-                        defaultValue: "Toggle automatic schedule for {{name}}",
-                        name: jobName(job.key),
-                      })}
-                      onChange={(event) =>
-                        requestScheduleToggle(real, event.target.checked)
-                      }
-                    />
-                    {t("schedule.automatic")}
-                  </label>
-                )}
                 {!!real.paused && operator && (
                   <button
                     className="button"

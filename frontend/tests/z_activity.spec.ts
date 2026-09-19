@@ -230,7 +230,7 @@ test("notification forms test Webhook and Discord locally, preserve settings whe
     deployment.timezone,
   );
   await page
-    .getByRole("button", { name: "Save settings", exact: true })
+    .getByRole("button", { name: "Save changes", exact: true })
     .click();
   await expect(page.getByRole("status")).toContainText(
     "Notification settings saved",
@@ -269,16 +269,21 @@ test("notification forms test Webhook and Discord locally, preserve settings whe
     )
     .toBe("Tally fixture");
   await page
-    .getByRole("button", { name: "Save settings", exact: true })
+    .getByRole("button", { name: "Save changes", exact: true })
     .click();
   await expect(page.getByRole("status")).toContainText(
     "Notification settings saved",
   );
   await page.getByRole("switch", { name: "Enable all notifications" }).check();
+  await expect(
+    page.getByRole("switch", { name: "Enable all notifications" }),
+  ).toBeChecked();
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Notifications enabled");
   await page
     .getByRole("switch", { name: "Enable all notifications" })
     .uncheck();
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(page.getByRole("status")).toContainText(
     "All notifications disabled",
   );

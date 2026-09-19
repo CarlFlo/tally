@@ -65,6 +65,10 @@ Live events invalidate only relevant resources. They should refresh visible serv
 
 Forms should distinguish draft values from authoritative saved state. Profile language selection is a draft until Save profile succeeds; only then does the saved locale become authoritative. Similar forms should not visually imply persistence before the backend accepts the change.
 
+Settings forms with more than one editable value use staged saving. Edits remain in a local draft and must not reach the backend until the shared **Unsaved changes** bar's primary **Save changes** action is pressed. The bar is fixed and centered at the bottom of the viewport, provides a secondary **Revert changes** action that restores the last authoritative values, and appears only while the draft differs from saved state. Dirty settings register both browser-exit protection and an in-app navigation warning. A test or preview action may run against the draft, but it must not persist the settings. A control is immediate-save only when the product explicitly defines that single action as its own save operation; one-shot actions such as adding or removing a show are not converted into staged settings.
+
+Every editable control, including its checked state, visual styling, and on/off label, must render from the draft. The saved snapshot is used only for dirty comparison, revert, and the eventual persistence request; it must not hide a draft change from the user.
+
 Immediate toggles are appropriate only when the product intentionally defines the toggle itself as the save action. Keep those semantics explicit instead of mixing auto-save and staged-save behavior in one control group.
 
 When authoritative state changes invalidate derived UI, render feedback from the new state rather than capturing stale derived values. Localization-sensitive toast messages, for example, should resolve their translation after the new locale is active.

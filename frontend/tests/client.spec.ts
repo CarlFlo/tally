@@ -27,7 +27,7 @@ test("configure, test, save and use a shared torrent client with visible API key
   await card
     .getByRole("combobox", { name: "Torrent client", exact: true })
     .selectOption("");
-  await card.getByRole("button", { name: "Save torrent client" }).click();
+  await card.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByRole("status")).toContainText(
     "Torrent client disabled",
   );
@@ -60,7 +60,7 @@ test("configure, test, save and use a shared torrent client with visible API key
   );
   const unsaved = await (await page.request.get("/api/downloader")).json();
   expect(unsaved.settings.adapter).toBe("");
-  await card.getByRole("button", { name: "Save torrent client" }).click();
+  await card.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByRole("status")).toContainText("Torrent client saved");
   await page.reload();
   await expect(

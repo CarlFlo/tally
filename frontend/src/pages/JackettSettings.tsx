@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Plug, Save } from "lucide-react";
+import { CheckCircle2, Plug } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ConnectionInput } from "../ConnectionInput";
 import { useLatestRequest } from "../useLatestRequest";
@@ -7,6 +7,8 @@ import { api, Busy, ErrorState, useApp, useLocal, type Boot } from "../lib";
 import { invalidateResources } from "../queryInvalidation";
 import { queryKeys } from "../queryKeys";
 import { useTranslation } from "react-i18next";
+import { UnsavedChangesBar, useUnsavedChangesWarning } from "../UnsavedChangesBar";
+import "../unsaved-changes.css";
 
 type JackettConfig = {
   base_url: string;
@@ -94,6 +96,8 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
   const [revision, setRevision] = useState(saved.revision);
   const [busy, setBusy] = useState<"test" | "save" | null>(null);
   const [feedback, setFeedback] = useState<{ message: string; error: boolean } | null>(null);
+  const hasChanges = JSON.stringify(data) !== JSON.stringify(previous.current.data);
+  useUnsavedChangesWarning(hasChanges, busy !== null, t("common.unsavedNavigation", { defaultValue: "You have unsaved changes. Leave this page without saving?" }));
   useEffect(() => {
     if (JSON.stringify(data) === JSON.stringify(previous.current.data)) {
       setData(saved.data);
@@ -126,6 +130,7 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
           "editable-settings",
           "capabilities",
         ]);
+        previous.current = { data, revision: result.revision };
         notify(t("searchSettings.saved"));
       }
     } catch (error) {
@@ -159,15 +164,21 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
             <button type="button" className="button" onClick={() => run("test")}>
               {busy === "test" ? <Busy /> : <Plug size={17} />}{t("connection.test")}
             </button>
-            <button className="button primary" type="submit">
-              {busy === "save" ? <Busy /> : <Save size={17} />}{t("searchSettings.save")}
-            </button>
           </div>
         </fieldset>
         {feedback && <div className={feedback.error ? "error-box" : "client-test-success"} role={feedback.error ? "alert" : "status"}>
           {!feedback.error && <CheckCircle2 size={18} />}<span>{feedback.message}</span>
         </div>}
       </form>
+      <UnsavedChangesBar
+        hasChanges={hasChanges}
+        busy={busy !== null}
+        onRevert={() => { setData(previous.current.data); setFeedback(null); }}
+        onSave={() => void run("save")}
+        statusLabel={t("common.unsavedChanges", { defaultValue: "Unsaved changes" })}
+        revertLabel={t("common.revertChanges", { defaultValue: "Revert changes" })}
+        saveLabel={t("common.saveChanges", { defaultValue: "Save changes" })}
+      />
     </section>
   );
 }

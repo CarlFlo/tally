@@ -34,6 +34,8 @@ Publish state changes after the authoritative operation has actually completed. 
 
 A form value is not saved merely because the UI displays it. Staged forms should apply only after an explicit save succeeds; immediate toggles should be used only when the toggle itself is intentionally the save action.
 
+All editable controls and their labels must render from the draft, while persistence and validation compare against the saved snapshot. Binding a staged toggle's `checked`, styling, or on/off text to the saved value makes the control appear unresponsive until Save, even though the draft changed. Regression tests should change the control, verify its visual state immediately, verify the unsaved bar appears, then reload or save to confirm the authoritative state separately.
+
 This avoids the common UX failure where a setting appears active and later reverts when the user navigates away.
 
 ### Derived feedback must follow the new state

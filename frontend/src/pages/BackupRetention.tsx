@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
-import { api, Busy, ErrorState, useApp } from "../lib";
+import { api, ErrorState, useApp } from "../lib";
 import { invalidateResources } from "../queryInvalidation";
+import { UnsavedChangesBar, useUnsavedChangesWarning } from "../UnsavedChangesBar";
+import "../unsaved-changes.css";
 
 export function BackupRetention({ saved }: { saved: any }) {
   const { t } = useTranslation();
@@ -13,6 +15,8 @@ export function BackupRetention({ saved }: { saved: any }) {
   const [error, setError] = useState<Error | null>(null);
   const cache = useQueryClient();
   const { notify } = useApp();
+  const hasChanges = keep !== previousSaved.current.data.keep;
+  useUnsavedChangesWarning(hasChanges, busy, t("common.unsavedNavigation"));
   useEffect(() => {
     if (keep === previousSaved.current.data.keep) {
       setKeep(saved.data.keep);
@@ -20,8 +24,8 @@ export function BackupRetention({ saved }: { saved: any }) {
     }
     previousSaved.current = saved;
   }, [keep, saved]);
-  async function save(event: FormEvent) {
-    event.preventDefault();
+  async function save(event?: FormEvent) {
+    event?.preventDefault();
     setBusy(true);
     setError(null);
     try {
@@ -30,6 +34,7 @@ export function BackupRetention({ saved }: { saved: any }) {
         revision,
       });
       setRevision(result.revision);
+      previousSaved.current = { ...previousSaved.current, data: { keep }, revision: result.revision };
       await invalidateResources(cache, ["editable-settings"]);
       notify(t("backups.saved"));
     } catch (e) {
@@ -39,7 +44,8 @@ export function BackupRetention({ saved }: { saved: any }) {
     }
   }
   return (
-    <form className="panel settings-card compact-retention" onSubmit={save}>
+    <>
+    <form className="panel settings-card compact-retention">
       <h3>{t("backups.retention")}</h3>
       <p className="muted">
         <Trans
@@ -59,11 +65,18 @@ export function BackupRetention({ saved }: { saved: any }) {
             onChange={(e) => setKeep(Number(e.target.value))}
           />
         </label>
-        <button className="button small" disabled={busy}>
-          {busy && <Busy />}{t("backups.saveSettings")}
-        </button>
       </div>
       {error && <ErrorState error={error} />}
     </form>
+    <UnsavedChangesBar
+      hasChanges={hasChanges}
+      busy={busy}
+      onRevert={() => { setKeep(previousSaved.current.data.keep); setError(null); }}
+      onSave={() => void save()}
+      statusLabel={t("common.unsavedChanges")}
+      revertLabel={t("common.revertChanges")}
+      saveLabel={t("common.saveChanges")}
+    />
+    </>
   );
 }

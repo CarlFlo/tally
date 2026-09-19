@@ -1,9 +1,9 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Bot, Search } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { api, Busy, ErrorState, dateOnly, useApp } from "./lib";
+import { api, Busy, ErrorState, dateOnly } from "./lib";
 import { queryKeys } from "./queryKeys";
 
 type AutomationShow = {
@@ -16,14 +16,17 @@ type AutomationShow = {
 };
 
 type AutomationShowsResponse = { shows: AutomationShow[] };
-type Enrollment = { policy: string; enabled: boolean };
-
-export function AutomationShowEnrollmentList() {
+export function AutomationShowEnrollmentList({
+  enrollmentDraft,
+  disabled,
+  onEnrollmentChange,
+}: {
+  enrollmentDraft: Record<string, boolean>;
+  disabled: boolean;
+  onEnrollmentChange: (id: string, enabled: boolean, saved: boolean) => void;
+}) {
   const { t } = useTranslation();
-  const { notify } = useApp();
-  const cache = useQueryClient();
   const [filter, setFilter] = useState("");
-  const [busy, setBusy] = useState<string | null>(null);
   const query = useQuery<AutomationShowsResponse>({
     queryKey: queryKeys.torrentAutomationShows(),
     queryFn: ({ signal }) =>
@@ -35,54 +38,9 @@ export function AutomationShowEnrollmentList() {
   const visible = needle
     ? shows.filter((show) => show.name.toLowerCase().includes(needle))
     : shows.filter((show) => show.status.trim().toLowerCase() === "running");
-  const enrolled = shows.filter((show) => !!show.automation_enabled).length;
-
-  async function setEnrollment(show: AutomationShow, enabled: boolean) {
-    const showsKey = queryKeys.torrentAutomationShows();
-    const previous = cache.getQueryData<AutomationShowsResponse>(showsKey);
-    setBusy(show.id);
-    cache.setQueryData<AutomationShowsResponse>(showsKey, (current) =>
-      current
-        ? {
-            shows: current.shows.map((item) =>
-              item.id === show.id
-                ? { ...item, automation_enabled: enabled }
-                : item,
-            ),
-          }
-        : current,
-    );
-    try {
-      const result = await api<Enrollment>(
-        `/torrents/automation/shows/${show.id}`,
-        "PUT",
-        { enabled },
-      );
-      cache.setQueryData<AutomationShowsResponse>(showsKey, (current) =>
-        current
-          ? {
-              shows: current.shows.map((item) =>
-                item.id === show.id
-                  ? { ...item, automation_enabled: result.enabled }
-                  : item,
-              ),
-            }
-          : current,
-      );
-      cache.setQueryData(queryKeys.torrentAutomationShow(show.id), result);
-      notify(
-        enabled
-          ? t("torrentAutomation.showEnabled", { name: show.name })
-          : t("torrentAutomation.showDisabled", { name: show.name }),
-      );
-    } catch (error) {
-      if (previous) cache.setQueryData(showsKey, previous);
-      else void cache.invalidateQueries({ queryKey: showsKey });
-      notify((error as Error).message, true);
-    } finally {
-      setBusy(null);
-    }
-  }
+  const enrolled = shows.filter(
+    (show) => enrollmentDraft[show.id] ?? !!show.automation_enabled,
+  ).length;
 
   return (
     <section className="panel settings-card automation-shows-card">
@@ -119,7 +77,8 @@ export function AutomationShowEnrollmentList() {
       ) : visible.length ? (
         <div className="automation-show-list">
           {visible.map((show) => {
-            const enabled = !!show.automation_enabled;
+            const saved = !!show.automation_enabled;
+            const enabled = enrollmentDraft[show.id] ?? saved;
             return (
               <div className="automation-show-row" key={show.id}>
                 <div className="automation-show-copy">
@@ -137,9 +96,9 @@ export function AutomationShowEnrollmentList() {
                   <input
                     type="checkbox"
                     checked={enabled}
-                    disabled={busy === show.id}
+                    disabled={disabled}
                     onChange={(event) =>
-                      void setEnrollment(show, event.target.checked)
+                      onEnrollmentChange(show.id, event.target.checked, saved)
                     }
                   />
                   {enabled

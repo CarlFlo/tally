@@ -1,14 +1,15 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Save } from "lucide-react";
-import { api, Busy, ErrorState, useApp } from "../lib";
+import { api, ErrorState, useApp } from "../lib";
 import { commonSchedules, isExperimentalJob, jobDescription, jobName } from "../schedules";
 import { useDebouncedValue } from "../useDebouncedValue";
 import { SchedulePreview, type Preview } from "./SchedulePreview";
 import { queryKeys } from "../queryKeys";
 import { invalidateResources } from "../queryInvalidation";
 import { ExperimentalJobConfirmation } from "../ExperimentalJobConfirmation";
+import { UnsavedChangesBar, useUnsavedChangesWarning } from "../UnsavedChangesBar";
+import "../unsaved-changes.css";
 
 export type Schedule = {
   key: string;
@@ -30,6 +31,8 @@ export function ScheduleEditor({ job }: { job: Schedule }) {
   const [busy, setBusy] = useState(false);
   const [saveError, setSaveError] = useState<Error>();
   const [confirmExperimental, setConfirmExperimental] = useState(false);
+  const hasChanges = spec !== saved.schedule || enabled !== !!saved.enabled;
+  useUnsavedChangesWarning(hasChanges, busy, t("common.unsavedNavigation"));
   const previewSpec = useDebouncedValue(spec, 350);
   const preview = useQuery<Preview>({
     queryKey: queryKeys.schedulePreview(previewSpec),
@@ -85,7 +88,8 @@ export function ScheduleEditor({ job }: { job: Schedule }) {
   const presets = commonSchedules[job.key] || [];
   const selectedPreset = presets.find(([, value]) => value === spec)?.[1] || "custom";
   return (
-    <form autoComplete="off" className={`panel settings-card schedule-editor ${!saved.enabled ? "is-disabled" : ""}`} onSubmit={(event: FormEvent) => { event.preventDefault(); void save(spec, !!saved.enabled); }}>
+    <>
+    <form autoComplete="off" className={`panel settings-card schedule-editor ${!enabled ? "is-disabled" : ""}`} onSubmit={(event) => event.preventDefault()}>
       <fieldset disabled={busy}>
         <div className="schedule-heading">
           <div><h3>{jobName(job.key)}</h3><p>{jobDescription(job.key)}</p></div>
@@ -95,14 +99,13 @@ export function ScheduleEditor({ job }: { job: Schedule }) {
               setConfirmExperimental(true);
               return;
             }
-            void save(saved.schedule, nextEnabled);
+            setEnabled(nextEnabled);
           }} />{t("schedule.automatic")}</label>
         </div>
         <div className="schedule-editor-body">
           <div className="schedule-fields">
             <label>{t("schedule.common")}<select value={selectedPreset} aria-label={t("schedule.commonFor", { name: jobName(job.key) })} onChange={(event) => event.target.value !== "custom" && setSpec(event.target.value)}><option value="custom">{t("schedule.custom")}</option>{presets.map(([label, value]) => <option key={value} value={value}>{t(label)}</option>)}</select><small aria-hidden="true">&nbsp;</small></label>
             <label>{t("schedule.expression")}<input name={`cron-${job.key}`} value={spec} required maxLength={100} spellCheck={false} autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-bwignore="true" data-protonpass-ignore="true" data-form-type="other" onChange={(event) => setSpec(event.target.value)} /><small>{t("schedule.fields")}</small></label>
-            <button className="button primary small">{busy ? <Busy /> : <Save size={16} />}{t("schedule.save")}</button>
           </div>
           <SchedulePreview preview={currentPreview || initialPreview} loading={!settled || preview.isFetching} error={settled ? preview.error as Error | undefined : undefined} timeFormat={boot.preferences.time_format} />
         </div>
@@ -113,9 +116,22 @@ export function ScheduleEditor({ job }: { job: Schedule }) {
         <ExperimentalJobConfirmation
           jobKey={job.key}
           onClose={() => setConfirmExperimental(false)}
-          onConfirm={() => save(saved.schedule, true)}
+          onConfirm={async () => {
+            setEnabled(true);
+            return true;
+          }}
         />
       )}
     </form>
+    <UnsavedChangesBar
+      hasChanges={hasChanges}
+      busy={busy}
+      onRevert={() => { setSpec(saved.schedule); setEnabled(!!saved.enabled); setSaveError(undefined); }}
+      onSave={() => void save(spec, enabled)}
+      statusLabel={t("common.unsavedChanges")}
+      revertLabel={t("common.revertChanges")}
+      saveLabel={t("common.saveChanges")}
+    />
+    </>
   );
 }

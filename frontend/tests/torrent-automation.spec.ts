@@ -282,6 +282,24 @@ test("automation page exposes release filters trust rules and disabled capabilit
     page.getByText("Enable automatic torrent downloads", { exact: true }),
   ).toHaveCount(0);
   await expect(page.getByText("Shows in automation", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save changes", exact: true })).toHaveCount(0);
+
+  const minimumSeeders = page.getByLabel("Minimum seeders", { exact: true });
+  const savedMinimumSeeders = await minimumSeeders.inputValue();
+  await minimumSeeders.fill("4");
+  await expect(page.getByRole("button", { name: "Save changes", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Revert changes", exact: true })).toBeVisible();
+  await expect(page.getByText("Unsaved changes", { exact: true })).toBeVisible();
+  page.once("dialog", (dialog) => {
+    expect(dialog.message()).toContain("unsaved changes");
+    void dialog.dismiss();
+  });
+  await page.getByRole("link", { name: "Previous Runs", exact: true }).click();
+  await expect(page).toHaveURL(/\/search\/automation$/);
+  await page.getByRole("button", { name: "Revert changes", exact: true }).click();
+  await expect(minimumSeeders).toHaveValue(savedMinimumSeeders);
+  await expect(page.getByRole("button", { name: "Save changes", exact: true })).toHaveCount(0);
+  await minimumSeeders.fill("4");
 
   const exampleRow = page.locator(".automation-show-row").filter({ hasText: "Example Show" });
   await expect(exampleRow).toBeVisible();
@@ -297,6 +315,12 @@ test("automation page exposes release filters trust rules and disabled capabilit
   await expect(enrollmentToggle).not.toBeChecked();
   await enrollmentToggle.check();
   await expect(enrollmentToggle).toBeChecked();
+  const stagedPolicy = await page.request.get(
+    `/api/torrents/automation/shows/${showID}`,
+  );
+  expect(await stagedPolicy.json()).toMatchObject({ policy: "default", enabled: false });
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Save changes", exact: true })).toHaveCount(0);
   const enrolledPolicy = await page.request.get(
     `/api/torrents/automation/shows/${showID}`,
   );
@@ -446,6 +470,7 @@ test("experimental torrent automation schedule is confirmed and shared across jo
     await expect(linkedSettingsToggle).toBeChecked();
     await linkedSettingsToggle.uncheck();
     await expect(linkedSettingsToggle).not.toBeChecked();
+    await page.getByRole("button", { name: "Save changes", exact: true }).click();
 
     await page.goto("/system/jobs");
     await expect(

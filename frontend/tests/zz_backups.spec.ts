@@ -25,7 +25,7 @@ test("backup archives restore relationships/preferences and delete without fake 
 
   const changedKeep = originalKeep === "4" ? "5" : "4";
   await keep.fill(changedKeep);
-  await page.getByRole("button", { name: "Save settings", exact: true }).click();
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Backup settings saved");
 
   await row.getByRole("button", { name: "Restore", exact: true }).click();

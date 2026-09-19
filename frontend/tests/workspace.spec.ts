@@ -201,7 +201,7 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
   await page.setViewportSize({ width: 1440, height: 1000 });
 
   await editor
-    .getByRole("button", { name: "Save schedule", exact: true })
+    .getByRole("button", { name: "Save changes", exact: true })
     .click();
   await expect(page.getByRole("status")).toContainText("Schedule saved");
   await page.reload();
@@ -225,6 +225,15 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
   await page
     .getByRole("checkbox", { name: /Successful backups/ })
     .setChecked(true);
+  await expect(page.getByRole("button", { name: "Save changes", exact: true })).toBeVisible();
+  await page
+    .getByRole("checkbox", { name: /Successful backups/ })
+    .setChecked(false);
+  await expect(page.getByRole("button", { name: "Save changes", exact: true })).toHaveCount(0);
+  await page
+    .getByRole("checkbox", { name: /Successful backups/ })
+    .setChecked(true);
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect
     .poll(
       async () =>
@@ -242,7 +251,7 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
   ).toHaveCount(0);
   await page.getByLabel("Automatic backups to keep").fill("3");
   await page
-    .getByRole("button", { name: "Save settings", exact: true })
+    .getByRole("button", { name: "Save changes", exact: true })
     .click();
   await expect(page.getByRole("status")).toContainText("Backup settings saved");
   await page.reload();

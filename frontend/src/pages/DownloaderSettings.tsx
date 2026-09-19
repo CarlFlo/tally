@@ -2,11 +2,13 @@ import { ConnectionInput } from "../ConnectionInput";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLatestRequest } from "../useLatestRequest";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Plug, Save } from "lucide-react";
+import { CheckCircle2, Plug } from "lucide-react";
 import { api, Busy, ErrorState, useApp, useLocal, type Boot } from "../lib";
 import { invalidateResources } from "../queryInvalidation";
 import { useTranslation } from "react-i18next";
 import { queryKeys } from "../queryKeys";
+import { UnsavedChangesBar, useUnsavedChangesWarning } from "../UnsavedChangesBar";
+import "../unsaved-changes.css";
 
 type Field = {
   key: string;
@@ -153,6 +155,11 @@ function ClientForm({
     message: string;
     error: boolean;
   } | null>(null);
+  useUnsavedChangesWarning(
+    changed,
+    busy !== null,
+    t("common.unsavedNavigation", { defaultValue: "You have unsaved changes. Leave this page without saving?" }),
+  );
   const definition = data.adapters.find((item) => item.id === adapter);
   useEffect(() => {
     if (changed || data.settings.revision <= revision) return;
@@ -305,9 +312,6 @@ function ClientForm({
           >
             {busy === "test" ? <Busy /> : <Plug size={17} />}{t("connection.test")}
           </button>
-          <button className="button primary" type="submit">
-            {busy === "save" ? <Busy /> : <Save size={17} />}{t("downloader.save")}
-          </button>
         </div>
       </fieldset>
       {feedback && (
@@ -329,6 +333,22 @@ function ClientForm({
           {t("connection.reload")}
         </button>
       )}
+      <UnsavedChangesBar
+        hasChanges={changed}
+        busy={busy !== null}
+        onRevert={() => {
+          setAdapter(data.settings.adapter);
+          setFields(data.settings.fields);
+          setTouched({});
+          setCleared({});
+          setChanged(false);
+          setFeedback(null);
+        }}
+        onSave={() => void run("save")}
+        statusLabel={t("common.unsavedChanges", { defaultValue: "Unsaved changes" })}
+        revertLabel={t("common.revertChanges", { defaultValue: "Revert changes" })}
+        saveLabel={t("common.saveChanges", { defaultValue: "Save changes" })}
+      />
     </form>
   );
 }

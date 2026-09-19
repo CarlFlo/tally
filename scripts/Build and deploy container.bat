@@ -143,4 +143,3 @@ echo Commit: %COMMIT%
 echo.
 
 :done
-pause

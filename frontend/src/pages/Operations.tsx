@@ -48,6 +48,8 @@ import { NotificationSettings } from "./NotificationSettings";
 import { invalidateResources } from "../queryInvalidation";
 import { queryKeys } from "../queryKeys";
 import { useLocalization } from "../i18n";
+import { UnsavedChangesBar, useUnsavedChangesWarning } from "../UnsavedChangesBar";
+import "../unsaved-changes.css";
 
 function normalizeHexColor(value: string) {
   if (!value || value.startsWith("#")) return value;
@@ -364,6 +366,22 @@ export function SettingsPage({
   const [busy, setBusy] = useState(false);
   const [password, setPassword] = useState("");
   const [current, setCurrent] = useState("");
+  const profileDraft = {
+    name,
+    avatar: customColor || (avatar.endsWith(".png") ? "" : avatar),
+    locale,
+  };
+  const savedProfile = {
+    name: boot.profile!.display_name,
+    avatar: boot.profile!.avatar,
+    locale: boot.profile!.locale || "en",
+  };
+  const profileHasChanges = tab === "personal" && JSON.stringify(profileDraft) !== JSON.stringify(savedProfile);
+  useUnsavedChangesWarning(
+    profileHasChanges,
+    busy,
+    t("common.unsavedNavigation", { defaultValue: "You have unsaved changes. Leave this page without saving?" }),
+  );
   useEffect(() => {
     setLocale(boot.profile!.locale || "en");
   }, [boot.profile!.locale]);
@@ -376,8 +394,8 @@ export function SettingsPage({
       notify((e as Error).message, true);
     }
   }
-  async function saveProfile(e: FormEvent) {
-    e.preventDefault();
+  async function saveProfile(e?: FormEvent) {
+    e?.preventDefault();
     setBusy(true);
     try {
       await api("/profile", "PATCH", {
@@ -655,10 +673,21 @@ export function SettingsPage({
                   </small>
                 )}
               </label>
-              <button className="button primary" disabled={busy}>
-                {busy && <Busy />}{t("settings.saveProfile")}
-              </button>
             </form>
+            <UnsavedChangesBar
+              hasChanges={profileHasChanges}
+              busy={busy}
+              onRevert={() => {
+                setName(savedProfile.name);
+                setAvatar(savedProfile.avatar);
+                setCustomColor(/^#[0-9A-Fa-f]{6}$/.test(savedProfile.avatar) ? savedProfile.avatar : "");
+                setLocale(savedProfile.locale);
+              }}
+              onSave={() => void saveProfile()}
+              statusLabel={t("common.unsavedChanges", { defaultValue: "Unsaved changes" })}
+              revertLabel={t("common.revertChanges", { defaultValue: "Revert changes" })}
+              saveLabel={t("common.saveChanges", { defaultValue: "Save changes" })}
+            />
           </section>
           <section className="panel settings-card">
             <h3>{t("settings.comfort")}</h3>

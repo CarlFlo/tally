@@ -4,20 +4,126 @@
 
 .torrent-automation-settings {
   display: grid;
-  gap: 16px;
+  gap: 18px;
   max-width: 1200px;
+}
+
+.torrent-automation-page {
+  padding-bottom: 104px;
+}
+
+.torrent-automation-heading {
+  position: relative;
+  isolation: isolate;
+  margin-bottom: 26px;
+  padding: 8px 0 4px;
+}
+
+.torrent-automation-heading > div {
+  position: relative;
+  z-index: 1;
+}
+
+.torrent-automation-heading::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  width: min(720px, 90vw);
+  height: 180px;
+  top: -82px;
+  left: -110px;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--accent) 15%, transparent), transparent 68%);
+}
+
+.torrent-automation-heading h1 {
+  max-width: 15ch;
+}
+
+.torrent-automation-heading p {
+  max-width: 700px;
 }
 
 .torrent-automation-settings .settings-card {
   margin: 0;
+  min-width: 0;
+  padding: 22px;
+  border-color: color-mix(in srgb, var(--border) 88%, var(--accent));
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--text) 4%, transparent);
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.torrent-automation-settings .settings-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+  box-shadow: 0 14px 30px color-mix(in srgb, var(--text) 7%, transparent);
+  transform: translateY(-1px);
+}
+
+.torrent-automation-settings .settings-card > h3,
+.automation-rule-heading h3,
+.automation-shows-heading h3 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.torrent-automation-settings .settings-card > h3 > svg,
+.automation-rule-heading h3 > svg,
+.automation-shows-heading h3 > svg {
+  padding: 7px;
+  box-sizing: content-box;
+  border-radius: 9px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
+}
+
+.torrent-automation-settings .settings-card > .muted,
+.automation-rule-heading .muted,
+.automation-shows-heading .muted {
+  max-width: 70ch;
+  margin: 9px 0 0;
+  line-height: 1.55;
 }
 
 .torrent-automation-settings .settings-grid {
   margin-top: 18px;
 }
 
+.torrent-automation-settings label:not(.toggle-setting) {
+  gap: 7px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.torrent-automation-settings input:not([type="checkbox"]),
+.torrent-automation-settings select,
+.torrent-automation-settings textarea {
+  background: color-mix(in srgb, var(--surface2) 80%, transparent);
+}
+
+.torrent-automation-settings input:not([type="checkbox"]):focus,
+.torrent-automation-settings select:focus,
+.torrent-automation-settings textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
 .compact-toggle {
   margin-top: 18px;
+}
+
+.selection-card .compact-toggle,
+.pacing-card .compact-toggle {
+  display: flex;
+  width: fit-content;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--surface2) 60%, transparent);
 }
 
 .automation-magnet-note {
@@ -386,6 +492,20 @@
   .torrent-automation-settings > .settings-actions {
     grid-column: 1 / -1;
   }
+
+  .torrent-automation-settings > .automation-shows-card {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.58fr);
+    column-gap: 28px;
+  }
+
+  .automation-shows-heading {
+    grid-row: span 2;
+  }
+
+  .automation-show-list,
+  .automation-shows-empty {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 1180px) {
@@ -618,6 +738,192 @@
 .automation-show-toggle {
   flex: 0 0 auto;
   margin: 0;
+  width: 118px;
+  min-height: 34px;
+  justify-content: center;
+  padding: 7px 9px;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.automation-rule-card {
+  display: grid;
+  align-content: start;
+}
+
+.automation-suggestion-row {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+}
+
+.rule-chip {
+  background: color-mix(in srgb, var(--surface2) 68%, transparent);
+}
+
+.rule-chip:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: var(--surface2);
+}
+
+.size-profile-card {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 6%, var(--surface)), var(--surface));
+}
+
+.size-range-setting + .size-range-setting {
+  padding-top: 17px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+}
+
+.automation-shows-card {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 9%, var(--surface)), var(--surface) 46%);
+}
+
+.automation-show-search {
+  margin: 2px 0 0;
+}
+
+.automation-show-list {
+  max-height: 390px;
+  overflow: auto;
+  padding-right: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.automation-show-row {
+  padding: 13px 4px;
+}
+
+.automation-show-row:hover {
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+.automation-save-bar {
+  position: sticky;
+  z-index: 3;
+  bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+  width: min(760px, calc(100% - 32px));
+  min-width: 0;
+  margin-left: auto;
+  margin-right: auto;
+  max-height: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  overflow: hidden;
+  padding: 0 14px;
+  border-width: 0;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition: max-height 240ms ease, margin 240ms ease, padding 240ms ease, border-width 240ms ease, opacity 180ms ease, transform 240ms ease;
+}
+
+.automation-save-bar.has-unsaved-changes {
+  max-height: 76px;
+  margin-top: 6px;
+  padding: 10px 12px 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--border));
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+  animation: automation-save-bar-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.automation-save-bar {
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface2) 88%, var(--surface));
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--text) 18%, transparent), 0 2px 6px color-mix(in srgb, var(--text) 8%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.automation-save-bar:not(.has-unsaved-changes) {
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.automation-save-bar .button {
+  flex: 0 1 154px;
+  min-width: 132px;
+}
+
+.automation-save-status {
+  display: inline-flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 8px;
+  margin-right: 4px;
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.automation-save-status::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--amber) 13%, transparent);
+}
+
+.automation-save-bar .button.ghost {
+  color: var(--muted);
+}
+
+.automation-save-bar .button.ghost:hover:not(:disabled) {
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface2) 80%, transparent);
+}
+
+.automation-save-bar.has-unsaved-changes .button.primary {
+  flex: 0 1 184px;
+  min-width: 154px;
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--accent) 26%, transparent);
+  animation: automation-save-button-in 380ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes automation-save-bar-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes automation-save-button-in {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 36%, transparent);
+    transform: scale(0.97);
+  }
+  55% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 0%, transparent);
+    transform: scale(1.02);
+  }
+  to {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent);
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .automation-save-bar {
+    animation: none;
+    transition: none;
+  }
+
+  .automation-save-bar.has-unsaved-changes .button.primary {
+    animation: none;
+  }
 }
 
 .automation-shows-empty {
@@ -646,5 +952,45 @@
 
   .automation-show-toggle {
     align-self: flex-start;
+  }
+
+  .torrent-automation-page {
+    padding-bottom: 84px;
+  }
+
+  .torrent-automation-settings .settings-card {
+    padding: 18px;
+  }
+
+  .automation-save-bar {
+    bottom: 8px;
+    width: calc(100vw - 32px);
+    min-width: 0;
+    max-width: 100%;
+    gap: 7px;
+  }
+
+  .automation-save-bar .button {
+    min-width: 0;
+  }
+
+  .automation-save-bar.has-unsaved-changes {
+    max-height: 112px;
+    flex-wrap: wrap;
+  }
+
+  .automation-save-status {
+    flex-basis: 100%;
+    margin: 0 0 1px;
+  }
+
+  .automation-save-bar.has-unsaved-changes .button.ghost {
+    flex: 0.8 1 0;
+    min-width: 0;
+  }
+
+  .automation-save-bar.has-unsaved-changes .button.primary {
+    flex: 1.2 1 0;
+    min-width: 0;
   }
 }

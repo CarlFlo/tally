@@ -1,7 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Bot, RotateCcw, Save, ShieldCheck, SlidersHorizontal, Star } from "lucide-react";
+import { Bot, RotateCcw, Save, ShieldCheck, SlidersHorizontal, Star, Undo2 } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { useBeforeUnload } from "react-router";
 import { api, Busy, ErrorState, useApp, useLocal } from "../lib";
 import { invalidateResources } from "../queryInvalidation";
 import { TorrentTabs } from "./TorrentTabs";
@@ -87,6 +88,19 @@ function parseList(value: string) {
     });
 }
 
+function configForSave(data: AutomationConfig, ruleText: RuleText): AutomationConfig {
+  return {
+    ...data,
+    high_confidence_only: true,
+    rules_version: 1,
+    allowed_groups: parseList(ruleText.allowed_groups),
+    preferred_groups: parseList(ruleText.preferred_groups),
+    allowed_uploaders: parseList(ruleText.allowed_uploaders),
+    preferred_uploaders: parseList(ruleText.preferred_uploaders),
+    preferred_providers: parseList(ruleText.preferred_providers),
+  };
+}
+
 function appendKeyword(current: string, keyword: string) {
   const words = current.split(/\s+/).filter(Boolean);
   if (words.some((word) => word.toLowerCase() === keyword.toLowerCase())) return current;
@@ -155,6 +169,8 @@ export function TorrentAutomationPage() {
   const [ruleText, setRuleText] = useState<RuleText | null>(null);
   const [revision, setRevision] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [enrollmentDraft, setEnrollmentDraft] = useState<Record<string, boolean>>({});
+  const navigationApproved = useRef(false);
 
   useEffect(() => {
     if (!query.data) return;
@@ -178,9 +194,71 @@ export function TorrentAutomationPage() {
     previous.current = query.data;
   }, [query.data]);
 
+  const persistedData = query.data
+    ? normalizeConfig(previous.current?.data || query.data.data)
+    : null;
+  const savedData = persistedData
+    ? configForSave(persistedData, ruleTextFromConfig(persistedData))
+    : null;
+  const hasSettingsChanges =
+    !!data &&
+    !!ruleText &&
+    !!savedData &&
+    JSON.stringify(configForSave(data, ruleText)) !== JSON.stringify(savedData);
+  const hasUnsavedChanges = hasSettingsChanges || Object.keys(enrollmentDraft).length > 0;
+
+  useBeforeUnload((event) => {
+    if (!hasUnsavedChanges || busy || navigationApproved.current) return;
+    event.preventDefault();
+    event.returnValue = "";
+  });
+
+  useEffect(() => {
+    if (!hasUnsavedChanges || busy) return;
+    const warnBeforeNavigation = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey ||
+        !(event.target instanceof Element)
+      ) {
+        return;
+      }
+      const link = event.target.closest("a[href]") as HTMLAnchorElement | null;
+      if (
+        !link ||
+        (link.target && link.target !== "_self") ||
+        link.hasAttribute("download")
+      ) {
+        return;
+      }
+      const destination = new URL(link.href, window.location.href);
+      if (
+        destination.origin === window.location.origin &&
+        destination.href === window.location.href
+      ) {
+        return;
+      }
+      if (!window.confirm(t("torrentAutomation.navigationWarning"))) {
+        event.preventDefault();
+        return;
+      }
+      navigationApproved.current = true;
+      window.setTimeout(() => {
+        navigationApproved.current = false;
+      }, 0);
+    };
+    document.addEventListener("click", warnBeforeNavigation, true);
+    return () => document.removeEventListener("click", warnBeforeNavigation, true);
+  }, [busy, hasUnsavedChanges, t]);
+
   if (query.error)
     return <ErrorState error={query.error} retry={() => query.refetch()} />;
-  if (!data || !ruleText || !query.data) return <Busy />;
+  if (!data || !ruleText || !query.data || !persistedData) return <Busy />;
+  const savedPersistedData = persistedData;
 
   function change(next: Partial<AutomationConfig>) {
     setData((current) => (current ? { ...current, ...next } : current));
@@ -188,6 +266,23 @@ export function TorrentAutomationPage() {
 
   function changeRuleText(next: Partial<RuleText>) {
     setRuleText((current) => (current ? { ...current, ...next } : current));
+  }
+
+  function changeEnrollment(id: string, enabled: boolean, saved: boolean) {
+    setEnrollmentDraft((current) => {
+      if (enabled === saved) {
+        const remaining = { ...current };
+        delete remaining[id];
+        return remaining;
+      }
+      return { ...current, [id]: enabled };
+    });
+  }
+
+  function revert() {
+    setData(savedPersistedData);
+    setRuleText(ruleTextFromConfig(savedPersistedData));
+    setEnrollmentDraft({});
   }
 
   function resetRules() {
@@ -207,26 +302,25 @@ export function TorrentAutomationPage() {
     const currentRuleText = ruleText;
     if (!currentData || !currentRuleText) return;
     setBusy(true);
-    const next: AutomationConfig = {
-      ...currentData,
-      high_confidence_only: true,
-      rules_version: 1,
-      allowed_groups: parseList(currentRuleText.allowed_groups),
-      preferred_groups: parseList(currentRuleText.preferred_groups),
-      allowed_uploaders: parseList(currentRuleText.allowed_uploaders),
-      preferred_uploaders: parseList(currentRuleText.preferred_uploaders),
-      preferred_providers: parseList(currentRuleText.preferred_providers),
-    };
+    const next = configForSave(currentData, currentRuleText);
+    const enrollmentChanges = Object.entries(enrollmentDraft);
     try {
-      const result = await api<{ revision: number }>(
-        "/settings/torrent-automation",
-        "PUT",
-        { data: next, revision },
-      );
-      setData(next);
-      setRuleText(ruleTextFromConfig(next));
-      setRevision(result.revision);
-      await invalidateResources(cache, ["editable-settings", "settings", "jobs"]);
+      if (hasSettingsChanges) {
+        const result = await api<{ revision: number }>(
+          "/settings/torrent-automation",
+          "PUT",
+          { data: next, revision },
+        );
+        setData(next);
+        setRuleText(ruleTextFromConfig(next));
+        setRevision(result.revision);
+        previous.current = { data: next, revision: result.revision };
+      }
+      for (const [id, enabled] of enrollmentChanges) {
+        await api(`/torrents/automation/shows/${id}`, "PUT", { enabled });
+      }
+      setEnrollmentDraft({});
+      await invalidateResources(cache, ["editable-settings", "settings", "jobs", "torrent-automation-shows"]);
       notify(
         t("torrentAutomation.saved", {
           defaultValue: "Torrent automation settings saved",
@@ -241,7 +335,7 @@ export function TorrentAutomationPage() {
 
   return (
     <div className="page torrent-automation-page">
-      <div className="page-heading">
+      <div className="page-heading torrent-automation-heading">
         <div>
           <span className="eyebrow">
             {t("torrentAutomation.eyebrow", { defaultValue: "STRONG SIGNALS BEFORE IT MOVES" })}
@@ -260,9 +354,13 @@ export function TorrentAutomationPage() {
       <TorrentTabs />
 
       <form onSubmit={save} className="torrent-automation-settings">
-        <AutomationShowEnrollmentList />
+        <AutomationShowEnrollmentList
+          enrollmentDraft={enrollmentDraft}
+          disabled={busy}
+          onEnrollmentChange={changeEnrollment}
+        />
 
-        <section className="panel settings-card">
+        <section className="panel settings-card selection-card">
           <h3>
             <Bot size={19} />
             {t("torrentAutomation.selection", { defaultValue: "Release selection" })}
@@ -508,7 +606,7 @@ export function TorrentAutomationPage() {
           </label>
         </section>
 
-        <section className="panel settings-card">
+        <section className="panel settings-card pacing-card">
           <h3>
             <Bot size={19} />
             {t("torrentAutomation.searchPacing", { defaultValue: "Search pacing" })}
@@ -623,7 +721,7 @@ export function TorrentAutomationPage() {
           </p>
         </section>
 
-        <section className="panel settings-card">
+        <section className="panel settings-card verification-card">
           <h3>
             <ShieldCheck size={19} />
             {t("torrentAutomation.verification", { defaultValue: "Verification" })}
@@ -684,10 +782,20 @@ export function TorrentAutomationPage() {
           </div>
         </section>
 
-        <div className="settings-actions">
-          <button className="button primary" type="submit" disabled={busy}>
-            {busy ? <Busy /> : <Save size={17} />}
-            {t("common.save")}
+        <div
+          className={`settings-actions automation-save-bar${hasUnsavedChanges ? " has-unsaved-changes" : ""}`}
+          aria-hidden={!hasUnsavedChanges}
+        >
+          <span className="automation-save-status">
+            {t("torrentAutomation.unsavedChanges")}
+          </span>
+          <button className="button ghost" type="button" disabled={busy || !hasUnsavedChanges} onClick={revert}>
+            <Undo2 size={17} />
+            {t("torrentAutomation.revert")}
+          </button>
+          <button className="button primary" type="submit" disabled={busy || !hasUnsavedChanges}>
+              {busy ? <Busy /> : <Save size={17} />}
+              {t("torrentAutomation.saveChanges")}
           </button>
         </div>
       </form>
