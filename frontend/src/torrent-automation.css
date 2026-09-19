@@ -13,28 +13,7 @@
 }
 
 .torrent-automation-heading {
-  position: relative;
-  isolation: isolate;
   margin-bottom: 26px;
-  padding: 8px 0 4px;
-}
-
-.torrent-automation-heading > div {
-  position: relative;
-  z-index: 1;
-}
-
-.torrent-automation-heading::before {
-  content: "";
-  position: absolute;
-  z-index: 0;
-  width: min(720px, 90vw);
-  height: 180px;
-  top: -82px;
-  left: -110px;
-  pointer-events: none;
-  border-radius: 50%;
-  background: radial-gradient(ellipse, color-mix(in srgb, var(--accent) 15%, transparent), transparent 68%);
 }
 
 .torrent-automation-heading h1 {

@@ -7,6 +7,7 @@ import { api, Busy, ErrorState, useApp, useLocal } from "../lib";
 import { invalidateResources } from "../queryInvalidation";
 import { TorrentTabs } from "./TorrentTabs";
 import { AutomationShowEnrollmentList } from "../AutomationShowEnrollmentList";
+import { PageHeader } from "../PageHeader";
 import "../torrent-selection.css";
 
 type AutomationConfig = {
@@ -335,22 +336,15 @@ export function TorrentAutomationPage() {
 
   return (
     <div className="page torrent-automation-page">
-      <div className="page-heading torrent-automation-heading">
-        <div>
-          <span className="eyebrow">
-            {t("torrentAutomation.eyebrow", { defaultValue: "STRONG SIGNALS BEFORE IT MOVES" })}
-          </span>
-          <h1>
-            {t("search.title")}<span className="accent">.</span>
-          </h1>
-          <p>
-            {t("torrentAutomation.description", {
-              defaultValue:
-                "Control how Tally matches, sizes, verifies, and selects releases before handing them to your torrent client.",
-            })}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        className="torrent-automation-heading"
+        eyebrow={t("torrentAutomation.eyebrow", { defaultValue: "STRONG SIGNALS BEFORE IT MOVES" })}
+        title={t("search.title")}
+        description={t("torrentAutomation.description", {
+          defaultValue:
+            "Control how Tally matches, sizes, verifies, and selects releases before handing them to your torrent client.",
+        })}
+      />
       <TorrentTabs />
 
       <form onSubmit={save} className="torrent-automation-settings">

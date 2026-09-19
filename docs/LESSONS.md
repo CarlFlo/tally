@@ -30,6 +30,10 @@ A completed mutation should have one authoritative path that publishes or invali
 
 Publish state changes after the authoritative operation has actually completed. For asynchronous jobs, completion is the meaningful invalidation point, not merely the button click that started the work.
 
+### Template shared behavior instead of duplicating it
+
+When multiple pages need the same interaction or visual treatment, implement it in one reusable component or shared style and let each page provide only its content and layout-specific options. Do not copy a polished header, toggle, save bar, or navigation guard into individual routes; duplicated implementations drift in dimensions, accessibility, animation, and bug fixes. Before adding a second implementation, search for the existing template and extend it with explicit slots or props. Add coverage that exercises the shared behavior so one change protects every consumer.
+
 ### Distinguish draft state from applied state
 
 A form value is not saved merely because the UI displays it. Staged forms should apply only after an explicit save succeeds; immediate toggles should be used only when the toggle itself is intentionally the save action.
