@@ -497,21 +497,29 @@ test("settings categories persist connections, schedules, debug previews and sta
   const schedule = page.locator(".schedule-editor").filter({
     has: page.getByRole("heading", { name: "Maintenance", exact: true }),
   });
+  const maintenanceStored = (
+    await (await page.request.get("/api/settings/scheduling")).json()
+  ).find((job: any) => job.key === "maintenance");
   await schedule
     .getByLabel("Cron expression")
     .fill("15 8 * * 1-5");
-  await schedule.getByRole("checkbox", { name: "Run automatically" }).uncheck();
   await schedule
+    .getByRole("checkbox", { name: "Run automatically" })
+    .setChecked(!Boolean(maintenanceStored.enabled));
+  await page
+    .locator(".unsaved-changes-bar.has-unsaved-changes")
     .getByRole("button", { name: "Save changes", exact: true })
     .click();
-  await expect(page.getByRole("status")).toContainText("Schedule saved");
+  await expect(page.getByRole("status")).toContainText(
+    maintenanceStored.enabled ? "Maintenance disabled" : "Maintenance enabled",
+  );
   await page.reload();
   await expect(
     schedule.getByLabel("Cron expression"),
   ).toHaveValue("15 8 * * 1-5");
   await expect(
     schedule.getByRole("checkbox", { name: "Run automatically" }),
-  ).not.toBeChecked();
+  ).toBeChecked({ checked: !Boolean(maintenanceStored.enabled) });
   await page.getByRole("link", { name: "Debug", exact: true }).click();
   const environment = page.locator(".environment-settings");
   await expect(environment).toContainText("TZ");
