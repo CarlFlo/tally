@@ -9,11 +9,11 @@ test("shared page headers align and scrollbars do not move content", async ({
     await page.setViewportSize({ width, height: 1000 });
     let left: number | undefined;
     for (const path of [
-      "/profile",
-      "/settings/profiles",
-      "/system/jobs",
-      "/system/statistics",
-      "/system/logs",
+      "/account",
+      "/admin/access/profiles",
+      "/admin/operations/jobs",
+      "/admin/operations/statistics",
+      "/admin/operations/logs",
     ]) {
       await page.goto(path);
       const heading = page.locator(".page > .page-heading").first();
@@ -36,7 +36,7 @@ test("shared page headers align and scrollbars do not move content", async ({
 
 test("header remains visible while scrolling", async ({ page }) => {
   await selectProfileByName(page, "My profile");
-  await page.goto("/system/logs");
+  await page.goto("/admin/operations/logs");
   const header = page.locator(".topbar");
   await expect(header).toBeVisible();
   await page.evaluate(() => {
