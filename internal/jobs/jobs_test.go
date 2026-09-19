@@ -113,7 +113,8 @@ func TestJobDeadlineCountsAsFailure(t *testing.T) {
 	if _, e = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-fixture','Fixture','violet',1); INSERT INTO shows(id,name) VALUES('show','Example'); INSERT INTO external_ids VALUES('tvmaze','show','7','show'); INSERT INTO profile_shows(profile_id,show_id,added_at) VALUES('profile-fixture','show',1)"); e != nil {
 		t.Fatal(e)
 	}
-	s := New(ctx, db, config.Config{JobRuntime: 50 * time.Millisecond, BatchSize: 5}, &metadata.Service{DB: db, Provider: &blockingTV{started: make(chan struct{}, 1)}}, p, nil)
+	fake := &blockingTV{started: make(chan struct{}, 1)}
+	s := New(ctx, db, config.Config{JobRuntime: 500 * time.Millisecond, BatchSize: 5}, &metadata.Service{DB: db, Provider: fake}, p, nil)
 	defer s.Stop(ctx)
 	if e = s.initializeSchedules(); e != nil {
 		t.Fatal(e)
@@ -121,6 +122,11 @@ func TestJobDeadlineCountsAsFailure(t *testing.T) {
 	id, e := s.Trigger("metadata", "manual_refresh", "")
 	if e != nil {
 		t.Fatal(e)
+	}
+	select {
+	case <-fake.started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("job did not reach the blocking provider")
 	}
 	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {
