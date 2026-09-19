@@ -11,7 +11,7 @@ test("profile creation and signed-out onboarding use the configured password", a
     headers,
     data: { profile: adminID, password: "1234" },
   });
-  await page.goto("/settings/profiles");
+  await page.goto("/admin/access/profiles");
   await page.getByRole("button", { name: "New profile", exact: true }).click();
   const evePassword = "Eve!1234";
   const createDialog = page.getByRole("dialog");
