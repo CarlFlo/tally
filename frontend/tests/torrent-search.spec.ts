@@ -3,6 +3,39 @@ import { selectProfileByName } from "./navigation";
 
 const headers = { "X-Tally-CSRF": "1" };
 
+let searchSnapshot: any;
+let torrentSnapshot: any;
+
+async function restoreSetting(page: any, path: string, snapshot: any) {
+  if (!snapshot) return;
+  const currentResponse = await page.request.get(path);
+  expect(currentResponse.ok()).toBe(true);
+  const current = await currentResponse.json();
+  if (JSON.stringify(current.data) === JSON.stringify(snapshot.data)) return;
+  const restore = await page.request.put(path, {
+    headers,
+    data: { data: snapshot.data, revision: current.revision },
+  });
+  expect(restore.ok()).toBe(true);
+}
+
+test.beforeEach(async ({ page }) => {
+  await selectProfileByName(page, "My profile");
+  const searchResponse = await page.request.get("/api/settings/search");
+  const torrentResponse = await page.request.get("/api/settings/torrent");
+  expect(searchResponse.ok()).toBe(true);
+  expect(torrentResponse.ok()).toBe(true);
+  searchSnapshot = await searchResponse.json();
+  torrentSnapshot = await torrentResponse.json();
+});
+
+test.afterEach(async ({ page }) => {
+  await restoreSetting(page, "/api/settings/search", searchSnapshot);
+  await restoreSetting(page, "/api/settings/torrent", torrentSnapshot);
+  searchSnapshot = undefined;
+  torrentSnapshot = undefined;
+});
+
 test("torrent search navigation and filters follow the saved Jackett state", async ({
   page,
 }) => {
