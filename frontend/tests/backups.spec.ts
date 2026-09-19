@@ -5,7 +5,7 @@ const headers = { "X-Tally-CSRF": "1" };
 
 test("backup archives restore relationships/preferences and delete without fake failure rows", async ({ page }) => {
   await selectProfileByName(page, "My profile");
-  await page.goto("/settings");
+  await page.goto("/admin/configuration/backups");
   await expect(page.locator(".compact-retention strong")).toHaveText("after");
 
   const keep = page.getByLabel("Automatic backups to keep");
