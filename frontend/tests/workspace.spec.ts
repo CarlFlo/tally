@@ -195,7 +195,8 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
   expect(stackedPreviewBox!.y).toBeGreaterThan(stackedFieldsBox!.y + stackedFieldsBox!.height);
   await page.setViewportSize({ width: 1440, height: 1000 });
 
-  await editor
+  await page
+    .locator(".unsaved-changes-bar.has-unsaved-changes")
     .getByRole("button", { name: "Save changes", exact: true })
     .click();
   await expect(page.getByRole("status")).toContainText(
