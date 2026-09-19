@@ -509,7 +509,7 @@ test("experimental torrent automation schedule is confirmed and shared across jo
   }
 });
 
-test("torrent search tabs remain responsive under rapid repeated navigation", async ({
+test("torrent search tabs stay responsive and cancel abandoned searches", async ({
   page,
 }) => {
   await selectProfileByName(page, "My profile");
@@ -518,11 +518,15 @@ test("torrent search tabs remain responsive under rapid repeated navigation", as
   for (let index = 0; index < 6; index++) {
     await page.getByRole("link", { name: "Automation", exact: true }).click();
     await expect(page).toHaveURL(/\/search\/automation$/);
-    await expect(page.getByLabel("Minimum seeders", { exact: true })).toBeEnabled();
+    await expect(
+      page.getByLabel("Minimum seeders", { exact: true }),
+    ).toBeEnabled();
 
     await page.getByRole("link", { name: "Previous Runs", exact: true }).click();
     await expect(page).toHaveURL(/\/search\/runs$/);
-    await expect(page.getByRole("link", { name: "Search", exact: true })).toBeEnabled();
+    await expect(
+      page.getByRole("link", { name: "Search", exact: true }),
+    ).toBeEnabled();
 
     await page.getByRole("link", { name: "Search", exact: true }).click();
     await expect(page).toHaveURL(/\/search$/);
@@ -530,6 +534,44 @@ test("torrent search tabs remain responsive under rapid repeated navigation", as
     await input.fill(`navigation-${index}`);
     await expect(input).toHaveValue(`navigation-${index}`);
   }
+
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/torrents/search", async (route) => {
+    await gate;
+    try {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ results: [], warnings: [] }),
+      });
+    } catch {
+      // Expected when Search unmounts and cancels the abandoned request.
+    }
+  });
+
+  const input = page.getByRole("textbox", { name: "Torrent search query" });
+  await input.fill("Example Show S01E01");
+  const pending = page.waitForRequest("**/api/torrents/search");
+  await page
+    .getByRole("button", { name: "Search torrents", exact: true })
+    .click();
+  const request = await pending;
+  const aborted = page.waitForEvent(
+    "requestfailed",
+    (failed) => failed === request,
+  );
+
+  await page.getByRole("link", { name: "Automation", exact: true }).click();
+  await expect(page).toHaveURL(/\/search\/automation$/, { timeout: 1_500 });
+  await aborted;
+  release();
+  await expect(
+    page.getByLabel("Minimum seeders", { exact: true }),
+  ).toBeEnabled();
+  await page.unroute("**/api/torrents/search");
 });
 
 test("previous runs explains verified decisions, accepts bad feedback and stays responsive", async ({
