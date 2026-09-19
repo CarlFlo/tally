@@ -388,8 +388,8 @@ func TestRegistryDoesNotFollowEnglishSymlinkOnStartup(t *testing.T) {
 	if !ok {
 		t.Fatal("embedded English fallback was not available")
 	}
-	if catalog.Meta.CatalogVersion != 27 {
-		t.Fatalf("catalog version=%d, want bundled version 27", catalog.Meta.CatalogVersion)
+	if catalog.Meta.CatalogVersion != registry.english.status.CatalogVersion {
+		t.Fatalf("catalog version=%d, want bundled version %d", catalog.Meta.CatalogVersion, registry.english.status.CatalogVersion)
 	}
 	common := catalog.Messages["common"].(map[string]any)
 	if common["save"] != "Save" {
