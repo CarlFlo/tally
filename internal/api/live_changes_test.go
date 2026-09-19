@@ -69,14 +69,21 @@ func TestLiveChangesScopesAndTargetsResources(t *testing.T) {
 			http.MethodPut,
 			"/api/settings/search",
 			"profile-admin",
-			[]liveUpdate{update("", "editable-settings", "settings", "capabilities", "bootstrap")},
+			[]liveUpdate{update("", "editable-settings", "settings", "capabilities", "bootstrap", "logs")},
 		},
 		{
 			"shared torrent settings",
 			http.MethodPut,
 			"/api/settings/torrent",
 			"profile-admin",
-			[]liveUpdate{update("", "editable-settings", "settings", "capabilities", "bootstrap", "downloads")},
+			[]liveUpdate{update("", "editable-settings", "settings", "capabilities", "bootstrap", "downloads", "logs")},
+		},
+		{
+			"shared backup settings refresh logs",
+			http.MethodPut,
+			"/api/settings/backups",
+			"profile-admin",
+			[]liveUpdate{update("", "editable-settings", "settings", "backups", "logs")},
 		},
 		{
 			"password sign-in refreshes sessions globally",
