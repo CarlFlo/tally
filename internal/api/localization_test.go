@@ -23,14 +23,15 @@ func TestLocaleEndpointsArePublic(t *testing.T) {
 	var listed struct {
 		Revision uint64 `json:"revision"`
 		Locales  []struct {
-			Locale string `json:"locale"`
-			Valid  bool   `json:"valid"`
+			Locale         string `json:"locale"`
+			CatalogVersion int    `json:"catalog_version"`
+			Valid          bool   `json:"valid"`
 		} `json:"locales"`
 	}
 	if err := json.Unmarshal(index.Body.Bytes(), &listed); err != nil {
 		t.Fatal(err)
 	}
-	if listed.Revision == 0 || len(listed.Locales) == 0 || listed.Locales[0].Locale != "en" || !listed.Locales[0].Valid {
+	if listed.Revision == 0 || len(listed.Locales) == 0 || listed.Locales[0].Locale != "en" || listed.Locales[0].CatalogVersion <= 0 || !listed.Locales[0].Valid {
 		t.Fatalf("unexpected locale index: %+v", listed)
 	}
 
@@ -46,7 +47,7 @@ func TestLocaleEndpointsArePublic(t *testing.T) {
 	if err := json.Unmarshal(catalog.Body.Bytes(), &body); err != nil {
 		t.Fatal(err)
 	}
-	if body.Meta.Locale != "en" || body.Meta.CatalogVersion != 28 || body.Messages["common"] == nil {
+	if body.Meta.Locale != "en" || body.Meta.CatalogVersion != listed.Locales[0].CatalogVersion || body.Messages["common"] == nil {
 		t.Fatalf("unexpected English catalog: %+v", body.Meta)
 	}
 
