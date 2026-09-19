@@ -28,6 +28,8 @@ Prefer current repository documentation and code over historical assumptions. Gi
 
 ## Before finishing
 
+For branch work, treat merge readiness as a final gate: finish the task's active `docs/TODO.md` items (or explicitly record intentionally deferred scope), review affected tests and fixtures against the final diff, and require the full authoritative CI run for the exact branch HEAD to succeed. Do not merge based on an earlier green commit, a skipped same-repository pull-request run, or a partial rerun.
+
 Run the checks required by `docs/VALIDATION.md` and investigate unexplained failures rather than bypassing them.
 
 Update `docs/TODO.md` to the remaining current/future state and update any other documentation whose architecture, behavior, configuration, localization, or validation contract changed.
