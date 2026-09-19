@@ -69,7 +69,7 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
   });
   expect(profileResponse.ok()).toBe(true);
   const profileFixture = await profileResponse.json();
-  await page.goto("/settings/profiles");
+  await page.goto("/admin/access/profiles");
   const profileDelete = page.getByRole("button", {
     name: "Delete Delete style fixture",
     exact: true,
@@ -130,7 +130,7 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
     headers,
     data: { timezone: "America/New_York", time_format: "24h" },
   });
-  await page.goto("/settings/scheduling");
+  await page.goto("/admin/configuration/schedules");
   const editor = page
     .locator(".schedule-editor")
     .filter({
@@ -216,7 +216,7 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
     data: { timezone: "UTC", time_format: "24h" },
   });
 
-  await page.goto("/settings/bell");
+  await page.goto("/account/notifications");
   await expect(
     page.getByRole("checkbox", { name: /Successful backups/ }),
   ).not.toBeChecked();
@@ -243,9 +243,9 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
     )
     .toContain("backup_successes");
 
-  await page.goto("/settings");
+  await page.goto("/admin/configuration/backups");
   await expect(
-    page.getByRole("link", { name: "Scheduling & backups", exact: true }),
+    page.getByRole("link", { name: "Backups", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByText("Effective configuration", { exact: true }),
@@ -297,7 +297,7 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
     fullPage: true,
   });
 
-  await page.goto("/system/jobs");
+  await page.goto("/admin/operations/jobs");
   const backupJob = page
     .locator(".job-card")
     .filter({ has: page.getByRole("heading", { name: "Automatic backup", exact: true }) });
@@ -310,7 +310,7 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
       return data.records.some((record: any) => record.kind === "auto");
     }, { timeout: 15_000 })
     .toBe(true);
-  await page.goto("/settings");
+  await page.goto("/admin/configuration/backups");
   await expect(page.locator(".backup-row").filter({ hasText: "Automatic" }).first()).toBeVisible();
 
   const bell = page.getByRole("button", { name: /^Notifications/ });
@@ -483,7 +483,7 @@ test("calendar combines season releases, groups horizon dates, and expands every
 });
 
 test("logs refresh in place without replacing an active filter", async ({ page }) => {
-  await page.goto("/system/logs");
+  await page.goto("/admin/operations/logs");
   const search = page.getByRole("textbox", { name: "Search logs" });
   await search.fill("updated backups settings");
   const saved = await (await page.request.get("/api/settings/backups")).json();
