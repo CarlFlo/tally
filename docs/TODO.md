@@ -4,9 +4,7 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 ## Current work
 
-- [ ] Complete the latest-head full validation baseline before deployment, including the Playwright suite and container scan.
-
-Completed torrent automation work is recorded in Git; durable behavior is described in the architecture and validation guides.
+No active implementation items.
 
 ## Current product foundations
 

@@ -68,6 +68,8 @@ A browser test that reloads between routes cannot reveal many lifecycle defects.
 
 Track invariants such as active listeners, subscriptions, intervals, request concurrency, and post-stress input responsiveness when practical. Also test revisiting a route: initial-load layout can be correct while retained measurements or stale state break after navigation away and back.
 
+Keep browser tests order-independent. A spec that mutates durable deployment or profile state should restore what it changed, rather than depending on a filename prefix or another test running first. When several stress tests exercise the same route-lifecycle failure mode, combine their distinct invariants into one deliberate stress test and keep separate tests only for genuinely different risks such as cancellation or large populated views.
+
 ### Give overlays explicit navigation semantics
 
 If opening an overlay materially changes what the user is viewing, integrate it with browser history. Back should close the top-level overlay before leaving the underlying page. Escape and explicit Close should produce the same final UI state without leaving stale history entries.

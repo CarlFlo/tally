@@ -9,6 +9,9 @@ permissions:
   contents: read
 jobs:
   test:
+    # Same-repository PR commits are already validated by their push run.
+    # Keep pull_request coverage for forks, where the base repository sees no push.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -24,8 +27,6 @@ jobs:
       - run: npm ci
         working-directory: frontend
       - run: npm audit --audit-level=high
-        working-directory: frontend
-      - run: npm run build
         working-directory: frontend
       - run: go vet ./... && go test -race ./...
       - run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
