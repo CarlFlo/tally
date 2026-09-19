@@ -67,7 +67,12 @@ export function JackettSettings() {
   }
 
   return (
-    <>
+    <div className="integration-settings">
+      <div className="section-heading settings-group-heading">
+        <div>
+          <h2>{t("settings.torrentSearch")}</h2>
+        </div>
+      </div>
       <section className="panel settings-card feature-toggle-setting">
         <label className="toggle-setting">
           <input
@@ -81,7 +86,7 @@ export function JackettSettings() {
         <p className="muted small-text">{t("searchSettings.toggleHelp")}</p>
       </section>
       <JackettForm saved={saved} />
-    </>
+    </div>
   );
 }
 

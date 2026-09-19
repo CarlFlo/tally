@@ -57,11 +57,6 @@ const ProfilesSettingsPage = lazy(() =>
     default: module.ProfilesSettingsPage,
   })),
 );
-const ProfileSecurityPage = lazy(() =>
-  import("./pages/ProfileSecurity").then((module) => ({
-    default: module.ProfileSecurityPage,
-  })),
-);
 const SystemPage = lazy(() =>
   import("./pages/System").then((module) => ({ default: module.SystemPage })),
 );
@@ -118,10 +113,16 @@ function App() {
     );
   }
   const location = useLocation();
-  const pageKey = (["calendar", "shows", "search", "downloads", "system", "settings"] as const).find(
+  const pageKey = (["calendar", "shows", "search", "downloads"] as const).find(
     (key) => location.pathname.startsWith("/" + key),
   );
-  const pageLabel = pageKey ? t(`nav.${pageKey}`) : t("brand.tagline");
+  const pageLabel = pageKey
+    ? t(`nav.${pageKey}`)
+    : location.pathname.startsWith("/admin")
+      ? t("nav.administration")
+      : location.pathname.startsWith("/account")
+        ? t("nav.profile")
+        : t("brand.tagline");
   const boot = bootstrap.data;
   const notify = (message: string, error = false, retry?: () => void) =>
     setToast({ message, error, retry });
@@ -353,63 +354,78 @@ function App() {
                       path="/logs"
                       element={
                         !!boot.profile.is_admin ? (
-                          <Navigate to="/system/logs" replace />
+                          <Navigate to="/admin/operations/logs" replace />
                         ) : (
                           <LogsPage personal />
                         )
                       }
                     />
                     <Route element={<AdminRoute />}>
-                      <Route path="/system/*" element={<SystemPage />} />
+                      <Route path="/admin/operations/*" element={<SystemPage />} />
+                      <Route path="/system/*" element={<Navigate to="/admin/operations/jobs" replace />} />
                       <Route
                         path="/jobs"
-                        element={<Navigate to="/system/jobs" replace />}
+                        element={<Navigate to="/admin/operations/jobs" replace />}
                       />
                       <Route
                         path="/statistics"
-                        element={<Navigate to="/system/statistics" replace />}
+                        element={<Navigate to="/admin/operations/statistics" replace />}
                       />
                       <Route
                         path="/settings/backups"
-                        element={<Navigate to="/settings" replace />}
+                        element={<Navigate to="/admin/configuration/backups" replace />}
                       />
-                      <Route path="/settings" element={<SettingsPage />} />
+                      <Route path="/admin/configuration/schedules" element={<SettingsPage tab="schedules" />} />
+                      <Route path="/admin/configuration/backups" element={<SettingsPage tab="backups" />} />
+                      <Route path="/admin/configuration/integrations/downloader" element={<SettingsPage tab="torrent" />} />
+                      <Route path="/admin/configuration/integrations/search" element={<SettingsPage tab="search" />} />
+                      <Route path="/admin/configuration/delivery" element={<SettingsPage tab="notifications" />} />
+                      <Route path="/admin/advanced/diagnostics" element={<SettingsPage tab="debug" />} />
+                      <Route path="/admin/access/profiles" element={<ProfilesSettingsPage />} />
+                      <Route path="/settings" element={<Navigate to="/admin/configuration/schedules" replace />} />
                       {(
                         [
                           "torrent",
                           "search",
                           "notifications",
-                          "bell",
                           "debug",
                         ] as const
                       ).map((tab) => (
                         <Route
                           key={tab}
-                          path={"/settings/" + tab}
-                          element={<SettingsPage tab={tab} />}
+                        path={"/settings/" + tab}
+                        element={<Navigate to={tab === "torrent" ? "/admin/configuration/integrations/downloader" : tab === "search" ? "/admin/configuration/integrations/search" : tab === "notifications" ? "/admin/configuration/delivery" : tab === "debug" ? "/admin/advanced/diagnostics" : "/account/notifications"} replace />}
                         />
                       ))}
                       <Route
                         path="/settings/scheduling"
-                        element={<Navigate to="/settings" replace />}
+                        element={<Navigate to="/admin/configuration/schedules" replace />}
                       />
                       <Route
                         path="/settings/profiles"
-                        element={<ProfilesSettingsPage />}
+                        element={<Navigate to="/admin/access/profiles" replace />}
                       />
                     </Route>
                     <Route
-                      path="/profile/danger"
+                      path="/account/danger"
                       element={<SettingsPage tab="danger" />}
                     />
                     <Route
-                      path="/profile"
+                      path="/account"
                       element={<SettingsPage tab="personal" />}
                     />
                     <Route
-                      path="/profile/security"
-                      element={<ProfileSecurityPage />}
+                      path="/account/notifications"
+                      element={<SettingsPage tab="bell" />}
                     />
+                    <Route
+                      path="/account/security"
+                      element={<SettingsPage tab="security" />}
+                    />
+                    <Route path="/profile/danger" element={<Navigate to="/account/danger" replace />} />
+                    <Route path="/profile/security" element={<Navigate to="/account/security" replace />} />
+                    <Route path="/profile" element={<Navigate to="/account" replace />} />
+                    <Route path="/settings/bell" element={<Navigate to="/account/notifications" replace />} />
                     <Route
                       path="/login/*"
                       element={<Navigate to="/calendar" replace />}

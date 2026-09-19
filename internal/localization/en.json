@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 28
+    "catalogVersion": 29
   },
   "common": {
     "save": "Save",
@@ -46,6 +46,7 @@
   },
   "nav": {
     "system": "System",
+    "administration": "Administration",
     "calendar": "Calendar",
     "shows": "My shows",
     "search": "Torrent search",
@@ -525,6 +526,8 @@
     "security": "Security",
     "dangerZone": "Danger zone",
     "schedulingBackups": "Scheduling & backups",
+    "schedules": "Schedules",
+    "backups": "Backups",
     "torrentClient": "Torrent client",
     "torrentSearch": "Torrent search",
     "notifications": "Notifications",
@@ -939,10 +942,10 @@
     "fullSeason": "Season {{season}} · Full season"
   },
   "system": {
-    "title": "System",
-    "eyebrow": "BEHIND THE SCENES",
+    "title": "Operations",
+    "eyebrow": "ADMINISTRATION",
     "description": "Monitor jobs, statistics, and activity.",
-    "sections": "System sections"
+    "sections": "Operations sections"
   },
   "debug": {
     "previews": "Debug previews",

@@ -29,8 +29,8 @@ test("populated System pages remain responsive across rapid navigation", async (
   await expect(page.locator(".activity-entry")).toHaveCount(50);
   const started = Date.now();
   for (let i = 0; i < 40; i++) {
-    await page.locator('.system-tabs a[href="/system/statistics"]').click();
-    await page.locator('.system-tabs a[href="/system/logs"]').click();
+    await page.locator('.system-tabs a[href="/admin/operations/statistics"]').click();
+    await page.locator('.system-tabs a[href="/admin/operations/logs"]').click();
   }
   console.log("Populated navigation", { elapsed: Date.now() - started, formatters: await page.evaluate(() => (window as any).formatterCount) });
   // Row count and route mounts must not allocate a formatter per date cell.

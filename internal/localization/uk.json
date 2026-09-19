@@ -3,7 +3,7 @@
     "locale": "uk",
     "name": "Українська",
     "direction": "ltr",
-    "catalogVersion": 28
+    "catalogVersion": 29
   },
   "common": {
     "save": "Зберегти",
@@ -46,6 +46,7 @@
   },
   "nav": {
     "system": "Система",
+    "administration": "Адміністрування",
     "calendar": "Календар",
     "shows": "Мої серіали",
     "search": "Пошук торрентів",
@@ -531,6 +532,8 @@
     "security": "Безпека",
     "dangerZone": "Небезпечна зона",
     "schedulingBackups": "Розклад і резервні копії",
+    "schedules": "Розклади",
+    "backups": "Резервні копії",
     "torrentClient": "Торрент-клієнт",
     "torrentSearch": "Пошук торрентів",
     "notifications": "Сповіщення",
@@ -951,10 +954,10 @@
     "fullSeason": "Сезон {{season}} · Повний сезон"
   },
   "system": {
-    "title": "Система",
-    "eyebrow": "ЗА ЛАШТУНКАМИ",
+    "title": "Операції",
+    "eyebrow": "АДМІНІСТРУВАННЯ",
     "description": "Стежте за завданнями, статистикою та активністю.",
-    "sections": "Розділи системи"
+    "sections": "Розділи операцій"
   },
   "debug": {
     "previews": "Попередні перегляди налагодження",

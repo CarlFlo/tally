@@ -90,7 +90,12 @@ export function DownloaderSettings() {
   const featureEnabled = enabled ?? feature.data.data.enabled;
 
   return (
-    <>
+    <div className="integration-settings">
+      <div className="section-heading settings-group-heading">
+        <div>
+          <h2>{t("settings.torrentClient")}</h2>
+        </div>
+      </div>
       <section className="panel settings-card feature-toggle-setting">
         <label className="toggle-setting">
           <input
@@ -126,7 +131,7 @@ export function DownloaderSettings() {
           />
         )}
       </section>
-    </>
+    </div>
   );
 }
 

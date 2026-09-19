@@ -6,7 +6,7 @@ import { ScheduleEditor, type Schedule } from "./ScheduleEditor";
 
 const scheduleOrder = ["metadata", "torrent_automation", "maintenance", "backup"];
 
-export function SchedulingBackupsSettings() {
+export function SchedulingBackupsSettings({ section = "all" }: { section?: "schedules" | "backups" | "all" }) {
   const { t } = useTranslation();
   const settings = useLocal<any>("editable-settings", "/settings/backups");
   const deployment = useLocal<any>("settings", "/settings");
@@ -16,7 +16,7 @@ export function SchedulingBackupsSettings() {
   );
   return (
     <div className="scheduling-backups">
-      <section className="settings-group" aria-labelledby="schedule-group-title">
+      {section !== "backups" && <section className="settings-group" aria-labelledby="schedule-group-title">
         <div className="section-heading settings-group-heading">
           <div>
             <h2 id="schedule-group-title">{t("backups.scheduling")}</h2>
@@ -31,8 +31,8 @@ export function SchedulingBackupsSettings() {
         <div className="settings-card-list">
           {orderedSchedules?.map((job) => <ScheduleEditor key={job.key} job={job} />)}
         </div>
-      </section>
-      <section className="settings-group backup-settings-group" aria-labelledby="backup-group-title">
+      </section>}
+      {section !== "schedules" && <section className="settings-group backup-settings-group" aria-labelledby="backup-group-title">
         <div className="section-heading settings-group-heading">
           <div>
             <h2 id="backup-group-title">{t("backups.retentionArchives")}</h2>
@@ -44,7 +44,7 @@ export function SchedulingBackupsSettings() {
           {settings.data && <BackupRetention saved={settings.data} />}
           <BackupArchives />
         </div>
-      </section>
+      </section>}
     </div>
   );
 }

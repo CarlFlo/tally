@@ -16,7 +16,7 @@ test("abandoned connection tests cannot disable or overwrite the next tab", asyn
   await page.getByRole("button", { name: "Test connection", exact: true }).click();
   const request = await pending;
   const aborted = page.waitForEvent("requestfailed", (failed) => failed === request);
-  await page.locator('.settings-tabs a[href="/settings/bell"]').click();
+  await page.locator('.settings-tabs a[href="/account/notifications"]').click();
   await aborted;
   release();
   await page.locator('.settings-tabs a[href="/settings/search"]').click();

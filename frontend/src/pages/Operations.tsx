@@ -121,7 +121,6 @@ export function StatisticsPage() {
     <div className="page">
       <div className="page-heading">
         <div>
-          <span className="eyebrow">{t("statistics.eyebrow")}</span>
           <h1>
             {t("statistics.title")}<span className="accent">.</span>
           </h1>
@@ -317,16 +316,17 @@ export function StatisticsPage() {
 }
 
 export function SettingsPage({
-  tab = "deployment",
+  tab = "schedules",
 }: {
   tab?:
     | "personal"
     | "profiles"
-    | "deployment"
+    | "schedules"
+    | "backups"
     | "security"
     | "danger"
-    | "notifications"
     | "bell"
+    | "notifications"
     | "search"
     | "torrent"
     | "debug";
@@ -335,7 +335,7 @@ export function SettingsPage({
   const { locales } = useLocalization();
   const { boot, notify } = useApp();
   const cache = useQueryClient();
-  const personal = tab === "personal" || tab === "security" || tab === "danger";
+  const personal = tab === "personal" || tab === "security" || tab === "danger" || tab === "bell";
   const settings = useLocal<any>(
     "settings",
     "/settings",
@@ -448,7 +448,6 @@ export function SettingsPage({
     <div className="page settings-page">
       <PageHeader
         title={personal ? t("settings.myProfile") : t("settings.title")}
-        eyebrow={personal ? t("settings.personalEyebrow") : t("settings.sharedEyebrow")}
         description={
           personal
             ? t("settings.personalDescription")
@@ -462,54 +461,59 @@ export function SettingsPage({
         {(personal
           ? [
               {
-                path: "/profile",
+                path: "/account",
                 label: t("settings.profilePreferences"),
                 icon: <UserRound size={17} />,
               },
               {
-                path: "/profile/security",
+                path: "/account/notifications",
+                label: t("settings.bell"),
+                icon: <Bell size={17} />,
+              },
+              {
+                path: "/account/security",
                 label: t("settings.security"),
                 icon: <ShieldCheck size={17} />,
               },
               {
-                path: "/profile/danger",
+                path: "/account/danger",
                 label: t("settings.dangerZone"),
                 icon: <Trash2 size={17} />,
               },
             ]
           : [
               {
-                path: "/settings",
-                label: t("settings.schedulingBackups"),
+                path: "/admin/configuration/schedules",
+                label: t("settings.schedules"),
                 icon: <HardDrive size={17} />,
               },
               {
-                path: "/settings/torrent",
+                path: "/admin/configuration/backups",
+                label: t("settings.backups"),
+                icon: <HardDrive size={17} />,
+              },
+              {
+                path: "/admin/configuration/integrations/downloader",
                 label: t("settings.torrentClient"),
                 icon: <Download size={17} />,
               },
               {
-                path: "/settings/search",
+                path: "/admin/configuration/integrations/search",
                 label: t("settings.torrentSearch"),
                 icon: <Globe size={17} />,
               },
               {
-                path: "/settings/notifications",
+                path: "/admin/configuration/delivery",
                 label: t("settings.notifications"),
                 icon: <Bell size={17} />,
               },
               {
-                path: "/settings/bell",
-                label: t("settings.bell"),
-                icon: <Bell size={17} />,
-              },
-              {
-                path: "/settings/debug",
+                path: "/admin/advanced/diagnostics",
                 label: t("settings.debug"),
                 icon: <Activity size={17} />,
               },
               {
-                path: "/settings/profiles",
+                path: "/admin/access/profiles",
                 label: t("settings.profiles"),
                 icon: <Laptop size={17} />,
               },
@@ -532,14 +536,10 @@ export function SettingsPage({
           )}
         </>
       )}
-      {(tab === "search" ||
-        tab === "notifications" ||
-        tab === "bell") &&
+      {(tab === "search" || tab === "notifications") &&
         (settings.data?.operator ? (
           tab === "notifications" ? (
             <NotificationSettings />
-          ) : tab === "bell" ? (
-            <BellNotificationSettings />
           ) : (
             <JackettSettings />
           )
@@ -549,6 +549,7 @@ export function SettingsPage({
           </p>
         ))}
       {tab === "debug" && <DebugSettings />}
+      {tab === "bell" && <BellNotificationSettings />}
       {tab === "danger" && <DangerZone />}
       {tab === "personal" && (
         <div className="settings-columns">
@@ -858,7 +859,8 @@ export function SettingsPage({
           </p>
         </section>
       )}
-      {tab === "deployment" && <SchedulingBackupsSettings />}
+      {tab === "schedules" && <SchedulingBackupsSettings section="schedules" />}
+      {tab === "backups" && <SchedulingBackupsSettings section="backups" />}
       {tab === "security" && (
         <div className="settings-columns">
           <section className="panel settings-card">

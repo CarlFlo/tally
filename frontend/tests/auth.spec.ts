@@ -32,7 +32,7 @@ test("local sign-in follows browser history and switching requires sign-out", as
   await page.getByRole("button", { name: "Enter your space" }).click();
   await expect(page).toHaveURL(/\/calendar$/);
   await openProfile(page);
-  await expect(page).toHaveURL(/\/profile$/);
+  await expect(page).toHaveURL(/\/account$/);
   await page.getByRole("link", { name: "Security", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Your sessions" }),

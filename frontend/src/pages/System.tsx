@@ -9,27 +9,29 @@ export function SystemPage() {
   const { t } = useTranslation();
   return (
     <div className="page system-page">
-      <PageHeader title={t("system.title")} eyebrow={t("system.eyebrow")} description={t("system.description")} />
+      <PageHeader title={t("system.title")} description={t("system.description")} />
       <nav className="settings-tabs system-tabs" aria-label={t("system.sections")}>
-        <NavLink to="/system/jobs">
+        <NavLink to="/admin/operations/jobs">
           <Activity size={17} />
           {t("nav.jobs")}
         </NavLink>
-        <NavLink to="/system/statistics">
+        <NavLink to="/admin/operations/statistics">
           <ChartNoAxesCombined size={17} />
           {t("nav.statistics")}
         </NavLink>
-        <NavLink to="/system/logs">
+        <NavLink to="/admin/operations/logs">
           <ScrollText size={17} />
           {t("nav.logs")}
         </NavLink>
       </nav>
-      <Routes>
-        <Route path="jobs" element={<JobsPage />} />
-        <Route path="statistics" element={<StatisticsPage />} />
-        <Route path="logs" element={<LogsPage />} />
-        <Route path="*" element={<Navigate to="/system/jobs" replace />} />
-      </Routes>
+      <div className="system-content">
+        <Routes>
+          <Route path="jobs" element={<JobsPage />} />
+          <Route path="statistics" element={<StatisticsPage />} />
+          <Route path="logs" element={<LogsPage />} />
+          <Route path="*" element={<Navigate to="/admin/operations/jobs" replace />} />
+        </Routes>
+      </div>
     </div>
   );
 }

@@ -167,6 +167,9 @@
 .system-page > .page > .page-heading h1 {
   font-size: 26px;
 }
+.system-content .page-heading::before {
+  display: none;
+}
 .calendar-date-note {
   display: none;
 }
@@ -367,7 +370,6 @@
   margin-top: 0;
   min-height: 100%;
 }
-.backup-settings-group { padding-top: 4px; border-top: 1px solid var(--border); }
 .scheduling-backups .settings-card { padding: 18px 22px; }
 .scheduling-backups .settings-group-heading { margin-bottom: 8px; }
 .scheduling-backups .settings-group-heading h2 { font-size: 17px; }

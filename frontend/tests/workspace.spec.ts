@@ -85,7 +85,7 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
     page.getByRole("dialog", { name: "Delete Delete style fixture?" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Confirm", exact: true }).click();
-  await expect(page).toHaveURL(/\/settings\/profiles$/);
+  await expect(page).toHaveURL(/\/admin\/access\/profiles$/);
   await expect(page.locator(".profile-settings-list")).not.toContainText(
     "Delete style fixture",
   );
@@ -111,14 +111,14 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
   ).toHaveCount(0);
   await openProfileMenu(page);
   await page.getByRole("link", { name: "System", exact: true }).click();
-  await expect(page).toHaveURL(/\/system\/jobs$/);
+  await expect(page).toHaveURL(/\/admin\/operations\/jobs$/);
   await expect(
-    page.getByRole("navigation", { name: "System sections" }),
+    page.getByRole("navigation", { name: "Operations sections" }),
   ).toBeVisible();
   await page.getByRole("link", { name: "Statistics", exact: true }).click();
-  await expect(page).toHaveURL(/\/system\/statistics$/);
+  await expect(page).toHaveURL(/\/admin\/operations\/statistics$/);
   await page.goBack();
-  await expect(page).toHaveURL(/\/system\/jobs$/);
+  await expect(page).toHaveURL(/\/admin\/operations\/jobs$/);
   await openProfileMenu(page);
   await page.keyboard.press("Escape");
   await expect(
@@ -351,7 +351,7 @@ test("header navigation, persistent inbox, compact schedules, and downloadable b
   });
   await expect(inbox).toContainText("You're all caught up.");
   await inbox.getByRole("link", { name: "View all logs" }).click();
-  await expect(page).toHaveURL(/\/system\/logs$/);
+  await expect(page).toHaveURL(/\/admin\/operations\/logs$/);
   await page
     .getByRole("textbox", { name: "Search logs" })
     .fill("metadata schedule");

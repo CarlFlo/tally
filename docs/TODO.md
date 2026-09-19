@@ -4,7 +4,12 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 ## Current work
 
-No active implementation items.
+- [ ] Restructure administration and account navigation for clearer scope.
+  - [x] Establish canonical admin/account route hierarchy while preserving legacy deep links.
+  - [x] Separate personal notification preferences from deployment notification delivery.
+  - [x] Consolidate the active profile-security route into the account settings shell.
+  - [ ] Replace flat administration tabs with grouped, responsive navigation.
+  - [ ] Complete full browser regression coverage for the revised destinations.
 
 ## Current product foundations
 

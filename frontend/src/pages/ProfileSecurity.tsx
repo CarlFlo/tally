@@ -30,19 +30,18 @@ export function ProfileSecurityPage() {
     <div className="page settings-page">
       <PageHeader
         title={t("settings.myProfile")}
-        eyebrow={t("settings.personalEyebrow")}
         description={t("settings.personalDescription")}
       />
       <nav className="settings-tabs" aria-label={t("settings.personalNav")}>
-        <NavLink to="/profile" end>
+        <NavLink to="/account" end>
           <UserRound size={17} />
           {t("settings.profilePreferences")}
         </NavLink>
-        <NavLink to="/profile/security" end>
+        <NavLink to="/account/security" end>
           <ShieldCheck size={17} />
           {t("settings.security")}
         </NavLink>
-        <NavLink to="/profile/danger" end>
+        <NavLink to="/account/danger" end>
           <Trash2 size={17} />
           {t("settings.dangerZone")}
         </NavLink>
@@ -107,7 +106,7 @@ export function ProfileSecurityPage() {
                 })}
               </p>
               {!!profile.is_admin && (
-                <NavLink className="button" to="/settings/profiles">
+                <NavLink className="button" to="/admin/access/profiles">
                   {t("profile.manageAuthentication", { defaultValue: "Manage authentication" })}
                 </NavLink>
               )}

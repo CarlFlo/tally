@@ -12,7 +12,7 @@ export async function openProfileMenu(page: Page) {
 export async function openProfile(page: Page) {
   await openProfileMenu(page);
   await page.getByRole("link", { name: "Profile", exact: true }).click();
-  await expect(page).toHaveURL(/\/profile$/);
+  await expect(page).toHaveURL(/\/account$/);
   await expect(page.locator("#profile-menu")).toHaveCount(0);
 }
 
