@@ -396,7 +396,7 @@ test("settings categories persist connections, schedules, debug previews and sta
     headers,
     data: { timezone: userTimezone, time_format: "24h" },
   });
-  await page.goto("/settings/notifications");
+  await page.goto("/admin/configuration/delivery");
   await expect(page.getByLabel("Notification timezone")).toHaveCount(0);
   await expect(page.locator(".notification-timezone-chip")).toHaveText(
     deploymentSettings.timezone,
@@ -492,7 +492,7 @@ test("settings categories persist connections, schedules, debug previews and sta
   });
   expect(restoreSearch.ok()).toBe(true);
   await page
-    .getByRole("link", { name: "Scheduling & backups", exact: true })
+    .getByRole("link", { name: "Schedules", exact: true })
     .click();
   const schedule = page.locator(".schedule-editor").filter({
     has: page.getByRole("heading", { name: "Maintenance", exact: true }),
@@ -532,7 +532,7 @@ test("settings categories persist connections, schedules, debug previews and sta
       return boot.preferences.debug_mode;
     })
     .toBe(true);
-  await page.goto("/system/jobs");
+  await page.goto("/admin/operations/jobs");
   await expect(
     page.getByRole("button", { name: "Preview paused", exact: true }),
   ).toBeVisible();
@@ -605,7 +605,7 @@ test("settings categories persist connections, schedules, debug previews and sta
     page.getByRole("combobox", { name: "Next metadata checks rows" }),
   ).toHaveValue("100");
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/settings/scheduling");
+  await page.goto("/admin/configuration/schedules");
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
