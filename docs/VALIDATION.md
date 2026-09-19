@@ -4,7 +4,7 @@ This file describes the current verification baseline and what must be checked f
 
 ## Current baseline
 
-The last recorded full baseline was verified on 2026-09-17 for `feature/torrent-search-downloads`. Run the complete check on the latest branch head before treating a newer branch as ready.
+The latest recorded full baseline was verified on 2026-09-19 for `refactor/test-pipeline-simplification`. Run the complete check on the latest branch head before treating a newer branch as ready.
 
 A complete branch check includes:
 
@@ -19,6 +19,8 @@ A complete branch check includes:
 - Trivy container scan
 
 Treat isolated reruns as diagnostic evidence, not as permission to ignore reproducible failures. The latest branch-head run, not an earlier green commit, is the final readiness signal.
+
+CI runs the full check for every push. For pull requests from the same repository, that push run is the authoritative check and the duplicate pull-request job is skipped; fork pull requests still run the full check through the `pull_request` event.
 
 ## What the automated suite covers
 
