@@ -4,6 +4,12 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 ## Current work
 
+- [ ] Simplify the validation/browser-test pipeline without reducing meaningful coverage:
+  - [ ] remove redundant frontend build work from the Playwright path;
+  - [ ] avoid duplicate branch CI runs when a pull request already provides the branch check;
+  - [ ] consolidate overlapping browser coverage where the same behavior is asserted more than once;
+  - [ ] reduce order/state coupling in browser tests where practical;
+  - [ ] run the complete branch-head validation before considering the cleanup ready.
 - [ ] Complete the latest-head full validation baseline before deployment, including the Playwright suite and container scan.
 
 Completed torrent automation work is recorded in Git; durable behavior is described in the architecture and validation guides.
