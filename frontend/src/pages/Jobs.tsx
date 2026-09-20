@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -60,17 +60,24 @@ export function JobsPage() {
   const cache = useQueryClient();
   const prefs = boot.preferences;
   const kind = prefs.job_type_filter || "all",
-    status = prefs.job_status_filter || "all";
+    status = prefs.job_status_filter || "all",
+    statusNot = !!prefs.job_status_filter_not;
   const jobs = useQuery<any>({
-    queryKey: queryKeys.jobs(kind, status),
+    queryKey: queryKeys.jobs(kind, status, statusNot),
     queryFn: ({ signal }) =>
-      api(`/jobs?kind=${kind}&status=${status}`, "GET", undefined, signal),
+      api(
+        `/jobs?kind=${kind}&status=${status}&status_not=${statusNot ? "1" : "0"}`,
+        "GET",
+        undefined,
+        signal,
+      ),
+    placeholderData: keepPreviousData,
   });
   const settings = useLocal<any>("settings", "/settings");
   const operator = settings.data?.operator;
   const [busy, setBusy] = useState("");
   const [experimentalEnable, setExperimentalEnable] = useState<any | null>(null);
-  async function preference(key: string, value: string) {
+  async function preference(key: string, value: string | boolean) {
     try {
       await api("/preferences", "PATCH", { [key]: value });
       await invalidateResources(cache, ["bootstrap"]);
@@ -281,25 +288,21 @@ export function JobsPage() {
       )}
       <div className="section-heading run-heading">
         <h2>{t("jobs.history")}</h2>
-        <div className="history-filters">
-          <label>
-            {t("jobs.job")}
-            <select
-              aria-label={t("jobs.filterJob")}
-              value={kind}
-              onChange={(e) => preference("job_type_filter", e.target.value)}
-            >
-              <option value="all">{t("jobs.all")}</option>
-              <option value="metadata">{t("jobs.metadata")}</option>
-              <option value="torrent_automation">
-                {t("jobs.torrentAutomation", { defaultValue: "Torrent automation" })}
-              </option>
-              <option value="backup">{t("jobs.backup")}</option>
-              <option value="maintenance">{t("jobs.maintenance")}</option>
-            </select>
-          </label>
-          <label>
-            {t("common.result")}
+        <div className="history-filters" aria-label={t("jobs.history")}>
+          <select
+            aria-label={t("jobs.filterJob")}
+            value={kind}
+            onChange={(e) => preference("job_type_filter", e.target.value)}
+          >
+            <option value="all">{t("jobs.all")}</option>
+            <option value="metadata">{t("jobs.metadata")}</option>
+            <option value="torrent_automation">
+              {t("jobs.torrentAutomation", { defaultValue: "Torrent automation" })}
+            </option>
+            <option value="backup">{t("jobs.backup")}</option>
+            <option value="maintenance">{t("jobs.maintenance")}</option>
+          </select>
+          <div className="history-result-filter" role="group" aria-label={t("jobs.filterResult")}>
             <select
               aria-label={t("jobs.filterResult")}
               value={status}
@@ -320,11 +323,21 @@ export function JobsPage() {
                 </option>
               ))}
             </select>
-          </label>
+            <button
+              type="button"
+              className={"filter-not-toggle" + (statusNot ? " active" : "")}
+              aria-label={t("jobs.filterResultNot")}
+              aria-pressed={statusNot}
+              disabled={status === "all"}
+              onClick={() => preference("job_status_filter_not", !statusNot)}
+            >
+              {t("jobs.not")}
+            </button>
+          </div>
         </div>
       </div>
       <p className="muted small-text">{t("jobs.latest")}</p>
-      <div className="panel table-scroll">
+      <div className="panel table-scroll jobs-history-scroll">
         {jobs.data?.runs.length ? (
           <table>
             <thead>

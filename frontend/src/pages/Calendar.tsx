@@ -177,8 +177,8 @@ export function CalendarPage({ onAdd }: { onAdd: () => void }) {
             {t("calendar.yourCalendar")}<span className="accent">.</span>
           </h1>
         </div>
-        <button className="button primary small" onClick={onAdd}>
-          <Plus size={16} />
+        <button className="button primary" onClick={onAdd}>
+          <Plus size={18} />
           {t("calendar.addShow")}
         </button>
         <div className="heading-note calendar-date-note">

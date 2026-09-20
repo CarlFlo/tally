@@ -553,15 +553,19 @@ test("settings categories persist connections, schedules, debug previews and sta
   await page
     .getByRole("combobox", { name: "Filter history by result" })
     .selectOption("failed");
+  await page
+    .getByRole("button", { name: "Exclude the selected result" })
+    .click();
   await expect
     .poll(async () => {
       const boot = await (await page.request.get("/api/bootstrap")).json();
       return {
         job: boot.preferences.job_type_filter,
         status: boot.preferences.job_status_filter,
+        statusNot: boot.preferences.job_status_filter_not,
       };
     })
-    .toEqual({ job: "backup", status: "failed" });
+    .toEqual({ job: "backup", status: "failed", statusNot: true });
   await page.reload();
   await expect(
     page.getByRole("combobox", { name: "Filter history by job" }),
@@ -569,6 +573,9 @@ test("settings categories persist connections, schedules, debug previews and sta
   await expect(
     page.getByRole("combobox", { name: "Filter history by result" }),
   ).toHaveValue("failed");
+  await expect(
+    page.getByRole("button", { name: "Exclude the selected result" }),
+  ).toHaveAttribute("aria-pressed", "true");
   await page.request.patch("/api/preferences", {
     headers,
     data: { time_format: "12h" },
@@ -623,6 +630,7 @@ test("settings categories persist connections, schedules, debug previews and sta
       debug_job_state: "normal",
       job_type_filter: "all",
       job_status_filter: "all",
+      job_status_filter_not: false,
       timezone: originalTimezone,
     },
   });

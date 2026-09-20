@@ -9,7 +9,7 @@ import (
 )
 
 func (s *Server) readPreferences(r *http.Request, id string) map[string]any {
-	p := map[string]any{"theme": s.Config.Theme, "timezone": s.Config.Timezone, "date_format": "d MMM yyyy", "time_format": "24h", "calendar_view": "month", "week_start": 1, "debug_mode": false, "debug_job_state": "normal", "request_limit": 20, "scan_limit": 20, "job_type_filter": "all", "job_status_filter": "all", "bell_categories": []string{"scheduled_job_failures", "backup_failures", "episode_releases", "provider_api_failures", "torrent_client_failures"}}
+	p := map[string]any{"theme": s.Config.Theme, "timezone": s.Config.Timezone, "date_format": "d MMM yyyy", "time_format": "24h", "calendar_view": "month", "week_start": 1, "debug_mode": false, "debug_job_state": "normal", "request_limit": 20, "scan_limit": 20, "job_type_filter": "all", "job_status_filter": "all", "job_status_filter_not": false, "bell_categories": []string{"scheduled_job_failures", "backup_failures", "episode_releases", "provider_api_failures", "torrent_client_failures"}}
 	var raw string
 	if s.DB.QueryRowContext(r.Context(), "SELECT data FROM profile_preferences WHERE profile_id=?", id).Scan(&raw) == nil {
 		_ = json.Unmarshal([]byte(raw), &p)
@@ -73,6 +73,10 @@ func (s *Server) preferences(w http.ResponseWriter, r *http.Request, session aut
 		case "job_status_filter":
 			if v != "all" && v != "success" && v != "failed" && v != "running" && v != "cancelled" && v != "interrupted" {
 				return bad("invalid status filter")
+			}
+		case "job_status_filter_not":
+			if _, ok := v.(bool); !ok {
+				return bad("invalid status filter mode")
 			}
 		case "bell_categories":
 			bellCategories, ok := v.([]any)

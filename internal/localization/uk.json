@@ -3,7 +3,7 @@
     "locale": "uk",
     "name": "Українська",
     "direction": "ltr",
-    "catalogVersion": 29
+    "catalogVersion": 30
   },
   "common": {
     "save": "Зберегти",
@@ -387,6 +387,7 @@
     "changes": "Зміни",
     "filterJob": "Фільтрувати історію за завданням",
     "filterResult": "Фільтрувати історію за результатом",
+    "filterResultNot": "Виключити вибраний результат",
     "cancel": "Скасувати завдання",
     "empty": "Відповідних запусків немає",
     "cancelRequested": "Запит на скасування надіслано",
@@ -416,6 +417,7 @@
     "resumeSchedule": "Відновити розклад",
     "job": "Завдання",
     "allResults": "Усі результати",
+    "not": "Не",
     "success": "Успішно",
     "failed": "Помилка",
     "cancelled": "Скасовано",

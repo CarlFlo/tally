@@ -106,6 +106,7 @@ export type Prefs = {
   scan_limit: number;
   job_type_filter: string;
   job_status_filter: string;
+  job_status_filter_not: boolean;
   bell_categories: string[];
 };
 export type Boot = {

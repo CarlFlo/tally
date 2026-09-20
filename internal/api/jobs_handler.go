@@ -23,6 +23,10 @@ FROM jobs j ORDER BY key`)
 	if status != "" && status != "all" && status != "success" && status != "failed" && status != "running" && status != "cancelled" && status != "interrupted" {
 		return bad("invalid status filter")
 	}
+	statusNot := r.URL.Query().Get("status_not")
+	if statusNot != "" && statusNot != "0" && statusNot != "1" {
+		return bad("invalid status filter mode")
+	}
 	query := "SELECT r.*,COALESCE(s.name,'') AS show_name FROM job_runs r LEFT JOIN shows s ON r.job_key='metadata:tvmaze:show:'||s.id WHERE 1=1"
 	args := []any{}
 	if kind != "" && kind != "all" {
@@ -30,7 +34,11 @@ FROM jobs j ORDER BY key`)
 		args = append(args, kind, kind+":%")
 	}
 	if status != "" && status != "all" {
-		query += " AND r.status=?"
+		if statusNot == "1" {
+			query += " AND r.status<>?"
+		} else {
+			query += " AND r.status=?"
+		}
 		args = append(args, status)
 	}
 	query += " ORDER BY started_at DESC,r.id DESC LIMIT 100"

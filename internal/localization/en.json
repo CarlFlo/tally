@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 29
+    "catalogVersion": 30
   },
   "common": {
     "save": "Save",
@@ -381,6 +381,7 @@
     "changes": "Changes",
     "filterJob": "Filter history by job",
     "filterResult": "Filter history by result",
+    "filterResultNot": "Exclude the selected result",
     "cancel": "Cancel job",
     "empty": "No matching runs",
     "cancelRequested": "Cancellation requested",
@@ -410,6 +411,7 @@
     "resumeSchedule": "Resume schedule",
     "job": "Job",
     "allResults": "All results",
+    "not": "Not",
     "success": "Success",
     "failed": "Failed",
     "cancelled": "Cancelled",

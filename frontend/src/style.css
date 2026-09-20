@@ -709,6 +709,10 @@ code {
   padding: 9px 11px;
   border-radius: 7px;
 }
+.calendar-page > .page-heading > .button,
+.library-page > .page-heading > .button {
+  align-self: flex-start;
+}
 .footer {
   display: flex;
   align-items: center;
@@ -2171,6 +2175,15 @@ code {
 }
 .table-scroll {
   overflow: auto;
+}
+.jobs-history-scroll {
+  height: 600px;
+}
+.jobs-history-scroll th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface2);
 }
 table {
   width: 100%;
@@ -3988,15 +4001,59 @@ td .table-error {
   gap: 8px;
   flex-wrap: wrap;
 }
-.history-filters label {
-  display: flex;
+.run-heading {
+  align-items: flex-end;
+}
+.history-filters {
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--muted);
+  justify-content: flex-end;
+  margin-left: auto;
 }
 .history-filters select {
   min-width: 130px;
+  min-height: 38px;
+  padding: 9px 10px;
+  background: var(--surface);
+  font-size: 12px;
+}
+.history-result-filter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.filter-not-toggle {
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 550;
+}
+.filter-not-toggle:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--surface2);
+  border-color: var(--dim);
+}
+.filter-not-toggle.active {
+  color: var(--accent);
+  background: var(--accent-bg);
+  border-color: var(--accent);
+}
+@media (max-width: 640px) {
+  .run-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .history-filters {
+    width: 100%;
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+  .jobs-history-scroll {
+    height: 420px;
+  }
 }
 .debug-panel {
   display: flex;

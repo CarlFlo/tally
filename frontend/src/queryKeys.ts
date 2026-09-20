@@ -9,9 +9,9 @@ export const queryKeys = {
     profileId
       ? (["show-actions", profileId] as const)
       : (["show-actions"] as const),
-  jobs: (kind?: string, status?: string) =>
+  jobs: (kind?: string, status?: string, statusNot = false) =>
     kind && status
-      ? (["jobs", kind, status] as const)
+      ? (["jobs", kind, status, statusNot ? "not" : "is"] as const)
       : (["jobs"] as const),
   schedules: () => ["schedules"] as const,
   statistics: () => ["statistics"] as const,

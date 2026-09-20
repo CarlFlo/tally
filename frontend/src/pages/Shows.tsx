@@ -51,7 +51,7 @@ export function ShowsPage({ onAdd }: { onAdd: () => void }) {
       (status === "all" || s.status === status),
   );
   return (
-    <div className="page">
+    <div className="page library-page">
       <div className="page-heading">
         <div>
           <span className="eyebrow">{t("library.eyebrow")}</span>
