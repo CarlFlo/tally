@@ -175,7 +175,9 @@ Independent capabilities deserve independent toggles. Hiding unavailable navigat
 
 ### Preserve saved secrets intentionally
 
-Editing a URL or non-secret field should not force a secret to be re-entered. Treat a blank concealed secret input as "retain existing" unless the UI explicitly offers removal. Never expose secrets in general APIs, logs, errors, telemetry, activity records, or decision history.
+Editing a URL or non-secret field should not force a secret to be re-entered. Treat a blank concealed secret input as "retain existing" only when the UI separately exposes an explicit removal action; otherwise blank becomes ambiguous and can make a saved credential impossible to clear.
+
+Do not send persisted credentials back to the browser merely to make editing convenient. Return redacted state plus a configured/not-configured signal, preserve the stored value server-side when the field is untouched, and make replacement or removal explicit. Never expose secrets in general APIs, logs, errors, telemetry, activity records, or decision history.
 
 ## Data, migrations, and backups
 
@@ -225,9 +227,17 @@ Opaque IDs are implementation details. Prefer display names and domain labels in
 
 When operator commands accept a friendly name as well as an ID, resolve names only when the match is exact and unambiguous; never guess which identity an operator intended.
 
+### Treat recovery credentials as credentials
+
+A password reset or recovery mechanism must follow the same secrecy rules as a normal password. Do not generate temporary passwords and place them in application logs, activity history, generic API responses, or other durable diagnostic channels.
+
+For a local operator-managed application, an interactive terminal reset is a safer recovery boundary: read the replacement password without echo, never log it, revoke existing sessions, and require the user to replace it after sign-in when appropriate. Recovery convenience does not justify creating a second credential-disclosure path.
+
 ### Preserve underlying errors when adding friendly lookup behavior
 
 A lookup returning "not found" is different from the database itself failing. Convenience resolution layers should preserve infrastructure errors instead of collapsing every failure into an absent-record result.
+
+The same rule applies to feature state and optional configuration. A missing row may legitimately select a default, but a failed settings/database read must not silently become "disabled", "enabled", "anonymous", or "not configured". Propagate the failure or fail closed according to the operation's security boundary.
 
 ## Time and scheduling
 
@@ -241,7 +251,9 @@ This separation avoids inconsistent scheduling across profiles and makes dayligh
 
 ### Logs and notifications serve different purposes
 
-Logs should preserve broad operational history. User notifications should be selective and actionable. Routine actions initiated by the same user usually do not need attention-grabbing notifications, while failed scheduled/background work often does.
+Logs should preserve broad operational history and the detailed diagnostic cause needed by operators. User-facing API errors, alerts, activity records, and notifications should carry stable, safe explanations rather than copying raw internal or upstream error text.
+
+Routine actions initiated by the same user usually do not need attention-grabbing notifications, while failed scheduled/background work often does. Expected cancellation is not a failure and should not create failure alerts.
 
 Offer useful categories with sensible defaults rather than exposing every possible event as a separate preference.
 
