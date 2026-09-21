@@ -141,3 +141,24 @@ func TestJobDeadlineCountsAsFailure(t *testing.T) {
 	}
 	t.Fatal("job timeout did not count toward repeated failure pause")
 }
+
+func TestUnknownJobAndScheduleStorageFailuresAreNotSuccessful(t *testing.T) {
+	ctx := context.Background()
+	db, err := database.Open(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := New(ctx, db, config.Config{JobConcurrency: 1, JobRuntime: time.Second}, nil, nil, nil)
+	defer service.Stop(ctx)
+
+	if _, err = service.run(ctx, "run", "unexpected", "manual", ""); err == nil {
+		t.Fatal("unknown internal job kind reported success")
+	}
+
+	if err = db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = service.Trigger("metadata", "scheduled_refresh", ""); err == nil {
+		t.Fatal("schedule database failure was treated as a disabled schedule")
+	}
+}
