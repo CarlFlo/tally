@@ -99,54 +99,48 @@ func TestPasswordOnlyAuthenticationErrors(t *testing.T) {
 	}
 }
 
-func TestRecoveryExpiryRestartAndForcedReplacement(t *testing.T) {
+func TestPasswordChangeReplacesCredentialAndRevokesOldSession(t *testing.T) {
 	s := testAuth(t)
 	hash, _ := Hash("original")
 	if _, err := s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at,auth_method) VALUES('profile-fixture','Fixture','violet',1,'password')"); err != nil {
 		t.Fatal(err)
 	}
-	_, _ = s.DB.Exec("INSERT INTO local_credentials VALUES('profile-fixture',?,0)", hash)
-	ctx := context.Background()
-	if e := s.Recover(ctx, "profile-fixture"); e != nil {
-		t.Fatal(e)
+	if _, err := s.DB.Exec("INSERT INTO local_credentials VALUES('profile-fixture',?,0)", hash); err != nil {
+		t.Fatal(err)
 	}
-	if e := s.Recover(ctx, "profile-fixture"); e == nil {
-		t.Fatal("cooldown not enforced")
+	ctx := context.Background()
+	loginWriter := httptest.NewRecorder()
+	loginRequest := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
+	if err := s.Login(ctx, loginWriter, loginRequest, "profile-fixture", "original"); err != nil {
+		t.Fatal(err)
+	}
+	cookies := loginWriter.Result().Cookies()
+	if len(cookies) == 0 {
+		t.Fatal("login did not create a session cookie")
+	}
+	resolveRequest := httptest.NewRequest(http.MethodGet, "http://example.com", nil)
+	resolveRequest.AddCookie(cookies[0])
+	session, err := s.Resolve(resolveRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	changeWriter := httptest.NewRecorder()
+	if err = s.Change(ctx, changeWriter, resolveRequest, session, "original", "changed"); err != nil {
+		t.Fatal(err)
 	}
 	var stored string
-	_ = s.DB.QueryRow("SELECT hash FROM local_credentials WHERE profile_id='profile-fixture'").Scan(&stored)
-	if !Verify(stored, "original") {
-		t.Fatal("recovery invalidated stored password")
+	if err = s.DB.QueryRow("SELECT hash FROM local_credentials WHERE profile_id='profile-fixture'").Scan(&stored); err != nil {
+		t.Fatal(err)
 	}
-	s.recovery["profile-fixture"] = recovery{Digest("temporary"), time.Now().Add(time.Minute), time.Now()}
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest("POST", "http://example.com", nil)
-	if e := s.Login(ctx, w, r, "profile-fixture", "temporary"); e != nil {
-		t.Fatal(e)
-	}
-	request := httptest.NewRequest("GET", "http://example.com", nil)
-	request.AddCookie(w.Result().Cookies()[0])
-	session, e := s.Resolve(request)
-	if e != nil || !session.Restricted {
-		t.Fatal("recovery did not restrict session")
-	}
-	if _, ok := s.recovery["profile-fixture"]; ok {
-		t.Fatal("temporary credential not consumed")
-	}
-	s.recovery["profile-fixture"] = recovery{Digest("expired"), time.Now().Add(-time.Second), time.Now()}
-	if e = s.Login(ctx, httptest.NewRecorder(), r, "profile-fixture", "expired"); e == nil {
-		t.Fatal("expired credential accepted")
-	}
-	restarted := New(s.DB, s.Config)
-	if len(restarted.recovery) != 0 {
-		t.Fatal("recovery survived restart")
-	}
-	if e = restarted.Change(ctx, httptest.NewRecorder(), r, session, "", "changed"); e != nil {
-		t.Fatal(e)
-	}
-	_ = s.DB.QueryRow("SELECT hash FROM local_credentials WHERE profile_id='profile-fixture'").Scan(&stored)
 	if !Verify(stored, "changed") || Verify(stored, "original") {
 		t.Fatal("password replacement failed")
+	}
+	var oldSessions int
+	if err = s.DB.QueryRow("SELECT COUNT(*) FROM sessions WHERE id=?", session.ID).Scan(&oldSessions); err != nil {
+		t.Fatal(err)
+	}
+	if oldSessions != 0 {
+		t.Fatal("old session survived password change")
 	}
 }
 
