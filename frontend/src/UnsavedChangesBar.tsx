@@ -45,6 +45,7 @@ export function UnsavedChangesBar({
   statusLabel,
   revertLabel,
   saveLabel,
+  className = "",
 }: {
   hasChanges: boolean;
   busy: boolean;
@@ -53,9 +54,10 @@ export function UnsavedChangesBar({
   statusLabel: string;
   revertLabel: string;
   saveLabel: string;
+  className?: string;
 }) {
   return (
-    <div className={`unsaved-changes-bar${hasChanges ? " has-unsaved-changes" : ""}`} aria-hidden={!hasChanges}>
+    <div className={`unsaved-changes-bar ${className}${hasChanges ? " has-unsaved-changes" : ""}`.trim()} aria-hidden={!hasChanges}>
       <span className="unsaved-changes-status">{statusLabel}</span>
       <button className="button ghost" type="button" disabled={busy || !hasChanges} onClick={onRevert}>
         <Undo2 size={16} />{revertLabel}
