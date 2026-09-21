@@ -27,6 +27,6 @@ RUN chmod 755 /usr/local/bin/tally /usr/local/libexec/tally /usr/local/bin/docke
 ENV APP_DATA_DIR=/config APP_ADDR=:8080 PUID=10001 PGID=10001
 VOLUME /config
 EXPOSE 8080
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 CMD ["tally", "healthcheck"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 CMD ["wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/readyz"]
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["tally"]
