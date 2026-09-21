@@ -19,7 +19,7 @@ import (
 	"github.com/CarlFlo/tally/internal/database"
 )
 
-const usage = "usage: tally [serve|backup|restore [backup.zip]|verify-backup [backup.zip]|reset-password [profile-id-or-name]|delete-backup <filename>|help]"
+const usage = "usage: tally <command> [arguments] (run \"tally help\" for commands)"
 
 func Run(args []string) error {
 	command := "serve"
@@ -28,7 +28,7 @@ func Run(args []string) error {
 	}
 	switch command {
 	case "help", "-h", "--help":
-		fmt.Println(usage)
+		printHelp()
 		return nil
 	case "serve", "backup", "restore", "verify-backup", "reset-password", "delete-backup":
 	default:
