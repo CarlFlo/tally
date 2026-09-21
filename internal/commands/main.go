@@ -126,7 +126,7 @@ func Run(args []string) error {
 		handled, operatorErr := callRunningOperator(ctx, c, operatorRequest{Action: "restore", Archive: archive})
 		if handled {
 			if operatorErr == nil {
-				fmt.Println("Backup restored live")
+				fmt.Println("Backup restored successfully — Tally is now using the restored data.")
 			}
 			return operatorErr
 		}
