@@ -18,7 +18,7 @@ import (
 	"github.com/CarlFlo/tally/internal/database"
 )
 
-const usage = "usage: tally [serve|healthcheck|backup|restore <archive>|verify-backup <archive>|reset-password <profile-id-or-name>|delete-backup <filename>]"
+const usage = "usage: tally [serve|healthcheck|backup|restore <archive>|verify-backup <archive>|reset-password <profile-id-or-name>|delete-backup <filename>|help]"
 
 func Run(args []string) error {
 	command := "serve"
