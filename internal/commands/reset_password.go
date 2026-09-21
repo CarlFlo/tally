@@ -57,9 +57,6 @@ func resetPasswordValue(ctx context.Context, db *database.Store, c config.Config
 		return err
 	}
 	authService := auth.New(db, c)
-	if err = authService.Policy(password); err != nil {
-		return err
-	}
 	hash, err := authService.HashPassword(ctx, password)
 	if err != nil {
 		return err
