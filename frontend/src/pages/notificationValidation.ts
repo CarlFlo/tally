@@ -3,11 +3,18 @@ const tokens = new Set(["event", "key", "level", "message", "show", "time"]);
 
 export type NotificationErrors = Record<string, string>;
 
-export function notificationErrors(data: any): NotificationErrors {
+export function notificationErrors(
+  data: any,
+  configured: Record<string, boolean> = {},
+): NotificationErrors {
   const errors: NotificationErrors = {};
   const endpoint = data.type === "discord" ? data.discord_url : data.url;
   const endpointField = data.type === "discord" ? "discord_url" : "url";
-  if (!validURL(endpoint)) errors[endpointField] = i18n.t("validation.validURL");
+  if (!endpoint && configured[endpointField]) {
+    // Stored endpoints are deliberately redacted from the browser.
+  } else if (!validURL(endpoint)) {
+    errors[endpointField] = i18n.t("validation.validURL");
+  }
   if (data.type === "webhook") validateBody(data.body, errors);
   if ((data.bot_name || "").length > 80)
     errors.bot_name = i18n.t("validation.max80");
