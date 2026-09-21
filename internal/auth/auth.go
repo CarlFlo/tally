@@ -13,7 +13,6 @@ type Service struct {
 	DB       *database.Store
 	Config   config.Config
 	mu       sync.Mutex
-	recovery map[string]recovery
 	attempts map[string]throttle
 	hashes   chan struct{}
 }
