@@ -33,6 +33,14 @@ func (s *Server) bootstrap(w http.ResponseWriter, r *http.Request, _ auth.Sessio
 			return err
 		}
 	}
-	jsonResponse(w, 200, map[string]any{"version": appversion.Version, "browser_theme": s.browserTheme(r), "profiles": profiles, "profile": profile, "preferences": prefs, "preferences_initialized": preferenceCount > 0, "restricted": session.Restricted, "warning": "", "max_profiles": s.Config.MaxProfiles, "password_min": s.Config.PasswordMin, "password_max": s.Config.PasswordMax, "jackett_enabled": s.torrentSearchEnabled(r.Context()), "torrent_search_enabled": s.torrentSearchEnabled(r.Context()), "torrent_downloads_enabled": s.torrentDownloadsEnabled(r.Context())})
+	searchEnabled, err := s.torrentSearchEnabled(r.Context())
+	if err != nil {
+		return err
+	}
+	downloadsEnabled, err := s.torrentDownloadsEnabled(r.Context())
+	if err != nil {
+		return err
+	}
+	jsonResponse(w, 200, map[string]any{"version": appversion.Version, "browser_theme": s.browserTheme(r), "profiles": profiles, "profile": profile, "preferences": prefs, "preferences_initialized": preferenceCount > 0, "restricted": session.Restricted, "warning": "", "max_profiles": s.Config.MaxProfiles, "password_min": s.Config.PasswordMin, "password_max": s.Config.PasswordMax, "jackett_enabled": searchEnabled, "torrent_search_enabled": searchEnabled, "torrent_downloads_enabled": downloadsEnabled})
 	return nil
 }
