@@ -15,7 +15,7 @@ func (s *Server) tallyDownloads(r *http.Request) (torrent.DownloadClient, torren
 	}
 	client, e := s.Clients.Current(r.Context())
 	if e != nil {
-		return nil, torrent.DownloadSnapshot{}, bad(e.Error())
+		return nil, torrent.DownloadSnapshot{}, clientInputError(e)
 	}
 	snapshot, e := client.Downloads(r.Context(), torrent.TallyCategory)
 	if e != nil {
