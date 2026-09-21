@@ -25,15 +25,19 @@ func (s *Server) torrentSearch(w http.ResponseWriter, r *http.Request, session a
 	if err := decode(r, &in); err != nil {
 		return err
 	}
-	in.Query = strings.Join(strings.Fields(in.Query), " ")
+	var err error
+	in.Query, err = normalizedSearchQuery(in.Query)
+	if err != nil {
+		return err
+	}
 	if !s.torrentSearchEnabled(r.Context()) {
 		return bad("torrent search is disabled in Settings")
 	}
-	if len(in.Query) < 2 || len(in.Query) > 200 {
-		return bad("search with 2–200 characters")
-	}
 	if in.MinSize < 0 || in.MaxSize < 0 || in.MinSeeders < 0 {
 		return bad("filters cannot be negative")
+	}
+	if len(in.Include) > 500 || len(in.Exclude) > 500 {
+		return bad("include and exclude filters must be 500 characters or fewer")
 	}
 
 	provider := s.jackett(r.Context())
