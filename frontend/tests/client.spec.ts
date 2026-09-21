@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { selectProfileByName } from "./navigation";
 
-test("configure, test, save and use a shared torrent client with visible API key controls and protected general APIs", async ({
+test("configure, test, save and use a shared torrent client with redacted API key controls and protected general APIs", async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -50,7 +50,7 @@ test("configure, test, save and use a shared torrent client with visible API key
     .getByLabel("API key", { exact: true })
     .fill("qbt_aaaaaaaaaaaaaaaaaaaaaaaaaaaa");
   await card.getByRole("button", { name: "Test connection" }).click();
-  await expect(card.getByRole("alert")).toContainText("HTTP 401");
+  await expect(card.getByRole("alert")).toContainText("external service request failed");
   await card
     .getByLabel("API key", { exact: true })
     .fill("qbt_0123456789abcdefghijklmnopqr");
@@ -66,8 +66,10 @@ test("configure, test, save and use a shared torrent client with visible API key
   await expect(
     card.getByRole("textbox", { name: "Web UI URL", exact: true }),
   ).toHaveValue(clientURL);
-  await expect(card.getByLabel("API key", { exact: true })).toHaveValue(
-    "qbt_0123456789abcdefghijklmnopqr",
+  await expect(card.getByLabel("API key", { exact: true })).toHaveValue("");
+  await expect(card.getByLabel("API key", { exact: true })).toHaveAttribute(
+    "placeholder",
+    "Saved — leave blank to keep it",
   );
   await expect(card.getByLabel("API key", { exact: true })).toHaveClass(
     "concealed-secret",
@@ -77,6 +79,7 @@ test("configure, test, save and use a shared torrent client with visible API key
     "text",
   );
   await card.getByRole("button", { name: "Show API key", exact: true }).click();
+  await expect(card.getByLabel("API key", { exact: true })).toHaveValue("");
   const saved = await (await page.request.get("/api/downloader")).json();
   expect(saved.settings.secrets_configured.api_key).toBe(true);
   expect(saved.settings.fields).not.toHaveProperty("api_key");
@@ -84,7 +87,7 @@ test("configure, test, save and use a shared torrent client with visible API key
     .getByRole("textbox", { name: "Web UI URL", exact: true })
     .fill(clientURL + "/different");
   await card.getByRole("button", { name: "Test connection" }).click();
-  await expect(card.getByRole("alert")).toContainText("HTTP 404");
+  await expect(card.getByRole("alert")).toContainText("external service request failed");
   await card
     .getByRole("textbox", { name: "Web UI URL", exact: true })
     .fill(clientURL);
