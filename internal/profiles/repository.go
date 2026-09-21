@@ -76,7 +76,10 @@ func (r Repository) Create(ctx context.Context, name, avatar, locale, hash, acto
 	}
 	actorName := name
 	if actor != profile.ID {
-		actorName = profileDisplayName(ctx, tx, actor)
+		actorName, err = profileDisplayName(ctx, tx, actor)
+		if err != nil {
+			return Profile{}, err
+		}
 	}
 	if err = activity.Record(ctx, tx, activity.Event{Action: "profile_created", Profile: actor, Message: actorName + " created profile " + name}); err != nil {
 		return Profile{}, err
