@@ -23,7 +23,7 @@ func (s *Server) testNotification(w http.ResponseWriter, r *http.Request, _ auth
 	defer cancel()
 	err := notifications.Send(ctx, s.Control, in, notifications.Message{Event: "test", Key: "test", Level: "info", Text: "Your Tally notification service is working.", Show: "Example show", Time: time.Now()})
 	if err != nil {
-		return apiError{502, err.Error()}
+		return remote(err)
 	}
 	jsonResponse(w, 200, map[string]string{"message": "Test notification delivered."})
 	return nil
