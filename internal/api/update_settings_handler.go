@@ -88,7 +88,7 @@ func (s *Server) updateSettings(w http.ResponseWriter, r *http.Request, session 
 			if errors.Is(e, settings.ErrConflict) {
 				return apiError{409, e.Error()}
 			}
-			return bad(e.Error())
+			return jobRequestError(e)
 		}
 		var revision int64
 		if e := s.DB.QueryRowContext(r.Context(), "SELECT revision FROM jobs WHERE key=?", in.Key).Scan(&revision); e != nil {
