@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -18,7 +19,7 @@ import (
 	"github.com/CarlFlo/tally/internal/database"
 )
 
-const usage = "usage: tally [serve|backup|restore <archive>|verify-backup <archive>|reset-password <profile-id-or-name>|delete-backup <filename>|help]"
+const usage = "usage: tally [serve|backup|restore <archive>|verify-backup <archive>|reset-password [profile-id-or-name]|delete-backup <filename>|help]"
 
 func Run(args []string) error {
 	command := "serve"
@@ -63,12 +64,26 @@ func Run(args []string) error {
 		}
 	}()
 
+	if command == "reset-password" && len(args) == 0 {
+		handled, response, operatorErr := callRunningOperatorResponse(ctx, c, operatorRequest{Action: "list-profiles"})
+		if operatorErr != nil {
+			return operatorErr
+		}
+		if handled {
+			if response.Error != "" {
+				return errors.New(response.Error)
+			}
+			printProfileList(response.Profiles)
+			return nil
+		}
+	}
+
 	if command == "verify-backup" {
 		return verifyBackup(ctx, c, args)
 	}
 
 	var resetValue string
-	if command == "reset-password" {
+	if command == "reset-password" && len(args) == 1 {
 		resetValue, err = readResetPassword()
 		if err != nil {
 			return err
@@ -122,6 +137,16 @@ func Run(args []string) error {
 	}
 	b := &backup.Service{DB: db, DataDir: c.DataDir, Path: filepath.Join(c.DataDir, "backups"), Timezone: c.Timezone}
 
+	if command == "reset-password" && len(args) == 0 {
+		defer db.Close()
+		profiles, listErr := listProfiles(ctx, db)
+		if listErr != nil {
+			return listErr
+		}
+		printProfileList(profiles)
+		return nil
+	}
+
 	if command == "serve" {
 		shutdownStarted, serveErr := serve(ctx, c, db, b)
 		if shutdownStarted.IsZero() {
@@ -170,8 +195,8 @@ func validateCommandArgs(command string, args []string) error {
 			return fmt.Errorf("usage: tally verify-backup <archive>")
 		}
 	case "reset-password":
-		if len(args) != 1 {
-			return fmt.Errorf("usage: tally reset-password <profile-id-or-name>")
+		if len(args) > 1 {
+			return fmt.Errorf("usage: tally reset-password [profile-id-or-name]")
 		}
 	case "delete-backup":
 		if len(args) != 1 {
