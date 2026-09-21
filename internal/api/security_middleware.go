@@ -42,7 +42,11 @@ func (s *Server) security(next http.Handler) http.Handler {
 		defer func() {
 			if v := recover(); v != nil {
 				slog.Error("request panic", "path", r.URL.Path, "panic", fmt.Sprint(v))
-				http.Error(w, "Internal server error", 500)
+				if strings.HasPrefix(r.URL.Path, "/api/") {
+					jsonResponse(w, http.StatusInternalServerError, map[string]string{"error": internalErrorMessage})
+					return
+				}
+				http.Error(w, "Internal server error", http.StatusInternalServerError)
 			}
 		}()
 		next.ServeHTTP(w, r)
