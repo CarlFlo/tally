@@ -2,6 +2,8 @@ package auth
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 )
 
@@ -27,6 +29,9 @@ func (s *Service) ProfileAuthMethod(ctx context.Context, profile string) (string
 	var hasPassword bool
 	if err := s.DB.QueryRowContext(ctx, `SELECT p.auth_method,EXISTS(SELECT 1 FROM local_credentials c WHERE c.profile_id=p.id)
 		FROM profiles p WHERE p.id=?`, profile).Scan(&method, &hasPassword); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", ErrProfileNotFound
+		}
 		return "", err
 	}
 	if hasPassword {
@@ -61,7 +66,7 @@ func (s *Service) SetProfileAuthentication(ctx context.Context, profile, method,
 		if err != nil {
 			return err
 		}
-		return fmt.Errorf("profile not found")
+		return ErrProfileNotFound
 	}
 	if method == ProfileAuthPassword {
 		if _, err = tx.ExecContext(ctx, `INSERT INTO local_credentials(profile_id,hash,must_change) VALUES(?,?,0)
