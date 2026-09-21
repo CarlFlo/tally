@@ -11,6 +11,7 @@ import { UnsavedChangesBar, useUnsavedChangesWarning } from "../UnsavedChangesBa
 import "../unsaved-changes.css";
 import {
   displayNotificationTime,
+  notificationEndpointReady,
   notificationErrors,
   parseNotificationTime,
 } from "./notificationValidation";
@@ -56,6 +57,7 @@ function NotificationForm({ saved }: { saved: any }) {
   const [secretsConfigured, setSecretsConfigured] = useState<Record<string, boolean>>(
     saved.secrets_configured || {},
   );
+  const [clearedSecrets, setClearedSecrets] = useState<Record<string, boolean>>({});
   const [timeText, setTimeText] = useState(() =>
     displayNotificationTime(data.delivery_time, boot.preferences.time_format),
   );
@@ -70,9 +72,12 @@ function NotificationForm({ saved }: { saved: any }) {
       boot.preferences.time_format,
     ),
   };
-  const errors = notificationErrors(normalized, secretsConfigured);
-  const savedValid =
-    Object.keys(notificationErrors(stored, secretsConfigured)).length === 0;
+  const effectiveConfigured = {
+    url: !!secretsConfigured.url && !clearedSecrets.url,
+    discord_url: !!secretsConfigured.discord_url && !clearedSecrets.discord_url,
+  };
+  const errors = notificationErrors(normalized, effectiveConfigured);
+  const savedValid = notificationEndpointReady(stored, secretsConfigured);
   const toggleMessage = savedValid
     ? ""
     : t("notifications.saveBeforeEnable");
@@ -94,22 +99,36 @@ function NotificationForm({ saved }: { saved: any }) {
     setData(next);
     setStored(next);
     setSecretsConfigured(saved.secrets_configured || {});
+    setClearedSecrets({});
     setRevision(saved.revision);
     setTimeText(
       displayNotificationTime(next.delivery_time, boot.preferences.time_format),
     );
   }, [boot.preferences.time_format, data, revision, saved, stored]);
-  const change = (key: string, value: any) =>
+  const change = (key: string, value: any) => {
+    if ((key === "url" || key === "discord_url") && value) {
+      setClearedSecrets((old) => ({ ...old, [key]: false }));
+    }
     setData((old: any) => ({ ...old, [key]: value }));
+  };
+  const clearSecret = (key: "url" | "discord_url", clear: boolean) => {
+    setClearedSecrets((old) => ({ ...old, [key]: clear }));
+    if (clear) {
+      setData((old: any) => ({ ...old, [key]: "" }));
+    }
+  };
   async function persist(next: any) {
     const response = await api("/settings/notifications", "PUT", {
       data: next,
       revision,
+      clear_secrets: clearedSecrets,
     });
     const serverTimezone = saved.server_timezone || next.timezone || "UTC";
     const nextConfigured = {
-      url: !!secretsConfigured.url || !!next.url,
-      discord_url: !!secretsConfigured.discord_url || !!next.discord_url,
+      url: !clearedSecrets.url && (!!secretsConfigured.url || !!next.url),
+      discord_url:
+        !clearedSecrets.discord_url &&
+        (!!secretsConfigured.discord_url || !!next.discord_url),
     };
     const persisted = {
       ...next,
@@ -119,6 +138,7 @@ function NotificationForm({ saved }: { saved: any }) {
     };
     setRevision(response.revision);
     setSecretsConfigured(nextConfigured);
+    setClearedSecrets({});
     setStored(persisted);
     setData(persisted);
     cache.setQueryData(queryKeys.local("editable-settings", "/settings/notifications"), {
@@ -190,6 +210,8 @@ function NotificationForm({ saved }: { saved: any }) {
             timeFormat={boot.preferences.time_format}
             changeTime={setTimeText}
             secretsConfigured={secretsConfigured}
+            clearedSecrets={clearedSecrets}
+            clearSecret={clearSecret}
           />
         </fieldset>
         {feedback && (
@@ -235,6 +257,7 @@ function NotificationForm({ saved }: { saved: any }) {
         busy={busy}
         onRevert={() => {
           setData(stored);
+          setClearedSecrets({});
           setTimeText(displayNotificationTime(stored.delivery_time, boot.preferences.time_format));
           setFeedback("");
         }}
