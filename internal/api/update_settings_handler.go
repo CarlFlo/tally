@@ -38,6 +38,11 @@ func (s *Server) updateSettings(w http.ResponseWriter, r *http.Request, session 
 		if e := decode(r, &in); e != nil {
 			return e
 		}
+		var current settings.Webhook
+		if _, e := s.settingsStore().Load(r.Context(), "notifications", &current); e != nil {
+			return e
+		}
+		in.Data = settings.MergeWebhookSecrets(in.Data, current)
 		if e := settings.ValidateWebhook(in.Data, s.Config.Timezone); e != nil {
 			return bad(e.Error())
 		}
@@ -51,6 +56,11 @@ func (s *Server) updateSettings(w http.ResponseWriter, r *http.Request, session 
 		if e := decode(r, &in); e != nil {
 			return e
 		}
+		var current settings.Search
+		if _, e := s.settingsStore().Load(r.Context(), "search", &current); e != nil {
+			return e
+		}
+		in.Data = settings.MergeSearchSecrets(in.Data, current)
 		if e := settings.ValidateSearch(in.Data); e != nil {
 			return bad(e.Error())
 		}
