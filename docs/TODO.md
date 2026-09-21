@@ -4,6 +4,11 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 ## Current work
 
+- [ ] Complete the architecture consistency and security audit.
+  - [ ] Consolidate genuine duplicate/shared behavior and make access/error boundaries explicit.
+  - [ ] Verify backend-authoritative security, async/state consistency, and regression coverage.
+  - [ ] Complete the repository-wide second pass and full branch-head validation.
+
 - [ ] Restructure administration and account navigation for clearer scope.
   - [x] Establish canonical admin/account route hierarchy while preserving legacy deep links.
   - [x] Separate personal notification preferences from deployment notification delivery.
