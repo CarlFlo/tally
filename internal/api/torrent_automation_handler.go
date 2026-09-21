@@ -99,9 +99,6 @@ func (s *Server) torrentAutomationShows(w http.ResponseWriter, r *http.Request, 
 }
 
 func (s *Server) torrentShowPolicy(w http.ResponseWriter, r *http.Request, _ auth.Session) error {
-	if err := torrent.ValidateShowMediaProfile(in.Mode); err != nil {
-		return bad(err.Error())
-	}
 	showID := r.PathValue("id")
 	var exists int
 	if err := s.DB.QueryRowContext(r.Context(), "SELECT EXISTS(SELECT 1 FROM shows WHERE id=?)", showID).Scan(&exists); err != nil {
@@ -186,6 +183,9 @@ func (s *Server) updateTorrentShowMediaProfile(w http.ResponseWriter, r *http.Re
 	}
 	if err := decode(r, &in); err != nil {
 		return err
+	}
+	if err := torrent.ValidateShowMediaProfile(in.Mode); err != nil {
+		return bad(err.Error())
 	}
 	showID := r.PathValue("id")
 	var exists int
