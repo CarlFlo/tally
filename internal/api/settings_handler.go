@@ -9,19 +9,24 @@ import (
 )
 
 func (s *Server) settings(w http.ResponseWriter, r *http.Request, session auth.Session) error {
-	backupKeep := 10
 	var retention settings.Backups
-	if _, err := s.settingsStore().Load(r.Context(), "backups", &retention); err == nil {
-		backupKeep = retention.Keep
+	if _, err := s.settingsStore().Load(r.Context(), "backups", &retention); err != nil {
+		return err
 	}
-	webhookConfigured := false
+
 	var webhook settings.Webhook
-	if _, e := s.settingsStore().Load(r.Context(), "notifications", &webhook); e == nil {
-		webhookConfigured = webhook.Enabled && webhook.URL != ""
+	if _, err := s.settingsStore().Load(r.Context(), "notifications", &webhook); err != nil {
+		return err
+	}
+	webhook = webhook.Defaults(s.Config.Timezone)
+	webhookConfigured := webhook.Enabled && webhook.Endpoint() != ""
+
+	rows, err := s.DB.Rows(r.Context(), "SELECT key,schedule,enabled FROM jobs")
+	if err != nil {
+		return err
 	}
 	metadataCron, maintenanceCron, backupCron := "0 * * * *", "30 3 * * *", "0 3 * * *"
 	backupEnabled := true
-	rows, _ := s.DB.Rows(r.Context(), "SELECT key,schedule,enabled FROM jobs")
 	for _, row := range rows {
 		switch row["key"] {
 		case "metadata":
@@ -33,33 +38,51 @@ func (s *Server) settings(w http.ResponseWriter, r *http.Request, session auth.S
 			backupEnabled = row["enabled"].(int64) == 1
 		}
 	}
-	backups := []map[string]any{}
-	if s.operator(session) == nil {
-		var e error
-		backups, e = s.DB.Rows(r.Context(), "SELECT * FROM backup_records ORDER BY created_at DESC LIMIT 100")
-		if e != nil {
-			return e
-		}
+
+	backups, err := s.DB.Rows(r.Context(), "SELECT * FROM backup_records ORDER BY created_at DESC LIMIT 100")
+	if err != nil {
+		return err
 	}
-	client, e := s.Clients.Load(r.Context())
-	if e != nil {
-		return e
+	client, err := s.Clients.Load(r.Context())
+	if err != nil {
+		return err
 	}
+	jackettConfigured, err := s.jackettConfigured(r.Context())
+	if err != nil {
+		return err
+	}
+	searchEnabled, err := s.torrentSearchEnabled(r.Context())
+	if err != nil {
+		return err
+	}
+	downloadsEnabled, err := s.torrentDownloadsEnabled(r.Context())
+	if err != nil {
+		return err
+	}
+
 	c := s.Config
-	var environment map[string]any
-	if s.operator(session) == nil {
-		environment = map[string]any{
-			"TZ":                             c.Timezone,
-			"APP_THEME_DEFAULT":              c.Theme,
-			"APP_MAX_PROFILES":               c.MaxProfiles,
-			"JOB_MAX_CONCURRENCY":            c.JobConcurrency,
-			"JOB_MAX_RETRIES":                c.JobRetries,
-			"JOB_MAX_BATCH_SIZE":             c.BatchSize,
-			"PROVIDER_MAX_CONCURRENCY":       c.ProviderConcurrency,
-			"STATS_RAW_RETENTION_DAYS":       c.RawRetention,
-			"STATS_AGGREGATE_RETENTION_DAYS": c.AggregateRetention,
-		}
+	environment := map[string]any{
+		"TZ":                             c.Timezone,
+		"APP_THEME_DEFAULT":              c.Theme,
+		"APP_MAX_PROFILES":               c.MaxProfiles,
+		"JOB_MAX_CONCURRENCY":            c.JobConcurrency,
+		"JOB_MAX_RETRIES":                c.JobRetries,
+		"JOB_MAX_BATCH_SIZE":             c.BatchSize,
+		"PROVIDER_MAX_CONCURRENCY":       c.ProviderConcurrency,
+		"STATS_RAW_RETENTION_DAYS":       c.RawRetention,
+		"STATS_AGGREGATE_RETENTION_DAYS": c.AggregateRetention,
 	}
-	jsonResponse(w, 200, map[string]any{"max_profiles": c.MaxProfiles, "timezone": c.Timezone, "downloader": client.Adapter, "downloader_configured": client.Configured(), "jackett_configured": s.jackettConfigured(), "torrent_search_enabled": s.torrentSearchEnabled(r.Context()), "torrent_downloads_enabled": s.torrentDownloadsEnabled(r.Context()), "webhook_configured": webhookConfigured, "backup_enabled": backupEnabled, "backup_keep": backupKeep, "backup_cron": backupCron, "metadata_cron": metadataCron, "maintenance_cron": maintenanceCron, "job_concurrency": c.JobConcurrency, "provider_concurrency": c.ProviderConcurrency, "operator": s.operator(session) == nil, "backups": backups, "schema_version": database.Version, "environment": environment})
+	jsonResponse(w, 200, map[string]any{
+		"max_profiles": c.MaxProfiles, "timezone": c.Timezone,
+		"downloader": client.Adapter, "downloader_configured": client.Configured(),
+		"jackett_configured": jackettConfigured,
+		"torrent_search_enabled": searchEnabled, "torrent_downloads_enabled": downloadsEnabled,
+		"webhook_configured": webhookConfigured,
+		"backup_enabled": backupEnabled, "backup_keep": retention.Keep,
+		"backup_cron": backupCron, "metadata_cron": metadataCron, "maintenance_cron": maintenanceCron,
+		"job_concurrency": c.JobConcurrency, "provider_concurrency": c.ProviderConcurrency,
+		"operator": session.Admin, "backups": backups, "schema_version": database.Version,
+		"environment": environment,
+	})
 	return nil
 }
