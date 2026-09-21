@@ -19,7 +19,7 @@ import (
 	"github.com/CarlFlo/tally/internal/database"
 )
 
-const usage = "usage: tally [serve|backup|restore <backup.zip>|verify-backup <backup.zip>|reset-password [profile-id-or-name]|delete-backup <filename>|help]"
+const usage = "usage: tally [serve|backup|restore [backup.zip]|verify-backup [backup.zip]|reset-password [profile-id-or-name]|delete-backup <filename>|help]"
 
 func Run(args []string) error {
 	command := "serve"
@@ -78,8 +78,26 @@ func Run(args []string) error {
 		}
 	}
 
+	if (command == "restore" || command == "verify-backup") && len(args) == 0 {
+		return printBackupList(ctx, c)
+	}
+
 	if command == "verify-backup" {
 		return verifyBackup(ctx, c, args)
+	}
+
+	if command == "backup" {
+		handled, response, operatorErr := callRunningOperatorResponse(ctx, c, operatorRequest{Action: "backup"})
+		if operatorErr != nil {
+			return operatorErr
+		}
+		if handled {
+			if response.Error != "" {
+				return errors.New(response.Error)
+			}
+			printBackupCreated(response.Backup)
+			return nil
+		}
 	}
 
 	var resetValue string
@@ -187,12 +205,12 @@ func Run(args []string) error {
 func validateCommandArgs(command string, args []string) error {
 	switch command {
 	case "restore":
-		if len(args) != 1 {
-			return fmt.Errorf("usage: tally restore <backup.zip>")
+		if len(args) > 1 {
+			return fmt.Errorf("usage: tally restore [backup.zip]")
 		}
 	case "verify-backup":
-		if len(args) != 1 {
-			return fmt.Errorf("usage: tally verify-backup <backup.zip>")
+		if len(args) > 1 {
+			return fmt.Errorf("usage: tally verify-backup [backup.zip]")
 		}
 	case "reset-password":
 		if len(args) > 1 {
