@@ -3,15 +3,19 @@ package commands
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"github.com/CarlFlo/tally/internal/backup"
 )
 
 func createBackup(ctx context.Context, b *backup.Service) error {
-	name, e := b.Create(ctx, "manual")
-	if e == nil {
-		fmt.Println(filepath.Join(b.Path, name))
+	name, err := b.Create(ctx, "manual")
+	if err != nil {
+		return err
 	}
-	return e
+	printBackupCreated(name)
+	return nil
+}
+
+func printBackupCreated(name string) {
+	fmt.Printf("Backup created: %s\n", name)
 }
