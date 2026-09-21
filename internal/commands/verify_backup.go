@@ -24,7 +24,7 @@ func verifyBackup(ctx context.Context, c config.Config, args []string) error {
 	defer os.RemoveAll(stage)
 	_, e = backup.Extract(ctx, archive, stage)
 	if e == nil {
-		fmt.Println("Backup verified")
+		fmt.Println("Backup verified successfully — archive is valid.")
 	}
 	return e
 }
