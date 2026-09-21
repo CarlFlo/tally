@@ -2,6 +2,7 @@ package api
 
 import (
 	"io/fs"
+	"log/slog"
 	"net/http"
 	"strings"
 )
@@ -39,10 +40,16 @@ func (s *Server) assets(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) requestTheme(r *http.Request) string {
 	theme := s.browserTheme(r)
-	if session, err := s.Auth.Resolve(r); err == nil && session.Profile != "" {
-		if value, ok := s.readPreferences(r, session.Profile)["theme"].(string); ok {
-			theme = value
+	if session, err := s.optionalSession(r); err == nil && session.Profile != "" {
+		if preferences, prefErr := s.readPreferences(r, session.Profile); prefErr == nil {
+			if value, ok := preferences["theme"].(string); ok {
+				theme = value
+			}
+		} else {
+			slog.Warn("read profile theme for first paint", "profile_id", session.Profile, "error", prefErr)
 		}
+	} else if err != nil {
+		slog.Warn("resolve session for first-paint theme", "error", err)
 	}
 	if theme != "light" && theme != "dark" && theme != "system" {
 		return "system"
