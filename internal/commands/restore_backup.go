@@ -19,6 +19,6 @@ func restoreBackup(ctx context.Context, c config.Config, args []string) error {
 	if err = backup.Restore(ctx, archive, c.DataDir); err != nil {
 		return err
 	}
-	fmt.Println("Backup restored successfully. Previous data was preserved in the pre-restore directory.")
+	fmt.Println("Backup restored successfully.")
 	return nil
 }
