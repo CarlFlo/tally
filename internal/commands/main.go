@@ -18,7 +18,7 @@ import (
 	"github.com/CarlFlo/tally/internal/database"
 )
 
-const usage = "usage: tally [serve|healthcheck|backup|restore <archive>|verify-backup <archive>|reset-password <profile-id-or-name>|delete-backup <filename>|help]"
+const usage = "usage: tally [serve|backup|restore <archive>|verify-backup <archive>|reset-password <profile-id-or-name>|delete-backup <filename>|help]"
 
 func Run(args []string) error {
 	command := "serve"
@@ -29,7 +29,7 @@ func Run(args []string) error {
 	case "help", "-h", "--help":
 		fmt.Println(usage)
 		return nil
-	case "healthcheck", "serve", "backup", "restore", "verify-backup", "reset-password", "delete-backup":
+	case "serve", "backup", "restore", "verify-backup", "reset-password", "delete-backup":
 	default:
 		return fmt.Errorf("%s", usage)
 	}
@@ -40,9 +40,6 @@ func Run(args []string) error {
 	c, err := config.Load()
 	if err != nil {
 		return err
-	}
-	if command == "healthcheck" {
-		return healthcheck(c)
 	}
 	if err = os.MkdirAll(c.DataDir, 0700); err != nil {
 		return err
