@@ -25,4 +25,12 @@ else
 fi
 
 chown "$PUID:$PGID" /config
+
+# Resolve the image's public command before dropping privileges. This keeps
+# CMD ["tally"] conventional without relying on su-exec to search PATH.
+if [ "$#" -gt 0 ] && [ "$1" = "tally" ]; then
+  shift
+  set -- /usr/local/libexec/tally "$@"
+fi
+
 exec su-exec "$PUID:$PGID" "$@"
