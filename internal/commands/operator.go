@@ -29,7 +29,8 @@ type operatorRequest struct {
 }
 
 type operatorResponse struct {
-	Error string `json:"error,omitempty"`
+	Error    string           `json:"error,omitempty"`
+	Profiles []profileSummary `json:"profiles,omitempty"`
 }
 
 type operatorServer struct {
@@ -81,8 +82,14 @@ func (s *operatorServer) handle(parent context.Context, conn net.Conn, c config.
 	}
 	ctx, cancel := context.WithTimeout(parent, 5*time.Minute)
 	defer cancel()
-	var err error
+
+	var (
+		err      error
+		profiles []profileSummary
+	)
 	switch request.Action {
+	case "list-profiles":
+		profiles, err = listProfiles(ctx, db)
 	case "reset-password":
 		if request.ProfileRef == "" || request.Password == "" {
 			err = fmt.Errorf("profile and password are required")
@@ -98,7 +105,7 @@ func (s *operatorServer) handle(parent context.Context, conn net.Conn, c config.
 	default:
 		err = fmt.Errorf("unsupported operator action")
 	}
-	response := operatorResponse{}
+	response := operatorResponse{Profiles: profiles}
 	if err != nil {
 		response.Error = err.Error()
 	}
@@ -114,27 +121,35 @@ func (s *operatorServer) Close() error {
 	return closeErr
 }
 
-func callRunningOperator(ctx context.Context, c config.Config, request operatorRequest) (bool, error) {
+func callRunningOperatorResponse(ctx context.Context, c config.Config, request operatorRequest) (bool, operatorResponse, error) {
 	path := filepath.Join(c.DataDir, operatorSocketName)
 	var dialer net.Dialer
 	conn, err := dialer.DialContext(ctx, "unix", path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) || errors.Is(err, syscall.ENOENT) || errors.Is(err, syscall.ECONNREFUSED) {
-			return false, nil
+			return false, operatorResponse{}, nil
 		}
-		return false, err
+		return false, operatorResponse{}, err
 	}
 	defer conn.Close()
 	_ = conn.SetDeadline(time.Now().Add(5 * time.Minute))
 	if err = json.NewEncoder(conn).Encode(request); err != nil {
-		return true, err
+		return true, operatorResponse{}, err
 	}
 	var response operatorResponse
 	if err = json.NewDecoder(io.LimitReader(conn, 64<<10)).Decode(&response); err != nil {
-		return true, err
+		return true, operatorResponse{}, err
+	}
+	return true, response, nil
+}
+
+func callRunningOperator(ctx context.Context, c config.Config, request operatorRequest) (bool, error) {
+	handled, response, err := callRunningOperatorResponse(ctx, c, request)
+	if err != nil {
+		return handled, err
 	}
 	if response.Error != "" {
-		return true, errors.New(response.Error)
+		return handled, errors.New(response.Error)
 	}
-	return true, nil
+	return handled, nil
 }
