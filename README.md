@@ -89,7 +89,6 @@ docker exec -it tally tally backup
 docker exec -it tally tally restore /config/backups/<backup>.zip
 docker exec -it tally tally verify-backup /config/backups/<backup>.zip
 docker exec -it tally tally delete-backup <filename>.zip
-docker exec tally tally healthcheck
 ```
 
 Run `docker exec tally tally help` for the full command list and usage.
