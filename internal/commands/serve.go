@@ -78,6 +78,11 @@ func serve(ctx context.Context, c config.Config, db *database.Store, b *backup.S
 	if err = j.Start(); err != nil {
 		return time.Time{}, err
 	}
+	operatorControl, err := startOperatorServer(ctx, c, db, b, hub, j)
+	if err != nil {
+		return time.Time{}, err
+	}
+	defer operatorControl.Close()
 
 	s := &api.Server{DB: db, Backup: b, Config: c, Auth: a, Metadata: m, Control: p, Jobs: j, Events: hub, Locales: locales, Clients: clients, Assets: web.Assets()}
 	server := &http.Server{Addr: c.Addr, Handler: s.Handler(), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 20 * time.Second, WriteTimeout: 120 * time.Second, IdleTimeout: 90 * time.Second, MaxHeaderBytes: 32 << 10}
