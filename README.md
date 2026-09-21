@@ -77,86 +77,22 @@ A profile configured with No authentication can be entered by anyone who can rea
 
 Tally stores its SQLite database, settings, locales, and backups below `/config` in the container. Application-managed credentials stored in Tally are included in protected backups; transient caches and environment-provided secrets are not.
 
-Backups can be created and restored from the web interface or CLI.
-
-Operator commands that Tally can apply safely at runtime are forwarded to the running server through a private Unix socket under `/config`. This means password resets and live restores do not require stopping the container:
-
-```bash
-docker exec -it tally tally reset-password <profile-id-or-name>
-docker exec -it tally tally restore /config/backups/<backup>.zip
-```
-
-The password reset prompts for the temporary password without echoing it, revokes existing sessions, and requires the profile to replace it after signing in. A live restore uses the same validated restore path as the web interface and refreshes server/browser state afterward.
-
-Commands that require exclusive offline access will still refuse to run while the main server owns the deployment lock. Run `tally help` to see the available commands.
+Backups can be created and restored from the web interface or CLI. See **Command-line tools** below for CLI usage.
 
 ## Command-line tools
 
-Tally includes operator commands for common maintenance and recovery tasks. When using Docker, run them inside the existing container:
-
-```bash
-docker exec -it tally tally <command>
-```
-
-Use `tally help` to display the available commands.
-
-### Reset a profile password
+Run maintenance commands inside the existing container:
 
 ```bash
 docker exec -it tally tally reset-password <profile-id-or-name>
-```
-
-Tally prompts for the temporary password without echoing it to the terminal. The command can be run while the server is online. Existing sessions for the profile are revoked, and the user must replace the temporary password after signing in.
-
-### Restore a backup
-
-```bash
-docker exec -it tally tally restore /config/backups/<backup>.zip
-```
-
-Restore can be performed while Tally is running. It uses the same validated live-restore path as the web interface and refreshes application state after the restore completes.
-
-### Create a backup
-
-```bash
 docker exec -it tally tally backup
-```
-
-Creates a manual backup and prints the resulting archive path.
-
-### Verify a backup
-
-```bash
+docker exec -it tally tally restore /config/backups/<backup>.zip
 docker exec -it tally tally verify-backup /config/backups/<backup>.zip
-```
-
-Validates and extracts the archive in a temporary staging directory without changing the live application state.
-
-### Delete a backup
-
-```bash
 docker exec -it tally tally delete-backup <filename>.zip
-```
-
-Deletes a backup from Tally's backup directory. Supply only the archive filename, not a path.
-
-### Check server readiness
-
-```bash
 docker exec tally tally healthcheck
 ```
 
-The command exits successfully when the running server reports that it is ready. It normally produces no output on success.
-
-### Show command help
-
-```bash
-docker exec tally tally help
-```
-
-The equivalent `tally -h` and `tally --help` forms are also supported.
-
-Commands that cannot safely share the live application state still use Tally's deployment lock and will refuse to run concurrently with the server.
+Run `docker exec tally tally help` for the full command list and usage.
 
 ## Localization
 
