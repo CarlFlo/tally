@@ -1,6 +1,9 @@
 package torrent
 
-import "context"
+import (
+	"context"
+	"errors"
+)
 
 func (s *ClientStore) Build(c ClientConfig) (DownloadClient, error) {
 	if c.Adapter == "" {
