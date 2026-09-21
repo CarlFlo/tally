@@ -1,13 +1,13 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Bot, RotateCcw, Save, ShieldCheck, SlidersHorizontal, Star, Undo2 } from "lucide-react";
-import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
+import { Bot, RotateCcw, ShieldCheck, SlidersHorizontal, Star } from "lucide-react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
-import { useBeforeUnload } from "react-router";
 import { api, Busy, ErrorState, useApp, useLocal } from "../lib";
 import { invalidateResources } from "../queryInvalidation";
 import { TorrentTabs } from "./TorrentTabs";
 import { AutomationShowEnrollmentList } from "../AutomationShowEnrollmentList";
 import { PageHeader } from "../PageHeader";
+import { UnsavedChangesBar, useUnsavedChangesWarning } from "../UnsavedChangesBar";
 import "../torrent-selection.css";
 
 type AutomationConfig = {
@@ -172,7 +172,6 @@ export function TorrentAutomationPage() {
   const [revision, setRevision] = useState(0);
   const [busy, setBusy] = useState(false);
   const [enrollmentDraft, setEnrollmentDraft] = useState<Record<string, boolean>>({});
-  const navigationApproved = useRef(false);
 
   useEffect(() => {
     if (!query.data) return;
@@ -209,53 +208,11 @@ export function TorrentAutomationPage() {
     JSON.stringify(configForSave(data, ruleText)) !== JSON.stringify(savedData);
   const hasUnsavedChanges = hasSettingsChanges || Object.keys(enrollmentDraft).length > 0;
 
-  useBeforeUnload((event) => {
-    if (!hasUnsavedChanges || busy || navigationApproved.current) return;
-    event.preventDefault();
-    event.returnValue = "";
-  });
-
-  useEffect(() => {
-    if (!hasUnsavedChanges || busy) return;
-    const warnBeforeNavigation = (event: MouseEvent) => {
-      if (
-        event.defaultPrevented ||
-        event.button !== 0 ||
-        event.metaKey ||
-        event.ctrlKey ||
-        event.shiftKey ||
-        event.altKey ||
-        !(event.target instanceof Element)
-      ) {
-        return;
-      }
-      const link = event.target.closest("a[href]") as HTMLAnchorElement | null;
-      if (
-        !link ||
-        (link.target && link.target !== "_self") ||
-        link.hasAttribute("download")
-      ) {
-        return;
-      }
-      const destination = new URL(link.href, window.location.href);
-      if (
-        destination.origin === window.location.origin &&
-        destination.href === window.location.href
-      ) {
-        return;
-      }
-      if (!window.confirm(t("torrentAutomation.navigationWarning"))) {
-        event.preventDefault();
-        return;
-      }
-      navigationApproved.current = true;
-      window.setTimeout(() => {
-        navigationApproved.current = false;
-      }, 0);
-    };
-    document.addEventListener("click", warnBeforeNavigation, true);
-    return () => document.removeEventListener("click", warnBeforeNavigation, true);
-  }, [busy, hasUnsavedChanges, t]);
+  useUnsavedChangesWarning(
+    hasUnsavedChanges,
+    busy,
+    t("torrentAutomation.navigationWarning"),
+  );
 
   if (query.error)
     return <ErrorState error={query.error} retry={() => query.refetch()} />;
@@ -298,8 +255,7 @@ export function TorrentAutomationPage() {
     });
   }
 
-  async function save(event: FormEvent) {
-    event.preventDefault();
+  async function save() {
     const currentData = data;
     const currentRuleText = ruleText;
     if (!currentData || !currentRuleText) return;
@@ -347,7 +303,13 @@ export function TorrentAutomationPage() {
       />
       <TorrentTabs />
 
-      <form onSubmit={save} className="torrent-automation-settings">
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          void save();
+        }}
+        className="torrent-automation-settings"
+      >
         <AutomationShowEnrollmentList
           enrollmentDraft={enrollmentDraft}
           disabled={busy}
@@ -800,22 +762,16 @@ export function TorrentAutomationPage() {
           </div>
         </section>
 
-        <div
-          className={`settings-actions automation-save-bar${hasUnsavedChanges ? " has-unsaved-changes" : ""}`}
-          aria-hidden={!hasUnsavedChanges}
-        >
-          <span className="automation-save-status">
-            {t("torrentAutomation.unsavedChanges")}
-          </span>
-          <button className="button ghost" type="button" disabled={busy || !hasUnsavedChanges} onClick={revert}>
-            <Undo2 size={17} />
-            {t("torrentAutomation.revert")}
-          </button>
-          <button className="button primary" type="submit" disabled={busy || !hasUnsavedChanges}>
-              {busy ? <Busy /> : <Save size={17} />}
-              {t("torrentAutomation.saveChanges")}
-          </button>
-        </div>
+        <UnsavedChangesBar
+          hasChanges={hasUnsavedChanges}
+          busy={busy}
+          onRevert={revert}
+          onSave={() => void save()}
+          statusLabel={t("torrentAutomation.unsavedChanges")}
+          revertLabel={t("torrentAutomation.revert")}
+          saveLabel={t("torrentAutomation.saveChanges")}
+          className="settings-actions automation-save-bar"
+        />
       </form>
     </div>
   );
