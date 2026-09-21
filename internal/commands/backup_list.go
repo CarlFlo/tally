@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"text/tabwriter"
 
@@ -29,16 +30,10 @@ func printBackupList(ctx context.Context, c config.Config) error {
 	}
 
 	fmt.Println("Available backups:")
-	w := tabwriter.NewWriter(stdoutWriter{}, 0, 4, 2, ' ', 0)
+	w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
 	fmt.Fprintln(w, "FILENAME\tTYPE")
 	for _, archive := range archives {
 		fmt.Fprintf(w, "%s\t%s\n", archive.Filename, archive.Kind)
 	}
 	return w.Flush()
-}
-
-type stdoutWriter struct{}
-
-func (stdoutWriter) Write(p []byte) (int, error) {
-	return fmt.Print(string(p))
 }
