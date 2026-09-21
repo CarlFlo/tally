@@ -27,7 +27,7 @@ func (s *Server) deleteProfile(w http.ResponseWriter, r *http.Request, session a
 	}
 	if targetAdmin {
 		if err := s.reauthenticateIfProtected(r.Context(), session.Profile, in.Password); err != nil {
-			return apiError{401, err.Error()}
+			return err
 		}
 	}
 
