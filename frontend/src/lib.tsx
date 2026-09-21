@@ -4,6 +4,7 @@ import { requestPool, RequestPoolOverloadError } from "./requestPool";
 import { queryKeys } from "./queryKeys";
 import { invalidateResources } from "./queryInvalidation";
 import { i18n } from "./i18n";
+import { released } from "./releaseTime";
 import {
   ArrowUpRight,
   Check,
@@ -511,13 +512,7 @@ export function EpisodeDrawer({
   const navigate = useNavigate();
   const [ep, setEp] = useState(episode);
   const [busy, setBusy] = useState(false);
-  const parsedAirstamp = Date.parse(ep.airstamp);
-  const today = dateTimeFormatter("en-CA", {
-    timeZone: boot.preferences.timezone,
-  }).format(Date.now());
-  const isReleased = Number.isFinite(parsedAirstamp)
-    ? parsedAirstamp <= Date.now()
-    : !!ep.airdate && ep.airdate < today;
+  const isReleased = released(ep, boot.preferences.timezone);
   async function toggle(field: "watched" | "downloaded") {
     const old = ep;
     const value = !ep[field];
