@@ -159,12 +159,8 @@ func (s *Server) updateTorrentShowPolicy(w http.ResponseWriter, r *http.Request,
 		return bad(err.Error())
 	}
 	showID := r.PathValue("id")
-	var exists int
-	if err := s.DB.QueryRowContext(r.Context(), "SELECT EXISTS(SELECT 1 FROM shows WHERE id=?)", showID).Scan(&exists); err != nil {
+	if err := s.requireTorrentShowAccess(r.Context(), session, showID); err != nil {
 		return err
-	}
-	if exists == 0 {
-		return apiError{404, "show not found"}
 	}
 	if err := s.torrentAutomationStore().SetShowPolicy(r.Context(), showID, in.Policy); err != nil {
 		return err
@@ -210,12 +206,8 @@ func (s *Server) updateTorrentShowMediaProfile(w http.ResponseWriter, r *http.Re
 		return bad(err.Error())
 	}
 	showID := r.PathValue("id")
-	var exists int
-	if err := s.DB.QueryRowContext(r.Context(), "SELECT EXISTS(SELECT 1 FROM shows WHERE id=?)", showID).Scan(&exists); err != nil {
+	if err := s.requireTorrentShowAccess(r.Context(), session, showID); err != nil {
 		return err
-	}
-	if exists == 0 {
-		return apiError{404, "show not found"}
 	}
 	if err := s.torrentAutomationStore().SetShowMediaProfile(r.Context(), showID, in.Mode); err != nil {
 		return err
