@@ -50,7 +50,7 @@ func testServer(t *testing.T, mode string) (*Server, http.Handler, *fakeTV) {
 	if _, e = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at,auth_method) VALUES('profile-admin','My profile','violet',?,'none')", time.Now().Unix()); e != nil {
 		t.Fatal(e)
 	}
-	c := config.Config{DataDir: dir, MaxProfiles: 3, PasswordMin: 4, PasswordMax: 128, Timezone: "UTC", Theme: "system", SessionIdle: 30 * 24 * time.Hour, SessionAbsolute: 180 * 24 * time.Hour, ResetCooldown: time.Minute}
+	c := config.Config{DataDir: dir, MaxProfiles: 3, PasswordMin: 4, PasswordMax: 128, Timezone: "UTC", Theme: "system", SessionIdle: 30 * 24 * time.Hour, SessionAbsolute: 180 * 24 * time.Hour}
 	p, e := providers.New(context.Background(), db, dir, 2, 0)
 	if e != nil {
 		t.Fatal(e)
