@@ -37,6 +37,8 @@ func serveCachedImage(w http.ResponseWriter, r *http.Request, path string) bool 
 	return true
 }
 
+var errInvalidProviderImage = errors.New("provider returned an invalid image")
+
 func validateImageFile(path string) error {
 	file, err := os.Open(path)
 	if err != nil {
@@ -45,7 +47,7 @@ func validateImageFile(path string) error {
 	defer file.Close()
 	cfg, format, err := image.DecodeConfig(file)
 	if err != nil || (format != "png" && format != "jpeg" && format != "webp") || cfg.Width > 5000 || cfg.Height > 5000 || int64(cfg.Width)*int64(cfg.Height) > 20000000 {
-		return errors.New("provider returned an invalid image")
+		return errInvalidProviderImage
 	}
 	return nil
 }
@@ -74,7 +76,10 @@ func (s *Server) image(w http.ResponseWriter, r *http.Request, _ auth.Session) e
 	}
 	defer os.Remove(download.Path)
 	if err = validateImageFile(download.Path); err != nil {
-		return bad(err.Error())
+		if errors.Is(err, errInvalidProviderImage) {
+			return bad(err.Error())
+		}
+		return err
 	}
 	if err = os.Rename(download.Path, path); err != nil {
 		// Another concurrent request may have populated the same cache entry.
