@@ -86,7 +86,7 @@ type AutomationRun struct {
 }
 
 type AutomationFeedback struct {
-	ProfileID string `json:"profile_id,omitempty"`
+	ProfileID string `json:"-"`
 	Reason    string `json:"reason"`
 	Note      string `json:"note,omitempty"`
 	CreatedAt int64  `json:"created_at"`
@@ -459,17 +459,35 @@ func validTerminalRunStatus(status AutomationRunStatus) bool {
 }
 
 func (s AutomationStore) ListRuns(ctx context.Context, limit int) ([]AutomationRun, error) {
+	return s.listRuns(ctx, "", limit)
+}
+
+func (s AutomationStore) ListRunsForProfile(ctx context.Context, profileID string, limit int) ([]AutomationRun, error) {
+	if profileID == "" {
+		return []AutomationRun{}, nil
+	}
+	return s.listRuns(ctx, profileID, limit)
+}
+
+func (s AutomationStore) listRuns(ctx context.Context, profileID string, limit int) ([]AutomationRun, error) {
 	if limit <= 0 || limit > 200 {
 		limit = 100
 	}
-	rows, err := s.DB.QueryContext(ctx, `SELECT r.id,r.show_id,r.episode_id,r.show_name,r.season,r.episode,r.query,r.status,
+	query := `SELECT r.id,r.show_id,r.episode_id,r.show_name,r.season,r.episode,r.query,r.status,
 		r.confidence,r.verification,r.selected_name,r.selected_infohash,r.settings_snapshot,r.decision_log,r.engine_version,
 		r.started_at,r.ended_at,r.duration_ms,f.profile_id,f.reason,f.note,f.created_at,
 		m.infohash,m.status,m.attempts,m.last_checked_at,m.completed_at,m.assessment,m.size_profile,m.error
 		FROM torrent_automation_runs r
 		LEFT JOIN torrent_automation_feedback f ON f.run_id=r.id
-		LEFT JOIN torrent_magnet_verifications m ON m.run_id=r.id
-		ORDER BY r.started_at DESC LIMIT ?`, limit)
+		LEFT JOIN torrent_magnet_verifications m ON m.run_id=r.id`
+	args := []any{}
+	if profileID != "" {
+		query += " WHERE EXISTS(SELECT 1 FROM profile_shows p WHERE p.profile_id=? AND p.show_id=r.show_id)"
+		args = append(args, profileID)
+	}
+	query += " ORDER BY r.started_at DESC LIMIT ?"
+	args = append(args, limit)
+	rows, err := s.DB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
