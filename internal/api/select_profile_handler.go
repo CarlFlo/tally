@@ -1,6 +1,8 @@
 package api
 
 import (
+	"database/sql"
+	"errors"
 	"net/http"
 
 	"github.com/CarlFlo/tally/internal/auth"
@@ -11,12 +13,20 @@ func (s *Server) selectProfile(w http.ResponseWriter, r *http.Request, _ auth.Se
 	if e := decode(r, &in); e != nil {
 		return e
 	}
-	if session, _ := s.Auth.Resolve(r); session.Profile != "" && session.Profile != in.Profile {
+	session, err := s.optionalSession(r)
+	if err != nil {
+		return err
+	}
+	if session.Profile != "" && session.Profile != in.Profile {
 		return apiError{409, "sign out before choosing another profile"}
 	}
 	var method string
-	if s.DB.QueryRowContext(r.Context(), "SELECT auth_method FROM profiles WHERE id=?", in.Profile).Scan(&method) != nil {
+	err = s.DB.QueryRowContext(r.Context(), "SELECT auth_method FROM profiles WHERE id=?", in.Profile).Scan(&method)
+	if errors.Is(err, sql.ErrNoRows) {
 		return apiError{404, "profile no longer exists"}
+	}
+	if err != nil {
+		return err
 	}
 	switch method {
 	case auth.ProfileAuthNone:
