@@ -53,6 +53,9 @@ function NotificationForm({ saved }: { saved: any }) {
   const [data, setData] = useState(() =>
     defaults(saved.data, saved.server_timezone),
   );
+  const [secretsConfigured, setSecretsConfigured] = useState<Record<string, boolean>>(
+    saved.secrets_configured || {},
+  );
   const [timeText, setTimeText] = useState(() =>
     displayNotificationTime(data.delivery_time, boot.preferences.time_format),
   );
@@ -67,8 +70,9 @@ function NotificationForm({ saved }: { saved: any }) {
       boot.preferences.time_format,
     ),
   };
-  const errors = notificationErrors(normalized);
-  const savedValid = Object.keys(notificationErrors(stored)).length === 0;
+  const errors = notificationErrors(normalized, secretsConfigured);
+  const savedValid =
+    Object.keys(notificationErrors(stored, secretsConfigured)).length === 0;
   const toggleMessage = savedValid
     ? ""
     : t("notifications.saveBeforeEnable");
@@ -89,6 +93,7 @@ function NotificationForm({ saved }: { saved: any }) {
     const next = defaults(saved.data, saved.server_timezone);
     setData(next);
     setStored(next);
+    setSecretsConfigured(saved.secrets_configured || {});
     setRevision(saved.revision);
     setTimeText(
       displayNotificationTime(next.delivery_time, boot.preferences.time_format),
@@ -102,13 +107,25 @@ function NotificationForm({ saved }: { saved: any }) {
       revision,
     });
     const serverTimezone = saved.server_timezone || next.timezone || "UTC";
-    const persisted = { ...next, timezone: serverTimezone };
+    const nextConfigured = {
+      url: !!secretsConfigured.url || !!next.url,
+      discord_url: !!secretsConfigured.discord_url || !!next.discord_url,
+    };
+    const persisted = {
+      ...next,
+      url: "",
+      discord_url: "",
+      timezone: serverTimezone,
+    };
     setRevision(response.revision);
+    setSecretsConfigured(nextConfigured);
     setStored(persisted);
+    setData(persisted);
     cache.setQueryData(queryKeys.local("editable-settings", "/settings/notifications"), {
       data: persisted,
       revision: response.revision,
       server_timezone: serverTimezone,
+      secrets_configured: nextConfigured,
     });
     await invalidateResources(cache, ["settings"]);
   }
@@ -126,7 +143,6 @@ function NotificationForm({ saved }: { saved: any }) {
     try {
       const enabledChanged = normalized.enabled !== stored.enabled;
       await persist(normalized);
-      setData(normalized);
       notify(
         enabledChanged
           ? t(normalized.enabled ? "notifications.enabledNotice" : "notifications.disabledNotice")
@@ -173,6 +189,7 @@ function NotificationForm({ saved }: { saved: any }) {
             timeText={timeText}
             timeFormat={boot.preferences.time_format}
             changeTime={setTimeText}
+            secretsConfigured={secretsConfigured}
           />
         </fieldset>
         {feedback && (
