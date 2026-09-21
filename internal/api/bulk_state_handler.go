@@ -23,8 +23,8 @@ func (s *Server) bulkState(w http.ResponseWriter, r *http.Request, session auth.
 		return bad("choose watched or downloaded state")
 	}
 	id := r.PathValue("id")
-	if !s.follows(r, session.Profile, id) {
-		return apiError{404, "show is not in your library"}
+	if err := s.requireFollow(r.Context(), session.Profile, id); err != nil {
+		return err
 	}
 
 	where := []string{"show_id=?"}
