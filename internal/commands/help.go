@@ -17,7 +17,7 @@ Commands:
   help                                Show this help
 
 Backup files:
-  Backup filenames are resolved from /config/backups by default.
+  Backup filenames are resolved from Tally's backup directory (normally /config/backups).
   restore and verify-backup also accept an absolute archive path.
 
 Examples:
