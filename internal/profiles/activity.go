@@ -3,19 +3,24 @@ package profiles
 import (
 	"context"
 	"database/sql"
+	"errors"
 )
 
 type rowQuerier interface {
 	QueryRowContext(context.Context, string, ...any) *sql.Row
 }
 
-func profileDisplayName(ctx context.Context, db rowQuerier, id string) string {
+func profileDisplayName(ctx context.Context, db rowQuerier, id string) (string, error) {
 	if id == "" {
-		return "System"
+		return "System", nil
 	}
 	var name string
-	if err := db.QueryRowContext(ctx, "SELECT display_name FROM profiles WHERE id=?", id).Scan(&name); err != nil || name == "" {
-		return "Deleted profile"
+	err := db.QueryRowContext(ctx, "SELECT display_name FROM profiles WHERE id=?", id).Scan(&name)
+	if errors.Is(err, sql.ErrNoRows) || name == "" {
+		return "Deleted profile", nil
 	}
-	return name
+	if err != nil {
+		return "", err
+	}
+	return name, nil
 }
