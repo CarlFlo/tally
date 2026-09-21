@@ -63,7 +63,7 @@ func TestEditableSettingsPersistAndIgnoreLaterEnvironment(t *testing.T) {
 		t.Fatal("disabled webhook still enabled")
 	}
 }
-func TestConnectionSecretsVisibleOnlyInExplicitOperatorView(t *testing.T) {
+func TestConnectionSecretsRemainRedactedForOperators(t *testing.T) {
 	s, h, _ := testServer(t, "local")
 	ctx := context.Background()
 	s.settingsStore().Ensure(ctx)
@@ -72,15 +72,21 @@ func TestConnectionSecretsVisibleOnlyInExplicitOperatorView(t *testing.T) {
 	}
 	owner := httptest.NewRecorder()
 	s.Auth.NewSession(ctx, owner, httptest.NewRequest("GET", "/", nil), "profile-admin", false)
-	response := request(t, h, "GET", "/api/downloader?reveal=1", nil, owner.Result().Cookies()...)
+	response := request(t, h, "GET", "/api/downloader", nil, owner.Result().Cookies()...)
 	expect(t, response, 200)
-	if !strings.Contains(response.Body.String(), fixtureClientKey) || response.Header().Get("Cache-Control") != "no-store" {
-		t.Fatal("explicit reveal unavailable or cacheable")
+	if strings.Contains(response.Body.String(), fixtureClientKey) {
+		t.Fatal("operator response exposed stored downloader credential")
+	}
+	if !strings.Contains(response.Body.String(), `"api_key":true`) {
+		t.Fatal("operator response did not report configured downloader credential")
+	}
+	if response.Header().Get("Cache-Control") != "no-store" {
+		t.Fatal("operator connection settings were cacheable")
 	}
 	s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-member','Other','mint',1)")
 	ordinary := httptest.NewRecorder()
 	s.Auth.NewSession(ctx, ordinary, httptest.NewRequest("GET", "/", nil), "profile-member", false)
-	for _, path := range []string{"/api/downloader?reveal=1", "/api/settings/search", "/api/settings/torrent", "/api/settings/notifications", "/api/settings/scheduling"} {
+	for _, path := range []string{"/api/downloader", "/api/settings/search", "/api/settings/torrent", "/api/settings/notifications", "/api/settings/scheduling"} {
 		expect(t, request(t, h, "GET", path, nil, ordinary.Result().Cookies()...), 403)
 	}
 }
