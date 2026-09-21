@@ -87,8 +87,8 @@ Run maintenance commands inside the existing container:
 docker exec -it tally tally reset-password
 docker exec -it tally tally reset-password <profile-id-or-unique-name>
 docker exec -it tally tally backup
-docker exec -it tally tally restore /config/backups/<backup>.zip
-docker exec -it tally tally verify-backup /config/backups/<backup>.zip
+docker exec -it tally tally restore <backup>.zip
+docker exec -it tally tally verify-backup <backup>.zip
 docker exec -it tally tally delete-backup <filename>.zip
 ```
 
