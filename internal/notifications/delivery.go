@@ -2,6 +2,7 @@ package notifications
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/CarlFlo/tally/internal/activity"
@@ -41,6 +42,7 @@ func (s *Service) deliver(ctx context.Context, now time.Time) error {
 			statsChanged = true
 			if sendErr := Send(ctx, s.Requester, config, message); sendErr != nil {
 				status = "failed"
+				slog.Warn("notification delivery failed", "event", event, "error", sendErr)
 				if err = activity.Record(ctx, s.DB, activity.Event{Action: "notification_failed", Message: "Notification delivery failed. Check Notification Services and test the connection."}); err != nil {
 					return err
 				}
