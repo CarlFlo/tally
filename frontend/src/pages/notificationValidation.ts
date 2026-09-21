@@ -12,6 +12,8 @@ export function notificationErrors(
   const endpointField = data.type === "discord" ? "discord_url" : "url";
   if (!endpoint && configured[endpointField]) {
     // Stored endpoints are deliberately redacted from the browser.
+  } else if (!endpoint && !data.enabled) {
+    // A disabled service may intentionally have no saved endpoint.
   } else if (!validURL(endpoint)) {
     errors[endpointField] = i18n.t("validation.validURL");
   }
@@ -74,4 +76,13 @@ function validateBody(body: string, errors: NotificationErrors) {
     if (!tokens.has(match[1]))
       errors.body = i18n.t("validation.unsupportedPlaceholder", { token: `{{${match[1]}}}` });
   }
+}
+
+
+export function notificationEndpointReady(
+  data: any,
+  configured: Record<string, boolean> = {},
+) {
+  const field = data.type === "discord" ? "discord_url" : "url";
+  return !!data[field] || !!configured[field];
 }
