@@ -6,9 +6,13 @@ import (
 	"github.com/CarlFlo/tally/internal/torrent"
 )
 
-func clientInputError(e error) error {
-	if errors.Is(e, torrent.ErrClientConflict) {
-		return apiError{409, e.Error()}
+func clientInputError(err error) error {
+	if errors.Is(err, torrent.ErrClientConflict) {
+		return apiError{409, err.Error()}
 	}
-	return bad(e.Error())
+	var validation torrent.ClientValidationError
+	if errors.As(err, &validation) || errors.Is(err, torrent.ErrNoClient) {
+		return bad(err.Error())
+	}
+	return err
 }
