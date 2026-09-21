@@ -9,7 +9,11 @@ import (
 )
 
 func (s *Server) registerProfile(w http.ResponseWriter, r *http.Request, _ auth.Session) error {
-	if session, _ := s.Auth.Resolve(r); session.Profile != "" {
+	session, err := s.optionalSession(r)
+	if err != nil {
+		return err
+	}
+	if session.Profile != "" {
 		return apiError{409, "sign out before creating a profile here"}
 	}
 	var in struct {
