@@ -15,7 +15,14 @@ func (s *Server) restoreBackup(w http.ResponseWriter, r *http.Request, session a
 	if s.Backup == nil {
 		return apiError{500, "backup service is unavailable"}
 	}
-	manifest, err := (restorer.Coordinator{DB: s.DB, Backup: s.Backup, Events: s.Events, Jobs: s.Jobs}).Archive(r.Context(), r.PathValue("id"))
+	coordinator := restorer.Coordinator{DB: s.DB, Backup: s.Backup}
+	if s.Events != nil {
+		coordinator.Events = s.Events
+	}
+	if s.Jobs != nil {
+		coordinator.Jobs = s.Jobs
+	}
+	manifest, err := coordinator.Archive(r.Context(), r.PathValue("id"))
 	if errors.Is(err, backup.ErrNotFound) {
 		return apiError{404, "backup not found"}
 	}
