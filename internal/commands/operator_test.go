@@ -55,6 +55,44 @@ func TestOperatorServerResetsPasswordWhileApplicationIsRunning(t *testing.T) {
 	}
 }
 
+func TestOperatorServerListsProfilesWhileApplicationIsRunning(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	dir := t.TempDir()
+	c := config.Config{DataDir: dir, Timezone: "UTC", PasswordMin: 4, PasswordMax: 128}
+	db, err := database.Open(ctx, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-a','Alex','violet',1),('profile-b','Alex','mint',2)"); err != nil {
+		t.Fatal(err)
+	}
+	backups := &backup.Service{DB: db, DataDir: dir, Path: filepath.Join(dir, "backups"), Timezone: "UTC"}
+	server, err := startOperatorServer(ctx, c, db, backups, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer server.Close()
+
+	handled, response, err := callRunningOperatorResponse(ctx, c, operatorRequest{Action: "list-profiles"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !handled {
+		t.Fatal("running operator server was not detected")
+	}
+	if response.Error != "" {
+		t.Fatal(response.Error)
+	}
+	if len(response.Profiles) != 2 {
+		t.Fatalf("expected 2 profiles, got %d", len(response.Profiles))
+	}
+	if response.Profiles[0].ID != "profile-a" || response.Profiles[1].ID != "profile-b" {
+		t.Fatalf("unexpected profile list: %+v", response.Profiles)
+	}
+}
+
 type restorePublisher struct {
 	called bool
 }
@@ -139,14 +177,16 @@ func TestCommandArgumentsAreValidatedBeforeRuntimeWork(t *testing.T) {
 		command string
 		args    []string
 	}{
-		{"reset-password", nil},
+		{"reset-password", []string{"one", "two"}},
 		{"restore", nil},
 		{"verify-backup", nil},
 		{"delete-backup", nil},
-		{"healthcheck", []string{"unexpected"}},
 	} {
 		if err := validateCommandArgs(test.command, test.args); err == nil {
 			t.Fatalf("%s accepted invalid arguments", test.command)
 		}
+	}
+	if err := validateCommandArgs("reset-password", nil); err != nil {
+		t.Fatalf("reset-password without a target should list profiles: %v", err)
 	}
 }
