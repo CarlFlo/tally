@@ -1,9 +1,6 @@
 package torrent
 
-import (
-	"context"
-	"fmt"
-)
+import "context"
 
 func (s *ClientStore) Build(c ClientConfig) (DownloadClient, error) {
 	if c.Adapter == "" {
@@ -11,10 +8,13 @@ func (s *ClientStore) Build(c ClientConfig) (DownloadClient, error) {
 	}
 	adapter := findClient(c.Adapter)
 	if adapter == nil {
-		return nil, fmt.Errorf("the saved torrent client is no longer supported; choose a client in Settings")
+		return nil, clientValidation("the saved torrent client is no longer supported; choose a client in Settings")
 	}
 	if e := c.validate(); e != nil {
-		return nil, e
+		if errors.Is(e, ErrNoClient) {
+			return nil, e
+		}
+		return nil, clientValidation("%s", e.Error())
 	}
 	return adapter.create(s.Control, c.Fields), nil
 }
