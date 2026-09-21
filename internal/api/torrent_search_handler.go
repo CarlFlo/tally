@@ -30,7 +30,11 @@ func (s *Server) torrentSearch(w http.ResponseWriter, r *http.Request, session a
 	if err != nil {
 		return err
 	}
-	if !s.torrentSearchEnabled(r.Context()) {
+	enabled, err := s.torrentSearchEnabled(r.Context())
+	if err != nil {
+		return err
+	}
+	if !enabled {
 		return bad("torrent search is disabled in Settings")
 	}
 	if in.MinSize < 0 || in.MaxSize < 0 || in.MinSeeders < 0 {
@@ -40,7 +44,10 @@ func (s *Server) torrentSearch(w http.ResponseWriter, r *http.Request, session a
 		return bad("include and exclude filters must be 500 characters or fewer")
 	}
 
-	provider := s.jackett(r.Context())
+	provider, err := s.jackett(r.Context())
+	if err != nil {
+		return err
+	}
 	if provider == nil {
 		return bad("configure and enable Jackett in Settings before searching")
 	}
@@ -134,11 +141,11 @@ func (s *Server) torrentSearchEvaluation(w http.ResponseWriter, r *http.Request,
 	selected.Data = encoded
 	s.selections.Store(token, selected)
 
-	config := settings.DefaultTorrentAutomation()
 	var stored settings.TorrentAutomation
-	if _, loadErr := s.settingsStore().Load(r.Context(), "torrent_automation", &stored); loadErr == nil {
-		config = stored.Effective()
+	if _, err := s.settingsStore().Load(r.Context(), "torrent_automation", &stored); err != nil {
+		return err
 	}
+	config := stored.Effective()
 
 	result := payload.Result
 	parsed := torrent.ParseReleaseName(result.Name)
