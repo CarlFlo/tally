@@ -14,6 +14,12 @@ func (s *Service) wakeScheduler() {
 	}
 }
 
+// RefreshSchedules asks the scheduler loop to re-read authoritative schedule
+// state immediately. It is used after live database restoration.
+func (s *Service) RefreshSchedules() {
+	s.wakeScheduler()
+}
+
 func (s *Service) nextScheduleDelay(now time.Time) time.Duration {
 	var next int64
 	if err := s.DB.QueryRowContext(s.ctx, "SELECT COALESCE(MIN(next_run),0) FROM jobs WHERE enabled=1 AND paused=0 AND next_run>0").Scan(&next); err != nil {
