@@ -13,7 +13,8 @@ func (s *Server) editableSettings(w http.ResponseWriter, r *http.Request, sessio
 	if e := s.operator(session); e != nil {
 		return e
 	}
-	// Secrets are deliberately visible to the deployment owner; never cache them.
+	// Editable settings may contain connection metadata; never cache them.
+	// Stored credentials are redacted before serialization.
 	w.Header().Set("Cache-Control", "no-store")
 	section := r.PathValue("section")
 	if section == "scheduling" {
