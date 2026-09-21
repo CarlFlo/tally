@@ -84,14 +84,15 @@ Backups can be created and restored from the web interface or CLI. See **Command
 Run maintenance commands inside the existing container:
 
 ```bash
-docker exec -it tally tally reset-password <profile-id-or-name>
+docker exec -it tally tally reset-password
+docker exec -it tally tally reset-password <profile-id-or-unique-name>
 docker exec -it tally tally backup
 docker exec -it tally tally restore /config/backups/<backup>.zip
 docker exec -it tally tally verify-backup /config/backups/<backup>.zip
 docker exec -it tally tally delete-backup <filename>.zip
 ```
 
-Run `docker exec tally tally help` for the full command list and usage.
+Running `reset-password` without a profile lists the available profiles and IDs. Run `docker exec tally tally help` for the full command list and usage.
 
 ## Localization
 
