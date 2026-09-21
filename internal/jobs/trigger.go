@@ -3,7 +3,7 @@ package jobs
 import (
 	"context"
 	"errors"
-	"fmt"
+	"database/sql"
 	"log/slog"
 	"time"
 
@@ -31,7 +31,7 @@ func (s *Service) TriggerAndWait(ctx context.Context, kind, trigger, show string
 
 func (s *Service) trigger(kind, trigger, show string) (string, <-chan error, error) {
 	if kind != "metadata" && kind != "torrent_automation" && kind != "maintenance" && kind != "backup" {
-		return "", nil, fmt.Errorf("unknown job")
+		return "", nil, requestError("unknown job")
 	}
 	key := kind
 	if show != "" {
@@ -40,24 +40,24 @@ func (s *Service) trigger(kind, trigger, show string) (string, <-chan error, err
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.stopped {
-		return "", nil, fmt.Errorf("application is shutting down")
+		return "", nil, requestError("application is shutting down")
 	}
 	if trigger == "scheduled_refresh" {
 		var enabled, paused bool
 		if err := s.DB.QueryRow("SELECT enabled,paused FROM jobs WHERE key=?", kind).Scan(&enabled, &paused); err != nil {
-			return "", nil, fmt.Errorf("read job schedule state: %w", err)
+			return "", nil, err
 		}
 		if !enabled || paused {
-			return "", nil, fmt.Errorf("job schedule is disabled or paused")
+			return "", nil, requestError("job schedule is disabled or paused")
 		}
 	}
 	if _, ok := s.running[key]; ok {
-		return "", nil, fmt.Errorf("this job is already running")
+		return "", nil, requestError("this job is already running")
 	}
 	select {
 	case s.sem <- struct{}{}:
 	default:
-		return "", nil, fmt.Errorf("all job slots are busy; try again shortly")
+		return "", nil, requestError("all job slots are busy; try again shortly")
 	}
 	id := database.ID()
 	ctx, cancel := context.WithTimeout(s.ctx, s.Config.JobRuntime)
@@ -128,16 +128,20 @@ func (s *Service) trigger(kind, trigger, show string) (string, <-chan error, err
 	return id, done, nil
 }
 
-func (s *Service) Cancel(id string) bool {
+func (s *Service) Cancel(id string) (bool, error) {
 	var key string
-	if s.DB.QueryRow("SELECT job_key FROM job_runs WHERE id=? AND status='running'", id).Scan(&key) != nil {
-		return false
+	err := s.DB.QueryRow("SELECT job_key FROM job_runs WHERE id=? AND status='running'", id).Scan(&key)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if cancel, ok := s.running[key]; ok {
 		cancel()
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
