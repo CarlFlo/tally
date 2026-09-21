@@ -3,6 +3,8 @@ package auth
 import (
 	"context"
 	"encoding/base64"
+	"errors"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -145,5 +147,30 @@ func TestRecoveryExpiryRestartAndForcedReplacement(t *testing.T) {
 	_ = s.DB.QueryRow("SELECT hash FROM local_credentials WHERE profile_id='profile-fixture'").Scan(&stored)
 	if !Verify(stored, "changed") || Verify(stored, "original") {
 		t.Fatal("password replacement failed")
+	}
+}
+
+func TestResolveDistinguishesSessionStateFromStorageFailure(t *testing.T) {
+	s := testAuth(t)
+	if _, err := s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at,auth_method) VALUES('session-profile','Session','violet',1,'none')"); err != nil {
+		t.Fatal(err)
+	}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "http://example.com", nil)
+	if err := s.NewSession(context.Background(), w, r, "session-profile", false); err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest(http.MethodGet, "http://example.com", nil)
+	request.AddCookie(w.Result().Cookies()[0])
+
+	if err := s.DB.Close(); err != nil {
+		t.Fatal(err)
+	}
+	_, err := s.Resolve(request)
+	if err == nil {
+		t.Fatal("closed database did not fail session resolution")
+	}
+	if errors.Is(err, ErrSignInRequired) || errors.Is(err, ErrSessionExpired) {
+		t.Fatalf("storage failure was misclassified as an invalid session: %v", err)
 	}
 }
