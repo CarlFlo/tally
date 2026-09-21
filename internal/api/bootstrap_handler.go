@@ -12,7 +12,10 @@ func (s *Server) bootstrap(w http.ResponseWriter, r *http.Request, _ auth.Sessio
 	if e != nil {
 		return e
 	}
-	session, _ := s.Auth.Resolve(r)
+	session, err := s.optionalSession(r)
+	if err != nil {
+		return err
+	}
 	var profile any
 	var prefs any = map[string]any{}
 	for _, p := range profiles {
@@ -20,11 +23,16 @@ func (s *Server) bootstrap(w http.ResponseWriter, r *http.Request, _ auth.Sessio
 			profile = p
 		}
 	}
-	if session.Profile != "" {
-		prefs = s.readPreferences(r, session.Profile)
-	}
 	var preferenceCount int
-	_ = s.DB.QueryRowContext(r.Context(), "SELECT COUNT(*) FROM profile_preferences WHERE profile_id=?", session.Profile).Scan(&preferenceCount)
+	if session.Profile != "" {
+		prefs, err = s.readPreferences(r, session.Profile)
+		if err != nil {
+			return err
+		}
+		if err = s.DB.QueryRowContext(r.Context(), "SELECT COUNT(*) FROM profile_preferences WHERE profile_id=?", session.Profile).Scan(&preferenceCount); err != nil {
+			return err
+		}
+	}
 	jsonResponse(w, 200, map[string]any{"version": appversion.Version, "browser_theme": s.browserTheme(r), "profiles": profiles, "profile": profile, "preferences": prefs, "preferences_initialized": preferenceCount > 0, "restricted": session.Restricted, "warning": "", "max_profiles": s.Config.MaxProfiles, "password_min": s.Config.PasswordMin, "password_max": s.Config.PasswordMax, "jackett_enabled": s.torrentSearchEnabled(r.Context()), "torrent_search_enabled": s.torrentSearchEnabled(r.Context()), "torrent_downloads_enabled": s.torrentDownloadsEnabled(r.Context())})
 	return nil
 }
