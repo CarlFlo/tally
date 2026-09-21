@@ -31,6 +31,7 @@ type operatorRequest struct {
 type operatorResponse struct {
 	Error    string           `json:"error,omitempty"`
 	Profiles []profileSummary `json:"profiles,omitempty"`
+	Backup   string           `json:"backup,omitempty"`
 }
 
 type operatorServer struct {
@@ -84,10 +85,13 @@ func (s *operatorServer) handle(parent context.Context, conn net.Conn, c config.
 	defer cancel()
 
 	var (
-		err      error
-		profiles []profileSummary
+		err        error
+		profiles   []profileSummary
+		backupName string
 	)
 	switch request.Action {
+	case "backup":
+		backupName, err = backups.Create(ctx, "manual")
 	case "list-profiles":
 		profiles, err = listProfiles(ctx, db)
 	case "reset-password":
@@ -105,7 +109,7 @@ func (s *operatorServer) handle(parent context.Context, conn net.Conn, c config.
 	default:
 		err = fmt.Errorf("unsupported operator action")
 	}
-	response := operatorResponse{Profiles: profiles}
+	response := operatorResponse{Profiles: profiles, Backup: backupName}
 	if err != nil {
 		response.Error = err.Error()
 	}
