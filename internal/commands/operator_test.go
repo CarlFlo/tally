@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -93,6 +94,44 @@ func TestOperatorServerListsProfilesWhileApplicationIsRunning(t *testing.T) {
 	}
 }
 
+func TestOperatorServerCreatesBackupWhileApplicationIsRunning(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	dir := t.TempDir()
+	c := config.Config{DataDir: dir, Timezone: "UTC", PasswordMin: 4, PasswordMax: 128}
+	db, err := database.Open(ctx, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-a','Fixture','violet',1)"); err != nil {
+		t.Fatal(err)
+	}
+	backups := &backup.Service{DB: db, DataDir: dir, Path: filepath.Join(dir, "backups"), Timezone: "UTC"}
+	server, err := startOperatorServer(ctx, c, db, backups, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer server.Close()
+
+	handled, response, err := callRunningOperatorResponse(ctx, c, operatorRequest{Action: "backup"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !handled {
+		t.Fatal("running operator server was not detected")
+	}
+	if response.Error != "" {
+		t.Fatal(response.Error)
+	}
+	if response.Backup == "" {
+		t.Fatal("backup filename was not returned")
+	}
+	if _, err = os.Stat(filepath.Join(backups.Path, response.Backup)); err != nil {
+		t.Fatalf("backup archive was not created: %v", err)
+	}
+}
+
 type restorePublisher struct {
 	called bool
 }
@@ -178,8 +217,8 @@ func TestCommandArgumentsAreValidatedBeforeRuntimeWork(t *testing.T) {
 		args    []string
 	}{
 		{"reset-password", []string{"one", "two"}},
-		{"restore", nil},
-		{"verify-backup", nil},
+		{"restore", []string{"one", "two"}},
+		{"verify-backup", []string{"one", "two"}},
 		{"delete-backup", nil},
 	} {
 		if err := validateCommandArgs(test.command, test.args); err == nil {
@@ -188,5 +227,11 @@ func TestCommandArgumentsAreValidatedBeforeRuntimeWork(t *testing.T) {
 	}
 	if err := validateCommandArgs("reset-password", nil); err != nil {
 		t.Fatalf("reset-password without a target should list profiles: %v", err)
+	}
+	if err := validateCommandArgs("restore", nil); err != nil {
+		t.Fatalf("restore without a target should list backups: %v", err)
+	}
+	if err := validateCommandArgs("verify-backup", nil); err != nil {
+		t.Fatalf("verify-backup without a target should list backups: %v", err)
 	}
 }
