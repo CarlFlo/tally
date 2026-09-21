@@ -47,7 +47,6 @@ func (s *Server) Handler() http.Handler {
 		{"GET /api/bootstrap", s.bootstrap, publicRoute},
 		{"POST /api/auth/register", s.registerProfile, publicRoute},
 		{"POST /api/auth/login", s.login, publicRoute},
-		{"POST /api/auth/recover", s.recover, publicRoute},
 		{"POST /api/auth/logout", s.logout, publicRoute},
 		{"POST /api/auth/password", s.password, authenticatedRoute},
 		{"GET /api/auth/sessions", s.sessions, authenticatedRoute},
