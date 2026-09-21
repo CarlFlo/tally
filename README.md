@@ -92,7 +92,7 @@ docker exec -it tally tally verify-backup <backup>.zip
 docker exec -it tally tally delete-backup <filename>.zip
 ```
 
-Running `reset-password` without a profile lists the available profiles and IDs. Run `docker exec tally tally help` for the full command list and usage.
+Running `reset-password` without a profile lists profiles and IDs. Running `restore` or `verify-backup` without a filename lists available backups. Run `docker exec tally tally help` for the full command list and usage.
 
 ## Localization
 
