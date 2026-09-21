@@ -20,6 +20,11 @@ func (s *Server) testJackett(w http.ResponseWriter, r *http.Request, session aut
 	if err := decode(r, &input); err != nil {
 		return err
 	}
+	var current settings.Search
+	if _, err := s.settingsStore().Load(r.Context(), "search", &current); err != nil {
+		return err
+	}
+	input.Data = settings.MergeSearchSecrets(input.Data, current)
 	input.Data.Enabled = true
 	if err := settings.ValidateSearch(input.Data); err != nil {
 		return bad(err.Error())
