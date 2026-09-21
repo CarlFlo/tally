@@ -87,4 +87,31 @@ func TestSettingsSecretRedactionAndPreservation(t *testing.T) {
 	if storedNotification.URL != notificationValue {
 		t.Fatal("blank redacted notification endpoint replaced the stored value")
 	}
+
+	afterPreserve := request(t, h, "GET", "/api/settings/notifications", nil)
+	var clearEnvelope map[string]json.RawMessage
+	if err := json.Unmarshal(afterPreserve.Body.Bytes(), &clearEnvelope); err != nil {
+		t.Fatal(err)
+	}
+	var clearRevision int64
+	var clearData settings.Webhook
+	if err := json.Unmarshal(clearEnvelope["revision"], &clearRevision); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(clearEnvelope["data"], &clearData); err != nil {
+		t.Fatal(err)
+	}
+	clearData.Enabled = false
+	response = request(t, h, "PUT", "/api/settings/notifications", map[string]any{
+		"revision":      clearRevision,
+		"data":          clearData,
+		"clear_secrets": map[string]bool{"url": true},
+	})
+	expect(t, response, http.StatusOK)
+	if _, err := s.settingsStore().Load(ctx, "notifications", &storedNotification); err != nil {
+		t.Fatal(err)
+	}
+	if storedNotification.URL != "" {
+		t.Fatal("explicit notification endpoint clear was ignored")
+	}
 }
