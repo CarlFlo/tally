@@ -15,7 +15,7 @@ func (s *Server) torrentSend(w http.ResponseWriter, r *http.Request, session aut
 	}
 	client, e := s.Clients.Current(r.Context())
 	if e != nil {
-		return bad(e.Error())
+		return clientInputError(e)
 	}
 	var in struct {
 		Selection string `json:"selection"`
