@@ -57,9 +57,10 @@ test("torrent search navigation and filters follow the saved Jackett state", asy
     torrentRevision = (await enableDownloads.json()).revision;
   }
 
+  expect(saved.secrets_configured?.api_key).toBe(true);
   const enabledData = {
+    ...saved.data,
     base_url: "http://127.0.0.1:1",
-    api_key: "browser-test-key",
     enabled: true,
   };
   const enabledResponse = await page.request.put("/api/settings/search", {
