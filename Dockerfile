@@ -19,12 +19,14 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 FROM alpine:3.24
 RUN apk upgrade --no-cache && apk add --no-cache ca-certificates su-exec
 RUN mkdir -p /config
-COPY --from=backend /out/tally /usr/local/bin/tally
+RUN mkdir -p /usr/local/libexec
+COPY --from=backend /out/tally /usr/local/libexec/tally
+COPY docker-tally.sh /usr/local/bin/tally
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod 755 /usr/local/bin/docker-entrypoint.sh
+RUN chmod 755 /usr/local/bin/tally /usr/local/libexec/tally /usr/local/bin/docker-entrypoint.sh
 ENV APP_DATA_DIR=/config APP_ADDR=:8080 PUID=10001 PGID=10001
 VOLUME /config
 EXPOSE 8080
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 CMD ["tally", "healthcheck"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 CMD ["wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/readyz"]
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["tally"]

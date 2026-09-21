@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -11,8 +12,11 @@ import (
 
 func (s *Server) events(w http.ResponseWriter, r *http.Request, session auth.Session) error {
 	if session.Profile == "" && s.Auth != nil {
-		if resolved, err := s.Auth.Resolve(r); err == nil {
+		resolved, err := s.Auth.Resolve(r)
+		if err == nil {
 			session = resolved
+		} else if !errors.Is(err, auth.ErrSignInRequired) && !errors.Is(err, auth.ErrSessionExpired) {
+			return err
 		}
 	}
 	publicOnly := session.Profile == "" || session.Restricted

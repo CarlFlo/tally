@@ -77,7 +77,22 @@ A profile configured with No authentication can be entered by anyone who can rea
 
 Tally stores its SQLite database, settings, locales, and backups below `/config` in the container. Application-managed credentials stored in Tally are included in protected backups; transient caches and environment-provided secrets are not.
 
-Backups can be created and restored from the web interface or CLI. Commands that directly modify Tally's data should normally be run while the main container is stopped.
+Backups can be created and restored from the web interface or CLI. See **Command-line tools** below for CLI usage.
+
+## Command-line tools
+
+Run maintenance commands inside the existing container:
+
+```bash
+docker exec -it tally tally reset-password
+docker exec -it tally tally reset-password <profile-id-or-unique-name>
+docker exec -it tally tally backup
+docker exec -it tally tally restore <backup>.zip
+docker exec -it tally tally verify-backup <backup>.zip
+docker exec -it tally tally delete-backup <filename>.zip
+```
+
+Running `reset-password` without a profile lists profiles and IDs. Running `restore` or `verify-backup` without a filename lists available backups. Run `docker exec tally tally help` for the full command list and usage.
 
 ## Localization
 

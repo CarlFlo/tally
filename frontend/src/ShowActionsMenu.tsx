@@ -4,6 +4,7 @@ import { useLocation } from "react-router-dom";
 import { Check, MoreVertical, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
 import { api, Confirm, useApp, type Show } from "./lib";
 import { invalidateResources } from "./queryInvalidation";
+import { queryKeys } from "./queryKeys";
 import { useTranslation } from "react-i18next";
 
 type Action = "remove" | "clear";
@@ -34,7 +35,7 @@ export function ShowActionsMenu({
     boot.torrent_search_enabled &&
     boot.torrent_downloads_enabled;
   const mediaProfile = useQuery<ShowMediaProfile>({
-    queryKey: ["torrent-automation-show-media-profile", show.id],
+    queryKey: queryKeys.torrentAutomationShowMediaProfile(show.id),
     queryFn: ({ signal }) =>
       api(`/torrents/automation/shows/${show.id}/media-profile`, "GET", undefined, signal),
     enabled: canManageAutomation,

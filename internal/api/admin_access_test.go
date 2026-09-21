@@ -20,6 +20,7 @@ func TestAdministratorRoleIsTransferableWithBackendGuard(t *testing.T) {
 	admin := &http.Cookie{Name: "tally_profile", Value: "profile-admin"}
 
 	expect(t, request(t, h, "GET", "/api/settings", nil, member), 403)
+	expect(t, request(t, h, "GET", "/api/backups", nil, member), 403)
 	expect(t, request(t, h, "DELETE", "/api/profiles/profile-member-2", nil, member), 403)
 
 	expect(t, request(t, h, "PATCH", "/api/profiles/profile-member/admin", map[string]any{"is_admin": true}, admin), 200)

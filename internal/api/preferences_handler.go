@@ -1,21 +1,31 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/CarlFlo/tally/internal/auth"
 )
 
-func (s *Server) readPreferences(r *http.Request, id string) map[string]any {
+func (s *Server) readPreferences(r *http.Request, id string) (map[string]any, error) {
 	p := map[string]any{"theme": s.Config.Theme, "timezone": s.Config.Timezone, "date_format": "d MMM yyyy", "time_format": "24h", "calendar_view": "month", "week_start": 1, "debug_mode": false, "debug_job_state": "normal", "request_limit": 20, "scan_limit": 20, "job_type_filter": "all", "job_status_filter": "all", "job_status_filter_not": false, "bell_categories": []string{"scheduled_job_failures", "backup_failures", "episode_releases", "provider_api_failures", "torrent_client_failures"}}
 	var raw string
-	if s.DB.QueryRowContext(r.Context(), "SELECT data FROM profile_preferences WHERE profile_id=?", id).Scan(&raw) == nil {
-		_ = json.Unmarshal([]byte(raw), &p)
+	err := s.DB.QueryRowContext(r.Context(), "SELECT data FROM profile_preferences WHERE profile_id=?", id).Scan(&raw)
+	if errors.Is(err, sql.ErrNoRows) {
+		return p, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if err = json.Unmarshal([]byte(raw), &p); err != nil {
+		return nil, fmt.Errorf("stored profile preferences are invalid: %w", err)
 	}
 	delete(p, "torrent_providers")
-	return p
+	return p, nil
 }
 
 func (s *Server) preferences(w http.ResponseWriter, r *http.Request, session auth.Session) error {
@@ -23,7 +33,10 @@ func (s *Server) preferences(w http.ResponseWriter, r *http.Request, session aut
 	if e := decode(r, &in); e != nil {
 		return e
 	}
-	p := s.readPreferences(r, session.Profile)
+	p, err := s.readPreferences(r, session.Profile)
+	if err != nil {
+		return err
+	}
 	for k, v := range in {
 		switch k {
 		case "theme":

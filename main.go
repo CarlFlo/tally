@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 
@@ -10,7 +11,11 @@ import (
 func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
 	if err := commands.Run(os.Args[1:]); err != nil {
-		slog.Error("application stopped", "error", err)
+		if len(os.Args) > 1 && os.Args[1] != "serve" {
+			fmt.Fprintln(os.Stderr, err)
+		} else {
+			slog.Error("application stopped", "error", err)
+		}
 		os.Exit(1)
 	}
 }

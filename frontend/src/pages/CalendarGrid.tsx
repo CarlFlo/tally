@@ -2,6 +2,7 @@ import { Check, Download, Star } from "lucide-react";
 import { localDay, timeLabel, type Episode, type Prefs } from "../lib";
 import { groupReleases, releaseLabel } from "../calendarReleases";
 import { useTranslation } from "react-i18next";
+import { displayLocale } from "../dateFormatting";
 
 type Props = {
   days: Date[];
@@ -26,7 +27,7 @@ export function CalendarGrid({
   expand,
   select,
 }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   return (
     <div className="month-grid">
       {days.map((day) => {
@@ -46,7 +47,7 @@ export function CalendarGrid({
               <span className={today ? "today-number" : ""}>
                 {day.getDate()}
               </span>
-              {today && <small>{t("calendar.today").toLocaleUpperCase()}</small>}
+              {today && <small>{t("calendar.today").toLocaleUpperCase(displayLocale(i18n.resolvedLanguage))}</small>}
             </div>
             <div className="day-entries">
               {visible.map((episodes) => {

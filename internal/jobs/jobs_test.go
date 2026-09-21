@@ -59,7 +59,11 @@ func TestJobDedupCancellationAndDeadline(t *testing.T) {
 	if _, e = s.Trigger("metadata", "manual_refresh", "show"); e == nil {
 		t.Fatal("duplicate logical job accepted")
 	}
-	if !s.Cancel(id) {
+	cancelled, cancelErr := s.Cancel(id)
+	if cancelErr != nil {
+		t.Fatal(cancelErr)
+	}
+	if !cancelled {
 		t.Fatal("cancellation not accepted")
 	}
 	deadline := time.Now().Add(3 * time.Second)
@@ -140,4 +144,28 @@ func TestJobDeadlineCountsAsFailure(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 	t.Fatal("job timeout did not count toward repeated failure pause")
+}
+
+func TestUnknownJobAndScheduleStorageFailuresAreNotSuccessful(t *testing.T) {
+	ctx := context.Background()
+	db, err := database.Open(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := New(ctx, db, config.Config{JobConcurrency: 1, JobRuntime: time.Second}, nil, nil, nil)
+	defer service.Stop(ctx)
+
+	if _, err = service.run(ctx, "run", "unexpected", "manual", ""); err == nil {
+		t.Fatal("unknown internal job kind reported success")
+	}
+
+	if err = db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = service.Trigger("metadata", "scheduled_refresh", ""); err == nil {
+		t.Fatal("schedule database failure was treated as a disabled schedule")
+	}
+	if _, err = service.Cancel("missing-run"); err == nil {
+		t.Fatal("cancellation database failure was treated as a stopped job")
+	}
 }

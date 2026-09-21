@@ -75,6 +75,11 @@ func serve(ctx context.Context, c config.Config, db *database.Store, b *backup.S
 	j := jobs.New(ctx, db, c, m, p, b)
 	j.OnChange = hub.Publish
 	p.Alert = j.Alert
+	operatorControl, err := startOperatorServer(ctx, c, db, b, hub, j)
+	if err != nil {
+		return time.Time{}, err
+	}
+	defer operatorControl.Close()
 	if err = j.Start(); err != nil {
 		return time.Time{}, err
 	}

@@ -21,8 +21,9 @@ func TestEditableSettingsPersistAndIgnoreLaterEnvironment(t *testing.T) {
 	}
 	input := map[string]any{"revision": 1, "data": settings.Search{BaseURL: "http://fixture.invalid", APIKey: "test-only-secret", Enabled: true}}
 	expect(t, request(t, h, "PUT", "/api/settings/search", input), 200)
-	if s.searchProvider("jackett") == nil {
-		t.Fatal("saved Jackett connection not applied")
+	provider, err := s.searchProvider(ctx, "jackett")
+	if err != nil || provider == nil {
+		t.Fatal("saved Jackett connection not applied", err)
 	}
 	expect(t, request(t, h, "PUT", "/api/settings/search", input), 409)
 	if e := s.settingsStore().Ensure(ctx); e != nil {
@@ -39,8 +40,13 @@ func TestEditableSettingsPersistAndIgnoreLaterEnvironment(t *testing.T) {
 	if !strings.Contains(preview.Body.String(), `"server_timezone":"Europe/Stockholm"`) || !strings.Contains(preview.Body.String(), `"next_delivery":`) {
 		t.Fatal("notification time preview did not use deployment timezone", preview.Body.String())
 	}
-	if s.searchProvider("jackett") == nil || s.searchProvider("torznab") != nil {
-		t.Fatal("restart overwrote UI settings")
+	provider, err = s.searchProvider(ctx, "jackett")
+	if err != nil || provider == nil {
+		t.Fatal("restart overwrote UI settings", err)
+	}
+	unsupported, err := s.searchProvider(ctx, "torznab")
+	if err != nil || unsupported != nil {
+		t.Fatal("unsupported provider unexpectedly resolved", err)
 	}
 	safe := request(t, h, "GET", "/api/settings", nil)
 	if strings.Contains(safe.Body.String(), "test-only-secret") {
@@ -57,7 +63,7 @@ func TestEditableSettingsPersistAndIgnoreLaterEnvironment(t *testing.T) {
 		t.Fatal("disabled webhook still enabled")
 	}
 }
-func TestConnectionSecretsVisibleOnlyInExplicitOperatorView(t *testing.T) {
+func TestConnectionSecretsRemainRedactedForOperators(t *testing.T) {
 	s, h, _ := testServer(t, "local")
 	ctx := context.Background()
 	s.settingsStore().Ensure(ctx)
@@ -66,15 +72,21 @@ func TestConnectionSecretsVisibleOnlyInExplicitOperatorView(t *testing.T) {
 	}
 	owner := httptest.NewRecorder()
 	s.Auth.NewSession(ctx, owner, httptest.NewRequest("GET", "/", nil), "profile-admin", false)
-	response := request(t, h, "GET", "/api/downloader?reveal=1", nil, owner.Result().Cookies()...)
+	response := request(t, h, "GET", "/api/downloader", nil, owner.Result().Cookies()...)
 	expect(t, response, 200)
-	if !strings.Contains(response.Body.String(), fixtureClientKey) || response.Header().Get("Cache-Control") != "no-store" {
-		t.Fatal("explicit reveal unavailable or cacheable")
+	if strings.Contains(response.Body.String(), fixtureClientKey) {
+		t.Fatal("operator response exposed stored downloader credential")
+	}
+	if !strings.Contains(response.Body.String(), `"api_key":true`) {
+		t.Fatal("operator response did not report configured downloader credential")
+	}
+	if response.Header().Get("Cache-Control") != "no-store" {
+		t.Fatal("operator connection settings were cacheable")
 	}
 	s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-member','Other','mint',1)")
 	ordinary := httptest.NewRecorder()
 	s.Auth.NewSession(ctx, ordinary, httptest.NewRequest("GET", "/", nil), "profile-member", false)
-	for _, path := range []string{"/api/downloader?reveal=1", "/api/settings/search", "/api/settings/torrent", "/api/settings/notifications", "/api/settings/scheduling"} {
+	for _, path := range []string{"/api/downloader", "/api/settings/search", "/api/settings/torrent", "/api/settings/notifications", "/api/settings/scheduling"} {
 		expect(t, request(t, h, "GET", path, nil, ordinary.Result().Cookies()...), 403)
 	}
 }

@@ -86,7 +86,7 @@ type AutomationRun struct {
 }
 
 type AutomationFeedback struct {
-	ProfileID string `json:"profile_id,omitempty"`
+	ProfileID string `json:"-"`
 	Reason    string `json:"reason"`
 	Note      string `json:"note,omitempty"`
 	CreatedAt int64  `json:"created_at"`
@@ -143,13 +143,12 @@ func (s AutomationStore) ShowMediaProfile(ctx context.Context, showID string) (S
 }
 
 func (s AutomationStore) SetShowMediaProfile(ctx context.Context, showID, mode string) error {
-	switch mode {
-	case MediaProfileAuto:
+	if err := ValidateShowMediaProfile(mode); err != nil {
+		return err
+	}
+	if mode == MediaProfileAuto {
 		_, err := s.DB.ExecContext(ctx, "DELETE FROM torrent_show_media_profile WHERE show_id=?", showID)
 		return err
-	case MediaProfileLive, MediaProfileAnimated:
-	default:
-		return fmt.Errorf("invalid show media profile")
 	}
 	_, err := s.DB.ExecContext(ctx, `INSERT INTO torrent_show_media_profile(show_id,profile,updated_at) VALUES(?,?,?)
 		ON CONFLICT(show_id) DO UPDATE SET profile=excluded.profile,updated_at=excluded.updated_at`, showID, mode, time.Now().Unix())
@@ -460,17 +459,35 @@ func validTerminalRunStatus(status AutomationRunStatus) bool {
 }
 
 func (s AutomationStore) ListRuns(ctx context.Context, limit int) ([]AutomationRun, error) {
+	return s.listRuns(ctx, "", limit)
+}
+
+func (s AutomationStore) ListRunsForProfile(ctx context.Context, profileID string, limit int) ([]AutomationRun, error) {
+	if profileID == "" {
+		return []AutomationRun{}, nil
+	}
+	return s.listRuns(ctx, profileID, limit)
+}
+
+func (s AutomationStore) listRuns(ctx context.Context, profileID string, limit int) ([]AutomationRun, error) {
 	if limit <= 0 || limit > 200 {
 		limit = 100
 	}
-	rows, err := s.DB.QueryContext(ctx, `SELECT r.id,r.show_id,r.episode_id,r.show_name,r.season,r.episode,r.query,r.status,
+	query := `SELECT r.id,r.show_id,r.episode_id,r.show_name,r.season,r.episode,r.query,r.status,
 		r.confidence,r.verification,r.selected_name,r.selected_infohash,r.settings_snapshot,r.decision_log,r.engine_version,
 		r.started_at,r.ended_at,r.duration_ms,f.profile_id,f.reason,f.note,f.created_at,
 		m.infohash,m.status,m.attempts,m.last_checked_at,m.completed_at,m.assessment,m.size_profile,m.error
 		FROM torrent_automation_runs r
 		LEFT JOIN torrent_automation_feedback f ON f.run_id=r.id
-		LEFT JOIN torrent_magnet_verifications m ON m.run_id=r.id
-		ORDER BY r.started_at DESC LIMIT ?`, limit)
+		LEFT JOIN torrent_magnet_verifications m ON m.run_id=r.id`
+	args := []any{}
+	if profileID != "" {
+		query += " WHERE EXISTS(SELECT 1 FROM profile_shows p WHERE p.profile_id=? AND p.show_id=r.show_id)"
+		args = append(args, profileID)
+	}
+	query += " ORDER BY r.started_at DESC LIMIT ?"
+	args = append(args, limit)
+	rows, err := s.DB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -548,11 +565,8 @@ func normalizeInfoHash(value string) string {
 }
 
 func (s AutomationStore) MarkBad(ctx context.Context, runID, profileID, reason, note string) error {
-	if !validFeedbackReason(reason) {
-		return fmt.Errorf("invalid bad-run reason")
-	}
-	if len(note) > 500 {
-		return fmt.Errorf("bad-run note is too long")
+	if err := ValidateAutomationFeedback(reason, note); err != nil {
+		return err
 	}
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
@@ -609,10 +623,8 @@ func (s AutomationStore) ShowPolicy(ctx context.Context, showID string) (string,
 }
 
 func (s AutomationStore) SetShowPolicy(ctx context.Context, showID, policy string) error {
-	switch policy {
-	case "default", "auto", "never":
-	default:
-		return fmt.Errorf("invalid show automation policy")
+	if err := ValidateShowPolicy(policy); err != nil {
+		return err
 	}
 	if policy == "default" {
 		_, err := s.DB.ExecContext(ctx, "DELETE FROM torrent_show_policy WHERE show_id=?", showID)

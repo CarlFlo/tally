@@ -2,7 +2,8 @@ package auth
 
 import (
 	"context"
-	"crypto/subtle"
+	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -16,20 +17,24 @@ type throttle struct {
 
 func (s *Service) Login(ctx context.Context, w http.ResponseWriter, r *http.Request, profile, password string) error {
 	if len(profile) > 64 {
-		return fmt.Errorf("incorrect password")
+		return ErrIncorrectPassword
 	}
 	var exists int
-	if s.DB.QueryRowContext(ctx, "SELECT 1 FROM profiles WHERE id=?", profile).Scan(&exists) != nil {
-		return fmt.Errorf("incorrect password")
+	err := s.DB.QueryRowContext(ctx, "SELECT 1 FROM profiles WHERE id=?", profile).Scan(&exists)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrIncorrectPassword
+	}
+	if err != nil {
+		return fmt.Errorf("read login profile: %w", err)
 	}
 	if len(password) > 4096 {
-		return fmt.Errorf("password is too long")
+		return ErrPasswordTooLong
 	}
 	s.mu.Lock()
 	a := s.attempts[profile]
 	if time.Now().Before(a.Next) {
 		s.mu.Unlock()
-		return fmt.Errorf("please wait a moment before trying again")
+		return ErrAuthenticationThrottled
 	}
 	a.Next = time.Now().Add(time.Second)
 	a.Last = time.Now()
@@ -42,8 +47,12 @@ func (s *Service) Login(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	}
 	var hash string
 	var must bool
-	e := s.DB.QueryRowContext(ctx, "SELECT hash,must_change FROM local_credentials WHERE profile_id=?", profile).Scan(&hash, &must)
-	valid := e == nil && Verify(hash, password)
+	err = s.DB.QueryRowContext(ctx, "SELECT hash,must_change FROM local_credentials WHERE profile_id=?", profile).Scan(&hash, &must)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		release()
+		return fmt.Errorf("read login credentials: %w", err)
+	}
+	valid := err == nil && Verify(hash, password)
 	release()
 
 	if valid && NeedsRehash(hash) {
@@ -61,10 +70,8 @@ func (s *Service) Login(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	s.mu.Lock()
-	rec, ok := s.recovery[profile]
-	temporary := ok && time.Now().Before(rec.Expires) && subtle.ConstantTimeCompare([]byte(rec.Hash), []byte(Digest(password))) == 1
-	if !valid && !temporary {
+	if !valid {
+		s.mu.Lock()
 		a = s.attempts[profile]
 		a.Failures++
 		delay := a.Failures
@@ -74,12 +81,10 @@ func (s *Service) Login(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		a.Next = time.Now().Add(time.Duration(delay) * time.Second)
 		s.attempts[profile] = a
 		s.mu.Unlock()
-		return fmt.Errorf("incorrect password")
+		return ErrIncorrectPassword
 	}
+	s.mu.Lock()
 	delete(s.attempts, profile)
-	if temporary {
-		delete(s.recovery, profile)
-	}
 	s.mu.Unlock()
-	return s.NewSession(ctx, w, r, profile, must || temporary)
+	return s.NewSession(ctx, w, r, profile, must)
 }

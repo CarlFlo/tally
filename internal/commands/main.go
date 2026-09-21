@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -18,21 +19,28 @@ import (
 	"github.com/CarlFlo/tally/internal/database"
 )
 
+const usage = "usage: tally <command> [arguments] (run \"tally help\" for commands)"
+
 func Run(args []string) error {
-	c, err := config.Load()
-	if err != nil {
-		return err
-	}
 	command := "serve"
 	if len(args) > 0 {
 		command, args = args[0], args[1:]
 	}
 	switch command {
-	case "healthcheck":
-		return healthcheck(c)
+	case "help", "-h", "--help":
+		printHelp()
+		return nil
 	case "serve", "backup", "restore", "verify-backup", "reset-password", "delete-backup":
 	default:
-		return fmt.Errorf("usage: tally [serve|healthcheck|backup|restore <archive>|verify-backup <archive>|reset-password <profile-id-or-name>|delete-backup <filename>]")
+		return fmt.Errorf("%s", usage)
+	}
+	if err := validateCommandArgs(command, args); err != nil {
+		return err
+	}
+
+	c, err := config.Load()
+	if err != nil {
+		return err
 	}
 	if err = os.MkdirAll(c.DataDir, 0700); err != nil {
 		return err
@@ -56,18 +64,84 @@ func Run(args []string) error {
 		}
 	}()
 
+	if command == "reset-password" && len(args) == 0 {
+		handled, response, operatorErr := callRunningOperatorResponse(ctx, c, operatorRequest{Action: "list-profiles"})
+		if operatorErr != nil {
+			return operatorErr
+		}
+		if handled {
+			if response.Error != "" {
+				return errors.New(response.Error)
+			}
+			printProfileList(response.Profiles)
+			return nil
+		}
+	}
+
+	if (command == "restore" || command == "verify-backup") && len(args) == 0 {
+		return printBackupList(ctx, c)
+	}
+
 	if command == "verify-backup" {
 		return verifyBackup(ctx, c, args)
 	}
+
+	if command == "backup" {
+		handled, response, operatorErr := callRunningOperatorResponse(ctx, c, operatorRequest{Action: "backup"})
+		if operatorErr != nil {
+			return operatorErr
+		}
+		if handled {
+			if response.Error != "" {
+				return errors.New(response.Error)
+			}
+			printBackupCreated(response.Backup)
+			return nil
+		}
+	}
+
+	var resetValue string
+	if command == "reset-password" && len(args) == 1 {
+		resetValue, err = readResetPassword()
+		if err != nil {
+			return err
+		}
+		handled, operatorErr := callRunningOperator(ctx, c, operatorRequest{
+			Action:     "reset-password",
+			ProfileRef: args[0],
+			Password:   resetValue,
+		})
+		if handled {
+			if operatorErr == nil {
+				printPasswordResetSuccess()
+			}
+			return operatorErr
+		}
+	}
+	if command == "restore" {
+		archive, pathErr := backupArchivePath(c, args[0])
+		if pathErr != nil {
+			return pathErr
+		}
+		handled, operatorErr := callRunningOperator(ctx, c, operatorRequest{Action: "restore", Archive: archive})
+		if handled {
+			if operatorErr == nil {
+				fmt.Println("Backup restored successfully.")
+			}
+			return operatorErr
+		}
+	}
+
 	lock := flock.New(filepath.Join(c.DataDir, "app.lock"))
 	locked, err := lock.TryLock()
 	if err != nil {
 		return err
 	}
 	if !locked {
-		return fmt.Errorf("another Tally process is using this volume; stop it before running operator commands")
+		return fmt.Errorf("another Tally process is using this volume; use the running server for supported live operator commands or stop it before running this command")
 	}
 	defer lock.Unlock()
+
 	if command == "restore" {
 		return restoreBackup(ctx, c, args)
 	}
@@ -80,6 +154,16 @@ func Run(args []string) error {
 		return err
 	}
 	b := &backup.Service{DB: db, DataDir: c.DataDir, Path: filepath.Join(c.DataDir, "backups"), Timezone: c.Timezone}
+
+	if command == "reset-password" && len(args) == 0 {
+		defer db.Close()
+		profiles, listErr := listProfiles(ctx, db)
+		if listErr != nil {
+			return listErr
+		}
+		printProfileList(profiles)
+		return nil
+	}
 
 	if command == "serve" {
 		shutdownStarted, serveErr := serve(ctx, c, db, b)
@@ -106,10 +190,40 @@ func Run(args []string) error {
 
 	switch command {
 	case "reset-password":
-		return resetPassword(ctx, db, args)
+		if err = resetPasswordValue(ctx, db, c, args[0], resetValue); err != nil {
+			return err
+		}
+		printPasswordResetSuccess()
+		return nil
 	case "backup":
 		return createBackup(ctx, b)
 	default:
 		return nil
 	}
+}
+
+func validateCommandArgs(command string, args []string) error {
+	switch command {
+	case "restore":
+		if len(args) > 1 {
+			return fmt.Errorf("usage: tally restore [backup.zip]")
+		}
+	case "verify-backup":
+		if len(args) > 1 {
+			return fmt.Errorf("usage: tally verify-backup [backup.zip]")
+		}
+	case "reset-password":
+		if len(args) > 1 {
+			return fmt.Errorf("usage: tally reset-password [profile-id-or-name]")
+		}
+	case "delete-backup":
+		if len(args) != 1 {
+			return fmt.Errorf("usage: tally delete-backup <filename>")
+		}
+	default:
+		if len(args) != 0 {
+			return fmt.Errorf("%s does not accept arguments", command)
+		}
+	}
+	return nil
 }

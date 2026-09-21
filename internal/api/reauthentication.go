@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 
 	"github.com/CarlFlo/tally/internal/auth"
 )
@@ -14,5 +15,11 @@ func (s *Server) reauthenticateIfProtected(ctx context.Context, profile, passwor
 	if method != auth.ProfileAuthPassword {
 		return nil
 	}
-	return s.Auth.Reauthenticate(ctx, profile, password)
+	if err = s.Auth.Reauthenticate(ctx, profile, password); err != nil {
+		if errors.Is(err, auth.ErrIncorrectPassword) || errors.Is(err, auth.ErrAuthenticationThrottled) {
+			return apiError{401, err.Error()}
+		}
+		return err
+	}
+	return nil
 }

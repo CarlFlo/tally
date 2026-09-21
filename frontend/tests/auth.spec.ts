@@ -28,6 +28,13 @@ test("local sign-in follows browser history and switching requires sign-out", as
   await expect(
     page.getByRole("heading", { name: "Welcome back, My profile." }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Forgot password?", exact: true }).click();
+  await expect(
+    page.getByText(
+      "Ask the server administrator to reset this profile with the tally reset-password operator command.",
+      { exact: true },
+    ),
+  ).toBeVisible();
   await page.getByLabel("Password", { exact: true }).fill("1234");
   await page.getByRole("button", { name: "Enter your space" }).click();
   await expect(page).toHaveURL(/\/calendar$/);

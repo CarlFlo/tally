@@ -2,7 +2,6 @@ package torrent
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 	"strings"
 
@@ -20,13 +19,13 @@ func (s *ClientStore) Prepare(ctx context.Context, in ClientUpdate) (ClientConfi
 	c := ClientConfig{Adapter: in.Adapter, Fields: map[string]string{}, Revision: saved.Revision}
 	if in.Adapter == "" {
 		if len(in.Fields) > 0 {
-			return c, fmt.Errorf("disabled clients cannot contain connection details")
+			return c, clientValidation("disabled clients cannot contain connection details")
 		}
 		return c, nil
 	}
 	adapter := findClient(in.Adapter)
 	if adapter == nil {
-		return c, fmt.Errorf("choose a supported torrent client")
+		return c, clientValidation("choose a supported torrent client")
 	}
 	known := map[string]bool{}
 	for _, field := range adapter.Fields {
@@ -34,10 +33,10 @@ func (s *ClientStore) Prepare(ctx context.Context, in ClientUpdate) (ClientConfi
 	}
 	for key, value := range in.Fields {
 		if !known[key] {
-			return c, fmt.Errorf("unknown torrent client field")
+			return c, clientValidation("unknown torrent client field")
 		}
 		if len(value) > 4096 {
-			return c, fmt.Errorf("torrent client field is too long")
+			return c, clientValidation("torrent client field is too long")
 		}
 		c.Fields[key] = value
 	}
@@ -48,11 +47,11 @@ func (s *ClientStore) Prepare(ctx context.Context, in ClientUpdate) (ClientConfi
 		value := strings.TrimSpace(c.Fields[field.Key])
 		if field.Type == "url" && value != "" {
 			if e := config.ValidateURL(value); e != nil {
-				return c, fmt.Errorf("%s must be an HTTP(S) address without embedded credentials", field.Label)
+				return c, clientValidation("%s must be an HTTP(S) address without embedded credentials", field.Label)
 			}
 			u, _ := url.Parse(value)
 			if u.RawQuery != "" || u.ForceQuery {
-				return c, fmt.Errorf("%s cannot contain a query string", field.Label)
+				return c, clientValidation("%s cannot contain a query string", field.Label)
 			}
 			value = strings.TrimRight(value, "/")
 		}
@@ -65,8 +64,11 @@ func (s *ClientStore) Prepare(ctx context.Context, in ClientUpdate) (ClientConfi
 			}
 		}
 		if field.Required && c.Fields[field.Key] == "" {
-			return c, fmt.Errorf("%s is required", field.Label)
+			return c, clientValidation("%s is required", field.Label)
 		}
 	}
-	return c, c.validate()
+	if err := c.validate(); err != nil {
+		return c, clientValidation("%s", err.Error())
+	}
+	return c, nil
 }

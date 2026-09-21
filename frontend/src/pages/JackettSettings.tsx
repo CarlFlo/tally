@@ -16,7 +16,11 @@ type JackettConfig = {
   enabled: boolean;
 };
 
-type SavedSearch = { data: JackettConfig; revision: number };
+type SavedSearch = {
+  data: JackettConfig;
+  revision: number;
+  secrets_configured?: Record<string, boolean>;
+};
 
 export function JackettSettings() {
   const { t } = useTranslation();
@@ -98,6 +102,9 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
   const startTest = useLatestRequest();
   const previous = useRef(saved);
   const [data, setData] = useState(saved.data);
+  const [apiKeyConfigured, setApiKeyConfigured] = useState(
+    !!saved.secrets_configured?.api_key,
+  );
   const [revision, setRevision] = useState(saved.revision);
   const [busy, setBusy] = useState<"test" | "save" | null>(null);
   const [feedback, setFeedback] = useState<{ message: string; error: boolean } | null>(null);
@@ -106,6 +113,7 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
   useEffect(() => {
     if (JSON.stringify(data) === JSON.stringify(previous.current.data)) {
       setData(saved.data);
+      setApiKeyConfigured(!!saved.secrets_configured?.api_key);
       setRevision(saved.revision);
     }
     previous.current = saved;
@@ -129,13 +137,21 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
           data: { ...data, enabled: saved.data.enabled },
           revision,
         });
+        const configured = apiKeyConfigured || data.api_key.trim() !== "";
+        const redacted = { ...data, api_key: "" };
+        setData(redacted);
+        setApiKeyConfigured(configured);
         setRevision(result.revision);
+        previous.current = {
+          data: redacted,
+          revision: result.revision,
+          secrets_configured: { api_key: configured },
+        };
         await invalidateResources(cache, [
           "settings",
           "editable-settings",
           "capabilities",
         ]);
-        previous.current = { data, revision: result.revision };
         notify(t("searchSettings.saved"));
       }
     } catch (error) {
@@ -161,7 +177,20 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
           <div>
             <label>
               {t("searchSettings.apiKey")}
-              <ConnectionInput label={t("searchSettings.apiKey")} secret hiddenByDefault value={data.api_key} required maxLength={4096} onChange={(event) => change({ api_key: event.target.value })} />
+              <ConnectionInput
+                label={t("searchSettings.apiKey")}
+                secret
+                hiddenByDefault
+                value={data.api_key}
+                required={!apiKeyConfigured}
+                maxLength={4096}
+                placeholder={
+                  apiKeyConfigured
+                    ? t("connection.savedPlaceholder")
+                    : undefined
+                }
+                onChange={(event) => change({ api_key: event.target.value })}
+              />
             </label>
             <p className="small-text muted client-field-help">{t("searchSettings.keyHelp")}</p>
           </div>
@@ -178,7 +207,11 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
       <UnsavedChangesBar
         hasChanges={hasChanges}
         busy={busy !== null}
-        onRevert={() => { setData(previous.current.data); setFeedback(null); }}
+        onRevert={() => {
+          setData(previous.current.data);
+          setApiKeyConfigured(!!previous.current.secrets_configured?.api_key);
+          setFeedback(null);
+        }}
         onSave={() => void run("save")}
         statusLabel={t("common.unsavedChanges", { defaultValue: "Unsaved changes" })}
         revertLabel={t("common.revertChanges", { defaultValue: "Revert changes" })}

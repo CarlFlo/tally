@@ -38,5 +38,9 @@ export const queryKeys = {
   showSuggestions: () => ["show-suggestions"] as const,
   showSearch: (query: string) => ["show-search", query] as const,
   schedulePreview: (spec: string) => ["schedule-preview", spec] as const,
+  notificationTimePreview: (deliveryTime: string, serverTimezone: string) =>
+    ["notification-time-preview", deliveryTime, serverTimezone] as const,
+  torrentAutomationShowMediaProfile: (id: string) =>
+    ["torrent-automation-show-media-profile", id] as const,
   local: (key: string, path: string) => [key, path] as const,
 } as const;

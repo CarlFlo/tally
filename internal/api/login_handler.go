@@ -1,13 +1,18 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/CarlFlo/tally/internal/auth"
 )
 
 func (s *Server) login(w http.ResponseWriter, r *http.Request, _ auth.Session) error {
-	if session, _ := s.Auth.Resolve(r); session.Profile != "" {
+	session, err := s.optionalSession(r)
+	if err != nil {
+		return err
+	}
+	if session.Profile != "" {
 		return apiError{409, "sign out before signing in to another profile"}
 	}
 	var in struct{ Profile, Password string }
@@ -15,11 +20,17 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request, _ auth.Session) e
 		return err
 	}
 	method, err := s.Auth.ProfileAuthMethod(r.Context(), in.Profile)
-	if err != nil || method != auth.ProfileAuthPassword {
+	if errors.Is(err, auth.ErrProfileNotFound) || (err == nil && method != auth.ProfileAuthPassword) {
 		return apiError{401, "password sign-in is not available for this profile"}
 	}
+	if err != nil {
+		return err
+	}
 	if err = s.Auth.Login(r.Context(), w, r, in.Profile, in.Password); err != nil {
-		return apiError{401, err.Error()}
+		if errors.Is(err, auth.ErrIncorrectPassword) || errors.Is(err, auth.ErrPasswordTooLong) || errors.Is(err, auth.ErrAuthenticationThrottled) {
+			return apiError{401, err.Error()}
+		}
+		return err
 	}
 	jsonResponse(w, 200, map[string]bool{"ok": true})
 	return nil

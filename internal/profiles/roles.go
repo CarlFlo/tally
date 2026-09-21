@@ -2,6 +2,8 @@ package profiles
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"strings"
 
 	"github.com/CarlFlo/tally/internal/activity"
@@ -25,7 +27,10 @@ func (r Repository) SetAdmin(ctx context.Context, actor, target string, admin bo
 	var current bool
 	if err = tx.QueryRowContext(ctx, `SELECT p.display_name,r.is_admin
 		FROM profiles p JOIN profile_roles r ON r.profile_id=p.id WHERE p.id=?`, target).Scan(&name, &current); err != nil {
-		return ErrNotFound
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
+		return err
 	}
 	if current == admin {
 		return nil
@@ -37,7 +42,10 @@ func (r Repository) SetAdmin(ctx context.Context, actor, target string, admin bo
 	if admin {
 		action, verb = "admin_granted", " granted administrator access to "
 	}
-	actorName := profileDisplayName(ctx, tx, actor)
+	actorName, err := profileDisplayName(ctx, tx, actor)
+	if err != nil {
+		return err
+	}
 	if err = activity.Record(ctx, tx, activity.Event{Action: action, Profile: actor, Message: actorName + verb + name}); err != nil {
 		return err
 	}
@@ -55,11 +63,17 @@ func (r Repository) Delete(ctx context.Context, actor, target string) (string, b
 	var admin bool
 	if err = tx.QueryRowContext(ctx, `SELECT p.display_name,r.is_admin
 		FROM profiles p JOIN profile_roles r ON r.profile_id=p.id WHERE p.id=?`, target).Scan(&name, &admin); err != nil {
-		return "", false, ErrNotFound
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", false, ErrNotFound
+		}
+		return "", false, err
 	}
 	actorName := name
 	if actor != target {
-		actorName = profileDisplayName(ctx, tx, actor)
+		actorName, err = profileDisplayName(ctx, tx, actor)
+		if err != nil {
+			return "", false, err
+		}
 	}
 	if _, err = tx.ExecContext(ctx, "DELETE FROM profiles WHERE id=?", target); err != nil {
 		return "", false, roleError(err)

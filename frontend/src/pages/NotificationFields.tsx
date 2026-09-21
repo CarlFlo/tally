@@ -22,6 +22,9 @@ export function NotificationFields({
   timeText,
   timeFormat,
   changeTime,
+  secretsConfigured = {},
+  clearedSecrets = {},
+  clearSecret,
 }: {
   data: any;
   change: (key: string, value: any) => void;
@@ -29,6 +32,9 @@ export function NotificationFields({
   timeText: string;
   timeFormat: string;
   changeTime: (value: string) => void;
+  secretsConfigured?: Record<string, boolean>;
+  clearedSecrets?: Record<string, boolean>;
+  clearSecret?: (key: "url" | "discord_url", clear: boolean) => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -44,9 +50,23 @@ export function NotificationFields({
         </select>
       </label>
       {data.type === "discord" ? (
-        <DiscordFields data={data} change={change} errors={errors} />
+        <DiscordFields
+          data={data}
+          change={change}
+          errors={errors}
+          secretsConfigured={secretsConfigured}
+          clearedSecrets={clearedSecrets}
+          clearSecret={clearSecret}
+        />
       ) : (
-        <WebhookFields data={data} change={change} errors={errors} />
+        <WebhookFields
+          data={data}
+          change={change}
+          errors={errors}
+          secretsConfigured={secretsConfigured}
+          clearedSecrets={clearedSecrets}
+          clearSecret={clearSecret}
+        />
       )}
       <fieldset className="notification-events">
         <legend>{t("notifications.subscribe")}</legend>
@@ -82,7 +102,7 @@ export function NotificationFields({
   );
 }
 
-function DiscordFields({ data, change, errors }: any) {
+function DiscordFields({ data, change, errors, secretsConfigured, clearedSecrets, clearSecret }: any) {
   const { t } = useTranslation();
   return (
     <>
@@ -93,12 +113,27 @@ function DiscordFields({ data, change, errors }: any) {
           secret
           type="url"
           value={data.discord_url}
+          disabled={!!clearedSecrets.discord_url}
           maxLength={4096}
-          placeholder="https://discord.com/api/webhooks/..."
+          placeholder={
+            secretsConfigured.discord_url
+              ? t("connection.savedPlaceholder")
+              : "https://discord.com/api/webhooks/..."
+          }
           aria-invalid={!!errors.discord_url}
           onChange={(e) => change("discord_url", e.target.value)}
         />
       </Field>
+      {secretsConfigured.discord_url && (
+        <label className="client-clear-secret">
+          <input
+            type="checkbox"
+            checked={!!clearedSecrets.discord_url}
+            onChange={(event) => clearSecret?.("discord_url", event.target.checked)}
+          />
+          {t("connection.clearSaved", { label: t("notifications.discordURL").toLowerCase() })}
+        </label>
+      )}
       <Field label={t("notifications.botName")} error={errors.bot_name}>
         <input
           value={data.bot_name}
@@ -121,7 +156,7 @@ function DiscordFields({ data, change, errors }: any) {
   );
 }
 
-function WebhookFields({ data, change, errors }: any) {
+function WebhookFields({ data, change, errors, secretsConfigured, clearedSecrets, clearSecret }: any) {
   const { t } = useTranslation();
   const preview = webhookPreview(data.body);
   return (
@@ -133,12 +168,27 @@ function WebhookFields({ data, change, errors }: any) {
           secret
           type="url"
           value={data.url}
+          disabled={!!clearedSecrets.url}
           maxLength={4096}
-          placeholder="https://your-service.example/webhook"
+          placeholder={
+            secretsConfigured.url
+              ? t("connection.savedPlaceholder")
+              : "https://your-service.example/webhook"
+          }
           aria-invalid={!!errors.url}
           onChange={(e) => change("url", e.target.value)}
         />
       </Field>
+      {secretsConfigured.url && (
+        <label className="client-clear-secret">
+          <input
+            type="checkbox"
+            checked={!!clearedSecrets.url}
+            onChange={(event) => clearSecret?.("url", event.target.checked)}
+          />
+          {t("connection.clearSaved", { label: t("notifications.webhookURL").toLowerCase() })}
+        </label>
+      )}
       <Field label={t("notifications.payload")} error={errors.body}>
         <textarea
           className="notification-body"

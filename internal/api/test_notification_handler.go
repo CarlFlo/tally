@@ -15,7 +15,11 @@ func (s *Server) testNotification(w http.ResponseWriter, r *http.Request, _ auth
 	if err := decode(r, &in); err != nil {
 		return err
 	}
-	in = in.Defaults(s.Config.Timezone)
+	var current settings.Webhook
+	if _, err := s.settingsStore().Load(r.Context(), "notifications", &current); err != nil {
+		return err
+	}
+	in = settings.MergeWebhookSecrets(in, current).Defaults(s.Config.Timezone)
 	if err := settings.ValidateWebhook(in, s.Config.Timezone); err != nil {
 		return bad(err.Error())
 	}
@@ -23,7 +27,7 @@ func (s *Server) testNotification(w http.ResponseWriter, r *http.Request, _ auth
 	defer cancel()
 	err := notifications.Send(ctx, s.Control, in, notifications.Message{Event: "test", Key: "test", Level: "info", Text: "Your Tally notification service is working.", Show: "Example show", Time: time.Now()})
 	if err != nil {
-		return apiError{502, err.Error()}
+		return remote(err)
 	}
 	jsonResponse(w, 200, map[string]string{"message": "Test notification delivered."})
 	return nil

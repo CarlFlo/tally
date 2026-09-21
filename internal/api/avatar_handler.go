@@ -1,6 +1,8 @@
 package api
 
 import (
+	"database/sql"
+	"errors"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -14,8 +16,12 @@ func (s *Server) avatar(w http.ResponseWriter, r *http.Request, _ auth.Session) 
 		return apiError{404, "avatar not found"}
 	}
 	var exists int
-	if s.DB.QueryRowContext(r.Context(), "SELECT 1 FROM profiles WHERE avatar=?", name).Scan(&exists) != nil {
+	err := s.DB.QueryRowContext(r.Context(), "SELECT 1 FROM profiles WHERE avatar=?", name).Scan(&exists)
+	if errors.Is(err, sql.ErrNoRows) {
 		return apiError{404, "avatar not found"}
+	}
+	if err != nil {
+		return err
 	}
 	w.Header().Set("Content-Type", "image/png")
 	w.Header().Set("Cache-Control", "public,max-age=86400")

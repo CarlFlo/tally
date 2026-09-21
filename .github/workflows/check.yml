@@ -38,6 +38,22 @@ jobs:
           name: browser-traces
           path: frontend/test-results
       - run: docker build -t tally:check .
+      - name: Verify container starts
+        run: |
+          id=$(docker run -d --rm tally:check)
+          trap 'docker rm -f "$id" >/dev/null 2>&1 || true' EXIT
+          for i in $(seq 1 30); do
+            if docker exec "$id" wget -q -O /dev/null http://127.0.0.1:8080/readyz; then
+              exit 0
+            fi
+            if ! docker inspect -f '{{.State.Running}}' "$id" | grep -q true; then
+              docker logs "$id"
+              exit 1
+            fi
+            sleep 1
+          done
+          docker logs "$id"
+          exit 1
       - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: tally:check

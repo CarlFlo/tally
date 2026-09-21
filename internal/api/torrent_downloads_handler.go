@@ -10,12 +10,16 @@ import (
 )
 
 func (s *Server) tallyDownloads(r *http.Request) (torrent.DownloadClient, torrent.DownloadSnapshot, error) {
-	if !s.torrentDownloadsEnabled(r.Context()) {
+	enabled, err := s.torrentDownloadsEnabled(r.Context())
+	if err != nil {
+		return nil, torrent.DownloadSnapshot{}, err
+	}
+	if !enabled {
 		return nil, torrent.DownloadSnapshot{}, bad("torrent downloads are disabled in Settings")
 	}
 	client, e := s.Clients.Current(r.Context())
 	if e != nil {
-		return nil, torrent.DownloadSnapshot{}, bad(e.Error())
+		return nil, torrent.DownloadSnapshot{}, clientInputError(e)
 	}
 	snapshot, e := client.Downloads(r.Context(), torrent.TallyCategory)
 	if e != nil {

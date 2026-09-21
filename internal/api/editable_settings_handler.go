@@ -13,7 +13,8 @@ func (s *Server) editableSettings(w http.ResponseWriter, r *http.Request, sessio
 	if e := s.operator(session); e != nil {
 		return e
 	}
-	// Secrets are deliberately visible to the deployment owner; never cache them.
+	// Editable settings may contain connection metadata; never cache them.
+	// Stored credentials are redacted before serialization.
 	w.Header().Set("Cache-Control", "no-store")
 	section := r.PathValue("section")
 	if section == "scheduling" {
@@ -46,18 +47,20 @@ func (s *Server) editableSettings(w http.ResponseWriter, r *http.Request, sessio
 	if e != nil {
 		return e
 	}
+	response := map[string]any{"data": out, "revision": rev}
 	if search, ok := out.(*settings.Search); ok {
-		effective := search.Effective()
-		out = &effective
+		redacted, configured := settings.RedactSearchSecrets(*search)
+		response["data"] = &redacted
+		response["secrets_configured"] = configured
 	}
 	if automation, ok := out.(*settings.TorrentAutomation); ok {
 		effective := automation.Effective()
-		out = &effective
-	}
-	response := map[string]any{"data": out, "revision": rev}
-	if webhook, ok := out.(*settings.Webhook); ok {
-		effective := webhook.Defaults(s.Config.Timezone)
 		response["data"] = &effective
+	}
+	if webhook, ok := out.(*settings.Webhook); ok {
+		redacted, configured := settings.RedactWebhookSecrets(*webhook, s.Config.Timezone)
+		response["data"] = &redacted
+		response["secrets_configured"] = configured
 		response["server_timezone"] = s.Config.Timezone
 	}
 	jsonResponse(w, 200, response)

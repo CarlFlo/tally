@@ -12,7 +12,7 @@ func (s *Server) createManualBackup(w http.ResponseWriter, r *http.Request, sess
 	}
 	id, err := s.Jobs.TriggerAndWait(r.Context(), "backup", "manual_backup", "")
 	if err != nil {
-		return bad(err.Error())
+		return jobRequestError(err)
 	}
 	jsonResponse(w, http.StatusCreated, map[string]string{"id": id})
 	return nil

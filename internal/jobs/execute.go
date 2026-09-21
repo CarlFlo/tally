@@ -1,6 +1,9 @@
 package jobs
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 // runResult keeps job outcomes named at the call site and persistence boundary.
 type runResult struct {
@@ -22,6 +25,6 @@ func (s *Service) run(ctx context.Context, id, kind, trigger, show string) (runR
 		processed, err := s.TorrentAutomation.Run(ctx)
 		return runResult{Processed: processed, Changes: processed, Attempt: 1}, err
 	default:
-		return runResult{Attempt: 1}, nil
+		return runResult{Attempt: 1}, fmt.Errorf("unknown job %q", kind)
 	}
 }

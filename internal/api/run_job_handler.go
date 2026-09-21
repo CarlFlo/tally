@@ -15,7 +15,7 @@ func (s *Server) runJob(w http.ResponseWriter, r *http.Request, session auth.Ses
 	}
 	id, e := s.Jobs.Trigger(kind, "manual_refresh", "")
 	if e != nil {
-		return bad(e.Error())
+		return jobRequestError(e)
 	}
 	jsonResponse(w, 202, map[string]string{"id": id})
 	return nil

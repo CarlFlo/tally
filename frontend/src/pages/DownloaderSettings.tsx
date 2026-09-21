@@ -40,7 +40,7 @@ export function DownloaderSettings() {
   const cache = useQueryClient();
   const query = useLocal<ClientData>(
     "downloader",
-    "/downloader?reveal=1",
+    "/downloader",
     true,
   );
   const feature = useLocal<TorrentFeature>(
@@ -147,6 +147,7 @@ function ClientForm({
   const cache = useQueryClient();
   const form = useRef<HTMLFormElement>(null);
   const startTest = useLatestRequest();
+  const [savedSettings, setSavedSettings] = useState(data.settings);
   const [adapter, setAdapter] = useState(data.settings.adapter);
   const [fields, setFields] = useState<Record<string, string>>(
     data.settings.fields,
@@ -167,13 +168,14 @@ function ClientForm({
   );
   const definition = data.adapters.find((item) => item.id === adapter);
   useEffect(() => {
-    if (changed || data.settings.revision <= revision) return;
+    if (changed || data.settings.revision <= savedSettings.revision) return;
+    setSavedSettings(data.settings);
     setAdapter(data.settings.adapter);
     setFields(data.settings.fields);
     setTouched({});
     setCleared({});
     setRevision(data.settings.revision);
-  }, [changed, data, revision]);
+  }, [changed, data, savedSettings.revision]);
   function change(key: string, value: string) {
     setChanged(true);
     setTouched((old) => ({ ...old, [key]: true }));
@@ -210,6 +212,11 @@ function ClientForm({
         });
       } else {
         const result = await api<Connection>("/downloader", "PUT", payload());
+        setSavedSettings(result);
+        setAdapter(result.adapter);
+        setFields(result.fields);
+        setTouched({});
+        setCleared({});
         setRevision(result.revision);
         setChanged(false);
         await invalidateResources(cache, [
@@ -251,8 +258,8 @@ function ClientForm({
         </label>
         {definition?.fields.map((field) => {
           const saved =
-            adapter === data.settings.adapter &&
-            data.settings.secrets_configured[field.key];
+            adapter === savedSettings.adapter &&
+            savedSettings.secrets_configured[field.key];
           return (
             <div key={field.key}>
               <label>
@@ -342,8 +349,8 @@ function ClientForm({
         hasChanges={changed}
         busy={busy !== null}
         onRevert={() => {
-          setAdapter(data.settings.adapter);
-          setFields(data.settings.fields);
+          setAdapter(savedSettings.adapter);
+          setFields(savedSettings.fields);
           setTouched({});
           setCleared({});
           setChanged(false);

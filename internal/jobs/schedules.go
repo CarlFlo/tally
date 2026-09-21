@@ -2,6 +2,8 @@ package jobs
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -22,17 +24,17 @@ func (s *Service) SaveSchedule(ctx context.Context, in Schedule, actors ...strin
 		actor = actors[0]
 	}
 	if in.Key != "metadata" && in.Key != "torrent_automation" && in.Key != "maintenance" && in.Key != "backup" {
-		return fmt.Errorf("unknown job")
+		return requestError("unknown job")
 	}
 	if len(in.Schedule) > 100 {
-		return fmt.Errorf("cron schedule is too long")
+		return requestError("cron schedule is too long")
 	}
 	next, err := s.nextScheduledRun(in.Schedule, time.Now())
 	if err != nil {
-		return err
+		return requestError("%s", err.Error())
 	}
 	if next.IsZero() {
-		return fmt.Errorf("schedule has no next occurrence")
+		return requestError("schedule has no next occurrence")
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -85,11 +87,14 @@ func (s *Service) Resume(ctx context.Context, key string) error {
 	defer s.mu.Unlock()
 	var spec string
 	if err := s.DB.QueryRowContext(ctx, "SELECT schedule FROM jobs WHERE key=?", key).Scan(&spec); err != nil {
-		return fmt.Errorf("unknown job")
+		if errors.Is(err, sql.ErrNoRows) {
+			return requestError("unknown job")
+		}
+		return err
 	}
 	next, err := s.nextScheduledRun(spec, time.Now())
 	if err != nil {
-		return err
+		return requestError("%s", err.Error())
 	}
 	if _, err = s.DB.ExecContext(ctx, "UPDATE jobs SET paused=0,failures=0,next_run=CASE WHEN enabled=1 THEN ? ELSE 0 END,revision=revision+1 WHERE key=?", next.Unix(), key); err != nil {
 		return err

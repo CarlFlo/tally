@@ -11,6 +11,7 @@ import { UnsavedChangesBar, useUnsavedChangesWarning } from "../UnsavedChangesBa
 import "../unsaved-changes.css";
 import {
   displayNotificationTime,
+  notificationEndpointReady,
   notificationErrors,
   parseNotificationTime,
 } from "./notificationValidation";
@@ -53,6 +54,10 @@ function NotificationForm({ saved }: { saved: any }) {
   const [data, setData] = useState(() =>
     defaults(saved.data, saved.server_timezone),
   );
+  const [secretsConfigured, setSecretsConfigured] = useState<Record<string, boolean>>(
+    saved.secrets_configured || {},
+  );
+  const [clearedSecrets, setClearedSecrets] = useState<Record<string, boolean>>({});
   const [timeText, setTimeText] = useState(() =>
     displayNotificationTime(data.delivery_time, boot.preferences.time_format),
   );
@@ -67,8 +72,12 @@ function NotificationForm({ saved }: { saved: any }) {
       boot.preferences.time_format,
     ),
   };
-  const errors = notificationErrors(normalized);
-  const savedValid = Object.keys(notificationErrors(stored)).length === 0;
+  const effectiveConfigured = {
+    url: !!secretsConfigured.url && !clearedSecrets.url,
+    discord_url: !!secretsConfigured.discord_url && !clearedSecrets.discord_url,
+  };
+  const errors = notificationErrors(normalized, effectiveConfigured);
+  const savedValid = notificationEndpointReady(stored, secretsConfigured);
   const toggleMessage = savedValid
     ? ""
     : t("notifications.saveBeforeEnable");
@@ -89,26 +98,54 @@ function NotificationForm({ saved }: { saved: any }) {
     const next = defaults(saved.data, saved.server_timezone);
     setData(next);
     setStored(next);
+    setSecretsConfigured(saved.secrets_configured || {});
+    setClearedSecrets({});
     setRevision(saved.revision);
     setTimeText(
       displayNotificationTime(next.delivery_time, boot.preferences.time_format),
     );
   }, [boot.preferences.time_format, data, revision, saved, stored]);
-  const change = (key: string, value: any) =>
+  const change = (key: string, value: any) => {
+    if ((key === "url" || key === "discord_url") && value) {
+      setClearedSecrets((old) => ({ ...old, [key]: false }));
+    }
     setData((old: any) => ({ ...old, [key]: value }));
+  };
+  const clearSecret = (key: "url" | "discord_url", clear: boolean) => {
+    setClearedSecrets((old) => ({ ...old, [key]: clear }));
+    if (clear) {
+      setData((old: any) => ({ ...old, [key]: "" }));
+    }
+  };
   async function persist(next: any) {
     const response = await api("/settings/notifications", "PUT", {
       data: next,
       revision,
+      clear_secrets: clearedSecrets,
     });
     const serverTimezone = saved.server_timezone || next.timezone || "UTC";
-    const persisted = { ...next, timezone: serverTimezone };
+    const nextConfigured = {
+      url: !clearedSecrets.url && (!!secretsConfigured.url || !!next.url),
+      discord_url:
+        !clearedSecrets.discord_url &&
+        (!!secretsConfigured.discord_url || !!next.discord_url),
+    };
+    const persisted = {
+      ...next,
+      url: "",
+      discord_url: "",
+      timezone: serverTimezone,
+    };
     setRevision(response.revision);
+    setSecretsConfigured(nextConfigured);
+    setClearedSecrets({});
     setStored(persisted);
+    setData(persisted);
     cache.setQueryData(queryKeys.local("editable-settings", "/settings/notifications"), {
       data: persisted,
       revision: response.revision,
       server_timezone: serverTimezone,
+      secrets_configured: nextConfigured,
     });
     await invalidateResources(cache, ["settings"]);
   }
@@ -126,7 +163,6 @@ function NotificationForm({ saved }: { saved: any }) {
     try {
       const enabledChanged = normalized.enabled !== stored.enabled;
       await persist(normalized);
-      setData(normalized);
       notify(
         enabledChanged
           ? t(normalized.enabled ? "notifications.enabledNotice" : "notifications.disabledNotice")
@@ -173,6 +209,9 @@ function NotificationForm({ saved }: { saved: any }) {
             timeText={timeText}
             timeFormat={boot.preferences.time_format}
             changeTime={setTimeText}
+            secretsConfigured={secretsConfigured}
+            clearedSecrets={clearedSecrets}
+            clearSecret={clearSecret}
           />
         </fieldset>
         {feedback && (
@@ -218,6 +257,7 @@ function NotificationForm({ saved }: { saved: any }) {
         busy={busy}
         onRevert={() => {
           setData(stored);
+          setClearedSecrets({});
           setTimeText(displayNotificationTime(stored.delivery_time, boot.preferences.time_format));
           setFeedback("");
         }}

@@ -10,12 +10,16 @@ import (
 )
 
 func (s *Server) torrentSend(w http.ResponseWriter, r *http.Request, session auth.Session) error {
-	if !s.torrentDownloadsEnabled(r.Context()) {
+	enabled, e := s.torrentDownloadsEnabled(r.Context())
+	if e != nil {
+		return e
+	}
+	if !enabled {
 		return bad("torrent downloads are disabled in Settings")
 	}
 	client, e := s.Clients.Current(r.Context())
 	if e != nil {
-		return bad(e.Error())
+		return clientInputError(e)
 	}
 	var in struct {
 		Selection string `json:"selection"`
@@ -81,8 +85,10 @@ func (s *Server) torrentSend(w http.ResponseWriter, r *http.Request, session aut
 		e = client.AddMagnet(r.Context(), result.Magnet)
 	} else {
 		var data []byte
-		provider := s.searchProvider("jackett")
-		if provider == nil {
+		provider, providerErr := s.searchProvider(r.Context(), "jackett")
+		if providerErr != nil {
+			e = providerErr
+		} else if provider == nil {
 			e = bad("the selected torrent provider is no longer configured")
 		} else {
 			data, e = provider.FetchTorrent(r.Context(), result.URL)

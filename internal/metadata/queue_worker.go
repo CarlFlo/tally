@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log/slog"
 	"strconv"
 	"time"
 
@@ -58,10 +59,12 @@ func (s *Service) ProcessNext(ctx context.Context) (processed bool, resultErr er
 	}
 	if e != nil {
 		status := "failed"
-		message := "Could not add " + name + ". " + e.Error()
+		message := "Could not update " + name + ". Please retry."
 		if errors.Is(ctx.Err(), context.Canceled) {
 			status = "queued"
 			message = ""
+		} else {
+			slog.Warn("queued show action failed", "profile_id", profile, "external_id", external, "error", e)
 		}
 		_, writeErr := s.DB.Exec("UPDATE show_actions SET status=?,error=?,updated_at=? WHERE profile_id=? AND external_id=? AND revision=?", status, message, time.Now().UnixMilli(), profile, external, revision)
 		return true, writeErr

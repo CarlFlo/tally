@@ -8,8 +8,8 @@ import (
 
 func (s *Server) show(w http.ResponseWriter, r *http.Request, session auth.Session) error {
 	id := r.PathValue("id")
-	if !s.follows(r, session.Profile, id) {
-		return apiError{404, "show is not in your library"}
+	if err := s.requireFollow(r.Context(), session.Profile, id); err != nil {
+		return err
 	}
 	shows, e := s.DB.Rows(r.Context(), "SELECT s.*,f.favorite FROM shows s JOIN profile_shows f ON f.show_id=s.id WHERE s.id=? AND f.profile_id=?", id, session.Profile)
 	if e != nil {

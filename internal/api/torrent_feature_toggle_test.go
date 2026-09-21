@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/CarlFlo/tally/internal/database"
 	"github.com/CarlFlo/tally/internal/settings"
 	"github.com/CarlFlo/tally/internal/torrent"
 )
@@ -31,7 +32,15 @@ func TestTorrentFeatureTogglesPreserveConnectionsAndEnforceActions(t *testing.T)
 		"data": search, "revision": 1,
 	})
 	expect(t, response, 200)
-	if !s.jackettConfigured() || s.torrentSearchEnabled(ctx) {
+	configured, err := s.jackettConfigured(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	enabled, err := s.torrentSearchEnabled(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !configured || enabled {
 		t.Fatal("search toggle changed Jackett configuration state")
 	}
 	response = request(t, h, "POST", "/api/torrents/search", map[string]any{"query": "Example"})
@@ -109,5 +118,23 @@ func TestTorrentFeatureTogglesPreserveConnectionsAndEnforceActions(t *testing.T)
 	expect(t, request(t, h, "DELETE", "/api/torrents/downloads/"+hash+"?delete_files=true", nil), 200)
 	if !deletedFiles.Load() {
 		t.Fatal("delete_files=true was not forwarded to qBittorrent")
+	}
+}
+
+func TestTorrentFeatureReadsFailClosedOnStorageFailure(t *testing.T) {
+	ctx := context.Background()
+	db, err := database.Open(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := &Server{DB: db}
+	if err = db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if enabled, readErr := s.torrentSearchEnabled(ctx); readErr == nil || enabled {
+		t.Fatalf("search settings failure did not fail closed: enabled=%t err=%v", enabled, readErr)
+	}
+	if enabled, readErr := s.torrentDownloadsEnabled(ctx); readErr == nil || enabled {
+		t.Fatalf("download settings failure did not fail closed: enabled=%t err=%v", enabled, readErr)
 	}
 }

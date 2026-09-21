@@ -1,6 +1,8 @@
 package api
 
 import (
+	"database/sql"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -12,7 +14,7 @@ func (s *Server) torrentAutomationStore() torrent.AutomationStore {
 	return torrent.AutomationStore{DB: s.DB}
 }
 
-func (s *Server) torrentAutomationRuns(w http.ResponseWriter, r *http.Request, _ auth.Session) error {
+func (s *Server) torrentAutomationRuns(w http.ResponseWriter, r *http.Request, session auth.Session) error {
 	limit := 100
 	if raw := r.URL.Query().Get("limit"); raw != "" {
 		value, err := strconv.Atoi(raw)
@@ -21,7 +23,16 @@ func (s *Server) torrentAutomationRuns(w http.ResponseWriter, r *http.Request, _
 		}
 		limit = value
 	}
-	runs, err := s.torrentAutomationStore().ListRuns(r.Context(), limit)
+	store := s.torrentAutomationStore()
+	var (
+		runs []torrent.AutomationRun
+		err  error
+	)
+	if session.Admin {
+		runs, err = store.ListRuns(r.Context(), limit)
+	} else {
+		runs, err = store.ListRunsForProfile(r.Context(), session.Profile, limit)
+	}
 	if err != nil {
 		return err
 	}
@@ -29,10 +40,20 @@ func (s *Server) torrentAutomationRuns(w http.ResponseWriter, r *http.Request, _
 	return nil
 }
 
-func (s *Server) torrentAutomationRun(w http.ResponseWriter, r *http.Request, _ auth.Session) error {
+func (s *Server) torrentAutomationRun(w http.ResponseWriter, r *http.Request, session auth.Session) error {
 	run, err := s.torrentAutomationStore().GetRun(r.Context(), r.PathValue("id"))
-	if err != nil {
+	if errors.Is(err, sql.ErrNoRows) {
 		return apiError{404, "automation run not found"}
+	}
+	if err != nil {
+		return err
+	}
+	if err = s.requireTorrentShowAccess(r.Context(), session, run.ShowID); err != nil {
+		var accessErr apiError
+		if errors.As(err, &accessErr) && accessErr.Status == http.StatusNotFound {
+			return apiError{404, "automation run not found"}
+		}
+		return err
 	}
 	jsonResponse(w, 200, run)
 	return nil
@@ -48,14 +69,30 @@ func (s *Server) markTorrentAutomationRunBad(w http.ResponseWriter, r *http.Requ
 	}
 	store := s.torrentAutomationStore()
 	run, err := store.GetRun(r.Context(), r.PathValue("id"))
-	if err != nil {
+	if errors.Is(err, sql.ErrNoRows) {
 		return apiError{404, "automation run not found"}
+	}
+	if err != nil {
+		return err
+	}
+	if err = s.requireTorrentShowAccess(r.Context(), session, run.ShowID); err != nil {
+		var accessErr apiError
+		if errors.As(err, &accessErr) && accessErr.Status == http.StatusNotFound {
+			return apiError{404, "automation run not found"}
+		}
+		return err
 	}
 	if run.Feedback != nil {
 		return apiError{409, "this run has already been marked bad"}
 	}
-	if err = store.MarkBad(r.Context(), run.ID, session.Profile, in.Reason, in.Note); err != nil {
+	if run.Status == torrent.RunRunning {
+		return bad("a running automation attempt cannot be marked bad")
+	}
+	if err = torrent.ValidateAutomationFeedback(in.Reason, in.Note); err != nil {
 		return bad(err.Error())
+	}
+	if err = store.MarkBad(r.Context(), run.ID, session.Profile, in.Reason, in.Note); err != nil {
+		return err
 	}
 	updated, err := store.GetRun(r.Context(), run.ID)
 	if err != nil {
@@ -84,14 +121,10 @@ func (s *Server) torrentAutomationShows(w http.ResponseWriter, r *http.Request, 
 	return nil
 }
 
-func (s *Server) torrentShowPolicy(w http.ResponseWriter, r *http.Request, _ auth.Session) error {
+func (s *Server) torrentShowPolicy(w http.ResponseWriter, r *http.Request, session auth.Session) error {
 	showID := r.PathValue("id")
-	var exists int
-	if err := s.DB.QueryRowContext(r.Context(), "SELECT EXISTS(SELECT 1 FROM shows WHERE id=?)", showID).Scan(&exists); err != nil {
+	if err := s.requireTorrentShowAccess(r.Context(), session, showID); err != nil {
 		return err
-	}
-	if exists == 0 {
-		return apiError{404, "show not found"}
 	}
 	policy, err := s.torrentAutomationStore().ShowPolicy(r.Context(), showID)
 	if err != nil {
@@ -122,16 +155,15 @@ func (s *Server) updateTorrentShowPolicy(w http.ResponseWriter, r *http.Request,
 	if in.Policy == "" {
 		return bad("automation enrollment is required")
 	}
+	if err := torrent.ValidateShowPolicy(in.Policy); err != nil {
+		return bad(err.Error())
+	}
 	showID := r.PathValue("id")
-	var exists int
-	if err := s.DB.QueryRowContext(r.Context(), "SELECT EXISTS(SELECT 1 FROM shows WHERE id=?)", showID).Scan(&exists); err != nil {
+	if err := s.requireTorrentShowAccess(r.Context(), session, showID); err != nil {
 		return err
 	}
-	if exists == 0 {
-		return apiError{404, "show not found"}
-	}
 	if err := s.torrentAutomationStore().SetShowPolicy(r.Context(), showID, in.Policy); err != nil {
-		return bad(err.Error())
+		return err
 	}
 	policy, err := s.torrentAutomationStore().ShowPolicy(r.Context(), showID)
 	if err != nil {
@@ -144,11 +176,17 @@ func (s *Server) updateTorrentShowPolicy(w http.ResponseWriter, r *http.Request,
 	return nil
 }
 
-func (s *Server) torrentShowMediaProfile(w http.ResponseWriter, r *http.Request, _ auth.Session) error {
+func (s *Server) torrentShowMediaProfile(w http.ResponseWriter, r *http.Request, session auth.Session) error {
 	showID := r.PathValue("id")
+	if err := s.requireTorrentShowAccess(r.Context(), session, showID); err != nil {
+		return err
+	}
 	profile, err := s.torrentAutomationStore().ShowMediaProfile(r.Context(), showID)
-	if err != nil {
+	if errors.Is(err, sql.ErrNoRows) {
 		return apiError{404, "show not found"}
+	}
+	if err != nil {
+		return err
 	}
 	jsonResponse(w, 200, profile)
 	return nil
@@ -164,16 +202,15 @@ func (s *Server) updateTorrentShowMediaProfile(w http.ResponseWriter, r *http.Re
 	if err := decode(r, &in); err != nil {
 		return err
 	}
+	if err := torrent.ValidateShowMediaProfile(in.Mode); err != nil {
+		return bad(err.Error())
+	}
 	showID := r.PathValue("id")
-	var exists int
-	if err := s.DB.QueryRowContext(r.Context(), "SELECT EXISTS(SELECT 1 FROM shows WHERE id=?)", showID).Scan(&exists); err != nil {
+	if err := s.requireTorrentShowAccess(r.Context(), session, showID); err != nil {
 		return err
 	}
-	if exists == 0 {
-		return apiError{404, "show not found"}
-	}
 	if err := s.torrentAutomationStore().SetShowMediaProfile(r.Context(), showID, in.Mode); err != nil {
-		return bad(err.Error())
+		return err
 	}
 	profile, err := s.torrentAutomationStore().ShowMediaProfile(r.Context(), showID)
 	if err != nil {

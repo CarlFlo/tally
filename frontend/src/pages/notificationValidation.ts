@@ -3,11 +3,20 @@ const tokens = new Set(["event", "key", "level", "message", "show", "time"]);
 
 export type NotificationErrors = Record<string, string>;
 
-export function notificationErrors(data: any): NotificationErrors {
+export function notificationErrors(
+  data: any,
+  configured: Record<string, boolean> = {},
+): NotificationErrors {
   const errors: NotificationErrors = {};
   const endpoint = data.type === "discord" ? data.discord_url : data.url;
   const endpointField = data.type === "discord" ? "discord_url" : "url";
-  if (!validURL(endpoint)) errors[endpointField] = i18n.t("validation.validURL");
+  if (!endpoint && configured[endpointField]) {
+    // Stored endpoints are deliberately redacted from the browser.
+  } else if (!endpoint && !data.enabled) {
+    // A disabled service may intentionally have no saved endpoint.
+  } else if (!validURL(endpoint)) {
+    errors[endpointField] = i18n.t("validation.validURL");
+  }
   if (data.type === "webhook") validateBody(data.body, errors);
   if ((data.bot_name || "").length > 80)
     errors.bot_name = i18n.t("validation.max80");
@@ -67,4 +76,13 @@ function validateBody(body: string, errors: NotificationErrors) {
     if (!tokens.has(match[1]))
       errors.body = i18n.t("validation.unsupportedPlaceholder", { token: `{{${match[1]}}}` });
   }
+}
+
+
+export function notificationEndpointReady(
+  data: any,
+  configured: Record<string, boolean> = {},
+) {
+  const field = data.type === "discord" ? "discord_url" : "url";
+  return !!data[field] || !!configured[field];
 }

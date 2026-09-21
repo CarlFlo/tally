@@ -10,11 +10,15 @@ import (
 
 func restoreBackup(ctx context.Context, c config.Config, args []string) error {
 	if len(args) != 1 {
-		return fmt.Errorf("usage: tally restore <archive>")
+		return fmt.Errorf("usage: tally restore <backup.zip>")
 	}
-	if err := backup.Restore(ctx, args[0], c.DataDir); err != nil {
+	archive, err := backupArchivePath(c, args[0])
+	if err != nil {
 		return err
 	}
-	fmt.Println("Backup restored; previous data preserved in pre-restore directory")
+	if err = backup.Restore(ctx, archive, c.DataDir); err != nil {
+		return err
+	}
+	fmt.Println("Backup restored successfully.")
 	return nil
 }

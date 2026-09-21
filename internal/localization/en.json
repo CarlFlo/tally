@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 30
+    "catalogVersion": 31
   },
   "common": {
     "save": "Save",
@@ -201,17 +201,15 @@
   "login": {
     "eyebrow": "MAKE YOURSELF AT HOME",
     "welcomeBack": "Welcome back, {{name}}.",
-    "setupPassword": "Set up your password, {{name}}.",
     "who": "Who's keeping up?",
     "subtitle": "Your shows, your progress, your next great episode.",
     "footer": "A personal space for the shows you love.",
-    "choosePassword": "Choose a password to secure your profile before continuing.",
     "password": "Password",
-    "setPasswordContinue": "Set password and continue",
     "enterSpace": "Enter your space",
-    "forgotPassword": "Forgot password? Send recovery to server logs",
+    "forgotPassword": "Forgot password?",
     "chooseAnother": "Choose another profile",
-    "addProfile": "Add profile"
+    "addProfile": "Add profile",
+    "passwordResetHelp": "Ask the server administrator to reset this profile with the tally reset-password operator command."
   },
   "passwordGate": {
     "title": "Make it yours.",

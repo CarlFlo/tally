@@ -1,22 +1,19 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Plus, Search, Star, X } from "lucide-react";
 import { api, Busy, Dialog, Empty, ErrorState, Poster, useApp } from "../lib";
 import { useLibraryActions } from "../LibraryActions";
 import { queryKeys } from "../queryKeys";
+import { useDebouncedValue } from "../useDebouncedValue";
 
 export function AddShow({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
-  const [debounced, setDebounced] = useState("");
+  const debounced = useDebouncedValue(query.trim(), 350);
   const [selected, setSelected] = useState<any>(null);
   const { boot, notify } = useApp();
   const library = useLibraryActions();
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(query.trim()), 350);
-    return () => clearTimeout(timer);
-  }, [query]);
   const suggestions = useQuery<any[]>({
     queryKey: queryKeys.showSuggestions(),
     queryFn: ({ signal }) =>

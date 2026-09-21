@@ -443,8 +443,10 @@ test("settings categories persist connections, schedules, debug previews and sta
   await expect(
     page.getByRole("switch", { name: "Enable all notifications" }),
   ).toBeChecked();
-  await expect(page.getByLabel("Webhook URL", { exact: true })).toHaveValue(
-    "http://127.0.0.1:1/fixture-webhook",
+  await expect(page.getByLabel("Webhook URL", { exact: true })).toHaveValue("");
+  await expect(page.getByLabel("Webhook URL", { exact: true })).toHaveAttribute(
+    "placeholder",
+    "Saved — leave blank to keep it",
   );
   await page
     .getByRole("switch", { name: "Enable all notifications" })
@@ -465,9 +467,6 @@ test("settings categories persist connections, schedules, debug previews and sta
     .getByLabel("Jackett base URL", { exact: true })
     .fill("http://127.0.0.1:1");
   await page
-    .getByLabel("API key", { exact: true })
-    .fill("plain-fixture-key");
-  await page
     .getByRole("button", { name: "Save changes", exact: true })
     .click();
   await expect(page.getByRole("status")).toContainText("Jackett settings saved");
@@ -477,7 +476,8 @@ test("settings categories persist connections, schedules, debug previews and sta
   await expect(page.getByRole("status")).toContainText("Torrent search disabled");
   await page.reload();
   const key = page.getByLabel("API key", { exact: true });
-  await expect(key).toHaveValue("plain-fixture-key");
+  await expect(key).toHaveValue("");
+  await expect(key).toHaveAttribute("placeholder", "Saved — leave blank to keep it");
   await expect(key).toHaveAttribute("type", "text");
   await expect(key).toHaveAttribute("autocomplete", "off");
   const disabledSearchSettings = await (

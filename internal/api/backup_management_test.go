@@ -125,12 +125,18 @@ func TestBackupManagementRequiresOperatorAndFailedRestorePreservesStateAndNotifi
 	}
 	logs := request(t, h, "GET", "/api/logs?q=restore%20failed", nil, owner)
 	expect(t, logs, 200)
-	if !strings.Contains(logs.Body.String(), "backup: restore failed") || !strings.Contains(logs.Body.String(), "job_failed") {
-		t.Fatal("restore failure was not saved in logs", logs.Body.String())
+	if !strings.Contains(logs.Body.String(), "Backup restore failed. Check server logs for details.") || !strings.Contains(logs.Body.String(), "job_failed") {
+		t.Fatal("safe restore failure was not saved in logs", logs.Body.String())
+	}
+	if strings.Contains(logs.Body.String(), "zip: not a valid zip file") {
+		t.Fatal("internal restore error leaked into application logs", logs.Body.String())
 	}
 	inbox := request(t, h, "GET", "/api/inbox", nil, owner)
 	expect(t, inbox, 200)
-	if !strings.Contains(inbox.Body.String(), "backup: restore failed") {
-		t.Fatal("restore failure was not shown in notifications", inbox.Body.String())
+	if !strings.Contains(inbox.Body.String(), "Backup restore failed. Check server logs for details.") {
+		t.Fatal("safe restore failure was not shown in notifications", inbox.Body.String())
+	}
+	if strings.Contains(inbox.Body.String(), "zip: not a valid zip file") {
+		t.Fatal("internal restore error leaked into notifications", inbox.Body.String())
 	}
 }

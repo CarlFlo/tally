@@ -19,6 +19,7 @@ import (
 	"github.com/CarlFlo/tally/internal/localization"
 	"github.com/CarlFlo/tally/internal/metadata"
 	"github.com/CarlFlo/tally/internal/providers"
+	"github.com/CarlFlo/tally/internal/settings"
 	"github.com/CarlFlo/tally/internal/torrent"
 )
 
@@ -50,7 +51,10 @@ func testServer(t *testing.T, mode string) (*Server, http.Handler, *fakeTV) {
 	if _, e = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at,auth_method) VALUES('profile-admin','My profile','violet',?,'none')", time.Now().Unix()); e != nil {
 		t.Fatal(e)
 	}
-	c := config.Config{DataDir: dir, MaxProfiles: 3, PasswordMin: 4, PasswordMax: 128, Timezone: "UTC", Theme: "system", SessionIdle: 30 * 24 * time.Hour, SessionAbsolute: 180 * 24 * time.Hour, ResetCooldown: time.Minute}
+	if e = (settings.Store{DB: db}).Ensure(context.Background()); e != nil {
+		t.Fatal(e)
+	}
+	c := config.Config{DataDir: dir, MaxProfiles: 3, PasswordMin: 4, PasswordMax: 128, Timezone: "UTC", Theme: "system", SessionIdle: 30 * 24 * time.Hour, SessionAbsolute: 180 * 24 * time.Hour}
 	p, e := providers.New(context.Background(), db, dir, 2, 0)
 	if e != nil {
 		t.Fatal(e)

@@ -1,6 +1,8 @@
 package api
 
 import (
+	"database/sql"
+	"errors"
 	"net/http"
 	"time"
 
@@ -21,13 +23,23 @@ func (s *Server) episodeState(w http.ResponseWriter, r *http.Request, session au
 	episodeID := r.PathValue("id")
 	var show string
 	var isReleased int
-	if s.DB.QueryRowContext(r.Context(), `SELECT show_id,
+	err := s.DB.QueryRowContext(r.Context(), `SELECT show_id,
 		CASE WHEN
 			(airstamp<>'' AND julianday(airstamp)<=julianday('now'))
 			OR (airstamp='' AND airdate<>'' AND airdate<date('now'))
 		THEN 1 ELSE 0 END
-		FROM episodes WHERE id=?`, episodeID).Scan(&show, &isReleased) != nil || !s.follows(r, session.Profile, show) {
+		FROM episodes WHERE id=?`, episodeID).Scan(&show, &isReleased)
+	if errors.Is(err, sql.ErrNoRows) {
 		return apiError{404, "episode is not in your library"}
+	}
+	if err != nil {
+		return err
+	}
+	if err = s.requireFollow(r.Context(), session.Profile, show); err != nil {
+		if apiErr, ok := err.(apiError); ok && apiErr.Status == http.StatusNotFound {
+			return apiError{404, "episode is not in your library"}
+		}
+		return err
 	}
 	if isReleased == 0 && ((in.Watched != nil && *in.Watched) || (in.Downloaded != nil && *in.Downloaded)) {
 		return bad("episode has not been released yet")

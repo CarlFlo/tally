@@ -2,6 +2,8 @@ package auth
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 )
@@ -17,10 +19,14 @@ func (s *Service) Change(ctx context.Context, w http.ResponseWriter, r *http.Req
 		}
 		var currentHash string
 		queryErr := s.DB.QueryRowContext(ctx, "SELECT hash FROM local_credentials WHERE profile_id=?", session.Profile).Scan(&currentHash)
+		if queryErr != nil && !errors.Is(queryErr, sql.ErrNoRows) {
+			release()
+			return fmt.Errorf("read current password: %w", queryErr)
+		}
 		valid := queryErr == nil && Verify(currentHash, current)
 		release()
 		if !valid {
-			return fmt.Errorf("current password is incorrect")
+			return ErrCurrentPasswordIncorrect
 		}
 	}
 
@@ -47,8 +53,5 @@ func (s *Service) Change(ctx context.Context, w http.ResponseWriter, r *http.Req
 	if e = tx.Commit(); e != nil {
 		return e
 	}
-	s.mu.Lock()
-	delete(s.recovery, session.Profile)
-	s.mu.Unlock()
 	return s.NewSession(ctx, w, r, session.Profile, false)
 }

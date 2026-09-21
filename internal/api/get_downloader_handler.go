@@ -15,15 +15,8 @@ func (s *Server) getDownloader(w http.ResponseWriter, r *http.Request, session a
 	if e != nil {
 		return e
 	}
+	w.Header().Set("Cache-Control", "no-store")
 	view := c.View()
-	if r.URL.Query().Get("reveal") == "1" {
-		w.Header().Set("Cache-Control", "no-store")
-		for key, configured := range view.SecretsConfigured {
-			if configured {
-				view.Fields[key] = c.Fields[key]
-			}
-		}
-	}
 	jsonResponse(w, 200, map[string]any{"adapters": torrent.ClientDefinitions(), "settings": view})
 	return nil
 }

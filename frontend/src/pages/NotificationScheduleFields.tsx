@@ -3,6 +3,7 @@ import { api, useApp } from "../lib";
 import { dateTimeFormatter, displayLocale } from "../dateFormatting";
 import type { NotificationErrors } from "./notificationValidation";
 import { parseNotificationTime } from "./notificationValidation";
+import { queryKeys } from "../queryKeys";
 import { useTranslation } from "react-i18next";
 
 export function NotificationScheduleFields({
@@ -24,7 +25,7 @@ export function NotificationScheduleFields({
   const userTimezone = boot.preferences.timezone || "UTC";
   const deliveryTime = parseNotificationTime(timeText, timeFormat);
   const preview = useQuery<{ next_delivery: number; server_timezone: string }>({
-    queryKey: ["notification-time-preview", deliveryTime, serverTimezone],
+    queryKey: queryKeys.notificationTimePreview(deliveryTime, serverTimezone),
     queryFn: ({ signal }) =>
       api(
         "/settings/notifications/preview",

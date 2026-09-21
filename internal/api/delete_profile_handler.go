@@ -14,9 +14,9 @@ func (s *Server) deleteProfile(w http.ResponseWriter, r *http.Request, session a
 		return apiError{403, "you can only delete your own profile"}
 	}
 
-	var targetAdmin bool
-	if err := s.DB.QueryRowContext(r.Context(), "SELECT is_admin FROM profile_roles WHERE profile_id=?", id).Scan(&targetAdmin); err != nil {
-		return apiError{404, "profile not found"}
+	targetAdmin, err := s.profileIsAdmin(r.Context(), id)
+	if err != nil {
+		return err
 	}
 
 	var in struct{ Password string }
@@ -27,11 +27,11 @@ func (s *Server) deleteProfile(w http.ResponseWriter, r *http.Request, session a
 	}
 	if targetAdmin {
 		if err := s.reauthenticateIfProtected(r.Context(), session.Profile, in.Password); err != nil {
-			return apiError{401, err.Error()}
+			return err
 		}
 	}
 
-	_, _, err := (profiles.Repository{DB: s.DB, Limit: s.Config.MaxProfiles}).Delete(r.Context(), session.Profile, id)
+	_, _, err = (profiles.Repository{DB: s.DB, Limit: s.Config.MaxProfiles}).Delete(r.Context(), session.Profile, id)
 	if errors.Is(err, profiles.ErrNotFound) {
 		return apiError{404, err.Error()}
 	}

@@ -6,18 +6,18 @@ import (
 	"github.com/CarlFlo/tally/internal/settings"
 )
 
-func (s *Server) torrentSearchEnabled(ctx context.Context) bool {
+func (s *Server) torrentSearchEnabled(ctx context.Context) (bool, error) {
 	var saved settings.Search
 	if _, err := s.settingsStore().Load(ctx, "search", &saved); err != nil {
-		return false
+		return false, err
 	}
-	return saved.Effective().Enabled
+	return saved.Effective().Enabled, nil
 }
 
-func (s *Server) torrentDownloadsEnabled(ctx context.Context) bool {
+func (s *Server) torrentDownloadsEnabled(ctx context.Context) (bool, error) {
 	var saved settings.Torrent
 	if _, err := s.settingsStore().Load(ctx, "torrent", &saved); err != nil {
-		return true
+		return false, err
 	}
-	return saved.Enabled
+	return saved.Enabled, nil
 }
