@@ -20,7 +20,7 @@ func testAuth(t *testing.T) *Service {
 		t.Fatal(e)
 	}
 	t.Cleanup(func() { db.Close() })
-	return New(db, config.Config{PasswordMin: 4, PasswordMax: 128, ResetCooldown: time.Minute, SessionIdle: time.Hour, SessionAbsolute: 24 * time.Hour, MaxProfiles: 3})
+	return New(db, config.Config{PasswordMin: 4, PasswordMax: 128, SessionIdle: time.Hour, SessionAbsolute: 24 * time.Hour, MaxProfiles: 3})
 }
 
 func legacyPasswordHash(password string) string {
