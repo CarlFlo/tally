@@ -1,6 +1,9 @@
 package api
 
 import (
+	"database/sql"
+	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/CarlFlo/tally/internal/auth"
@@ -10,7 +13,9 @@ import (
 func (s *Server) browserTheme(r *http.Request) string {
 	theme := "system"
 	if cookie, err := r.Cookie("tally_browser"); err == nil {
-		_ = s.DB.QueryRowContext(r.Context(), "SELECT theme FROM browser_preferences WHERE id=?", cookie.Value).Scan(&theme)
+		if err = s.DB.QueryRowContext(r.Context(), "SELECT theme FROM browser_preferences WHERE id=?", cookie.Value).Scan(&theme); err != nil && !errors.Is(err, sql.ErrNoRows) {
+			slog.Warn("read browser theme", "error", err)
+		}
 	}
 	return theme
 }
@@ -27,7 +32,10 @@ func (s *Server) browserPreferences(w http.ResponseWriter, r *http.Request, _ au
 	}
 	id := ""
 	if cookie, err := r.Cookie("tally_browser"); err == nil {
-		_ = s.DB.QueryRowContext(r.Context(), "SELECT id FROM browser_preferences WHERE id=?", cookie.Value).Scan(&id)
+		err = s.DB.QueryRowContext(r.Context(), "SELECT id FROM browser_preferences WHERE id=?", cookie.Value).Scan(&id)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
 	}
 	if id == "" {
 		id = database.ID()
