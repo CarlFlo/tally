@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"fmt"
 	"os"
+	"text/tabwriter"
 
 	"github.com/CarlFlo/tally/internal/auth"
 	"github.com/CarlFlo/tally/internal/config"
@@ -38,6 +39,21 @@ func readResetPassword() (string, error) {
 		return "", fmt.Errorf("password cannot be empty")
 	}
 	return string(first), nil
+}
+
+func printProfileList(profiles []profileSummary) {
+	if len(profiles) == 0 {
+		fmt.Fprintln(os.Stdout, "No profiles found.")
+		return
+	}
+	fmt.Fprintln(os.Stdout, "Profiles:")
+	w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
+	fmt.Fprintln(w, "NAME\tROLE\tAUTHENTICATION\tPROFILE ID")
+	for _, p := range profiles {
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", p.Name, p.Role, p.Authentication, p.ID)
+	}
+	_ = w.Flush()
+	fmt.Fprintln(os.Stdout, "\nReset with: tally reset-password <profile-id-or-unique-name>")
 }
 
 func resetPasswordValue(ctx context.Context, db *database.Store, c config.Config, profileRef, password string) error {
