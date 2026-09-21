@@ -31,7 +31,7 @@ func (s *Server) updateProfileAdmin(w http.ResponseWriter, r *http.Request, sess
 	}
 	if current && !in.Admin {
 		if err := s.reauthenticateIfProtected(r.Context(), session.Profile, in.Password); err != nil {
-			return apiError{401, err.Error()}
+			return err
 		}
 	}
 
