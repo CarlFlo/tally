@@ -44,7 +44,10 @@ func (s *Service) trigger(kind, trigger, show string) (string, <-chan error, err
 	}
 	if trigger == "scheduled_refresh" {
 		var enabled, paused bool
-		if err := s.DB.QueryRow("SELECT enabled,paused FROM jobs WHERE key=?", kind).Scan(&enabled, &paused); err != nil || !enabled || paused {
+		if err := s.DB.QueryRow("SELECT enabled,paused FROM jobs WHERE key=?", kind).Scan(&enabled, &paused); err != nil {
+			return "", nil, fmt.Errorf("read job schedule state: %w", err)
+		}
+		if !enabled || paused {
 			return "", nil, fmt.Errorf("job schedule is disabled or paused")
 		}
 	}
