@@ -2,10 +2,17 @@ package auth
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
+)
+
+var (
+	ErrSignInRequired = errors.New("sign in to continue")
+	ErrSessionExpired = errors.New("session expired; sign in again")
 )
 
 type Session struct {
@@ -23,7 +30,7 @@ func (s *Service) Resolve(r *http.Request) (Session, error) {
 	ctx := r.Context()
 	c, e := r.Cookie("tally_session")
 	if e != nil {
-		return Session{}, fmt.Errorf("sign in to continue")
+		return Session{}, ErrSignInRequired
 	}
 	var session Session
 	var last, expires int64
@@ -31,14 +38,19 @@ func (s *Service) Resolve(r *http.Request) (Session, error) {
 	e = s.DB.QueryRowContext(ctx, `SELECT s.profile_id,s.last_seen,s.expires_at,s.restricted,r.is_admin
 		FROM sessions s JOIN profile_roles r ON r.profile_id=s.profile_id WHERE s.id=?`, session.ID).
 		Scan(&session.Profile, &last, &expires, &session.Restricted, &session.Admin)
+	if errors.Is(e, sql.ErrNoRows) {
+		return Session{}, ErrSessionExpired
+	}
+	if e != nil {
+		return Session{}, fmt.Errorf("resolve session: %w", e)
+	}
 	now := time.Now().Unix()
-	if e != nil || now >= expires || now-last >= int64(s.Config.SessionIdle.Seconds()) {
-		return Session{}, fmt.Errorf("session expired; sign in again")
+	if now >= expires || now-last >= int64(s.Config.SessionIdle.Seconds()) {
+		return Session{}, ErrSessionExpired
 	}
 	if now-last > 60 {
-		_, e = s.DB.ExecContext(ctx, "UPDATE sessions SET last_seen=? WHERE id=?", now, session.ID)
-		if e != nil {
-			return Session{}, e
+		if _, e = s.DB.ExecContext(ctx, "UPDATE sessions SET last_seen=? WHERE id=?", now, session.ID); e != nil {
+			return Session{}, fmt.Errorf("refresh session activity: %w", e)
 		}
 	}
 	return session, nil
