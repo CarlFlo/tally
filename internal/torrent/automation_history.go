@@ -143,13 +143,12 @@ func (s AutomationStore) ShowMediaProfile(ctx context.Context, showID string) (S
 }
 
 func (s AutomationStore) SetShowMediaProfile(ctx context.Context, showID, mode string) error {
-	switch mode {
-	case MediaProfileAuto:
+	if err := ValidateShowMediaProfile(mode); err != nil {
+		return err
+	}
+	if mode == MediaProfileAuto {
 		_, err := s.DB.ExecContext(ctx, "DELETE FROM torrent_show_media_profile WHERE show_id=?", showID)
 		return err
-	case MediaProfileLive, MediaProfileAnimated:
-	default:
-		return fmt.Errorf("invalid show media profile")
 	}
 	_, err := s.DB.ExecContext(ctx, `INSERT INTO torrent_show_media_profile(show_id,profile,updated_at) VALUES(?,?,?)
 		ON CONFLICT(show_id) DO UPDATE SET profile=excluded.profile,updated_at=excluded.updated_at`, showID, mode, time.Now().Unix())
@@ -548,11 +547,8 @@ func normalizeInfoHash(value string) string {
 }
 
 func (s AutomationStore) MarkBad(ctx context.Context, runID, profileID, reason, note string) error {
-	if !validFeedbackReason(reason) {
-		return fmt.Errorf("invalid bad-run reason")
-	}
-	if len(note) > 500 {
-		return fmt.Errorf("bad-run note is too long")
+	if err := ValidateAutomationFeedback(reason, note); err != nil {
+		return err
 	}
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
@@ -609,10 +605,8 @@ func (s AutomationStore) ShowPolicy(ctx context.Context, showID string) (string,
 }
 
 func (s AutomationStore) SetShowPolicy(ctx context.Context, showID, policy string) error {
-	switch policy {
-	case "default", "auto", "never":
-	default:
-		return fmt.Errorf("invalid show automation policy")
+	if err := ValidateShowPolicy(policy); err != nil {
+		return err
 	}
 	if policy == "default" {
 		_, err := s.DB.ExecContext(ctx, "DELETE FROM torrent_show_policy WHERE show_id=?", showID)
