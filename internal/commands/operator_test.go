@@ -55,6 +55,22 @@ func TestOperatorServerResetsPasswordWhileApplicationIsRunning(t *testing.T) {
 	}
 }
 
+type restorePublisher struct {
+	called bool
+}
+
+func (p *restorePublisher) Publish(_ string, _ ...string) {
+	p.called = true
+}
+
+type restoreScheduler struct {
+	called bool
+}
+
+func (s *restoreScheduler) RefreshSchedules() {
+	s.called = true
+}
+
 func TestOperatorServerRestoresBackupLive(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -78,7 +94,9 @@ func TestOperatorServerRestoresBackupLive(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	server, err := startOperatorServer(ctx, c, db, backups, nil, nil)
+	publisher := &restorePublisher{}
+	scheduler := &restoreScheduler{}
+	server, err := startOperatorServer(ctx, c, db, backups, publisher, scheduler)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,6 +114,12 @@ func TestOperatorServerRestoresBackupLive(t *testing.T) {
 	}
 	if name != "Before backup" {
 		t.Fatalf("live restore did not replace state: %q", name)
+	}
+	if !publisher.called {
+		t.Fatal("live restore did not publish refreshed runtime state")
+	}
+	if !scheduler.called {
+		t.Fatal("live restore did not wake the scheduler")
 	}
 }
 
