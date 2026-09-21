@@ -19,7 +19,7 @@ import (
 	"github.com/CarlFlo/tally/internal/database"
 )
 
-const usage = "usage: tally [serve|backup|restore <archive>|verify-backup <archive>|reset-password [profile-id-or-name]|delete-backup <filename>|help]"
+const usage = "usage: tally [serve|backup|restore <backup.zip>|verify-backup <backup.zip>|reset-password [profile-id-or-name]|delete-backup <filename>|help]"
 
 func Run(args []string) error {
 	command := "serve"
@@ -101,7 +101,7 @@ func Run(args []string) error {
 		}
 	}
 	if command == "restore" {
-		archive, pathErr := filepath.Abs(args[0])
+		archive, pathErr := backupArchivePath(c, args[0])
 		if pathErr != nil {
 			return pathErr
 		}
@@ -188,11 +188,11 @@ func validateCommandArgs(command string, args []string) error {
 	switch command {
 	case "restore":
 		if len(args) != 1 {
-			return fmt.Errorf("usage: tally restore <archive>")
+			return fmt.Errorf("usage: tally restore <backup.zip>")
 		}
 	case "verify-backup":
 		if len(args) != 1 {
-			return fmt.Errorf("usage: tally verify-backup <archive>")
+			return fmt.Errorf("usage: tally verify-backup <backup.zip>")
 		}
 	case "reset-password":
 		if len(args) > 1 {
