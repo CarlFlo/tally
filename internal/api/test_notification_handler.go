@@ -15,7 +15,11 @@ func (s *Server) testNotification(w http.ResponseWriter, r *http.Request, _ auth
 	if err := decode(r, &in); err != nil {
 		return err
 	}
-	in = in.Defaults(s.Config.Timezone)
+	var current settings.Webhook
+	if _, err := s.settingsStore().Load(r.Context(), "notifications", &current); err != nil {
+		return err
+	}
+	in = settings.MergeWebhookSecrets(in, current).Defaults(s.Config.Timezone)
 	if err := settings.ValidateWebhook(in, s.Config.Timezone); err != nil {
 		return bad(err.Error())
 	}
