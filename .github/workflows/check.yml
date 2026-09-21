@@ -43,7 +43,7 @@ jobs:
           id=$(docker run -d --rm tally:check)
           trap 'docker rm -f "$id" >/dev/null 2>&1 || true' EXIT
           for i in $(seq 1 30); do
-            if docker exec "$id" /usr/local/bin/tally healthcheck; then
+            if docker exec "$id" tally healthcheck; then
               exit 0
             fi
             if ! docker inspect -f '{{.State.Running}}' "$id" | grep -q true; then
