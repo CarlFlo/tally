@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -123,5 +124,21 @@ func TestOldClientSettingsDisableSendingUntilAPIKeyIsSaved(t *testing.T) {
 	expect(t, response, 400)
 	if !strings.Contains(response.Body.String(), "API key") {
 		t.Fatal("missing key was not explained")
+	}
+}
+
+func TestClientInputErrorDoesNotHideInfrastructureFailure(t *testing.T) {
+	infrastructure := errors.New("database unavailable")
+	if got := clientInputError(infrastructure); !errors.Is(got, infrastructure) {
+		t.Fatalf("infrastructure error was replaced: %v", got)
+	}
+	var apiErr apiError
+	if errors.As(clientInputError(infrastructure), &apiErr) {
+		t.Fatalf("infrastructure error was misclassified as client input: %v", apiErr)
+	}
+
+	validation := torrent.ClientValidationError{Message: "bad client input"}
+	if got := clientInputError(validation); !errors.As(got, &apiErr) || apiErr.Status != 400 {
+		t.Fatalf("validation error was not mapped to 400: %v", got)
 	}
 }
