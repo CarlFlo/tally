@@ -10,7 +10,11 @@ func (s *Server) cancelJob(w http.ResponseWriter, r *http.Request, session auth.
 	if e := s.operator(session); e != nil {
 		return e
 	}
-	if !s.Jobs.Cancel(r.PathValue("id")) {
+	cancelled, err := s.Jobs.Cancel(r.PathValue("id"))
+	if err != nil {
+		return err
+	}
+	if !cancelled {
 		return bad("job is no longer running")
 	}
 	jsonResponse(w, 200, map[string]bool{"ok": true})
