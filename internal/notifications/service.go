@@ -28,7 +28,11 @@ func (s *Service) changedProfile(profile string, resources ...string) {
 
 func (s *Service) nextDelay(ctx context.Context, now time.Time) time.Duration {
 	var next int64
-	if err := s.DB.QueryRowContext(ctx, "SELECT COALESCE(MIN(available_at),0) FROM notification_outbox WHERE status='pending'").Scan(&next); err != nil || next == 0 {
+	if err := s.DB.QueryRowContext(ctx, "SELECT COALESCE(MIN(available_at),0) FROM notification_outbox WHERE status='pending'").Scan(&next); err != nil {
+		slog.Error("read next notification delivery", "error", err)
+		return notificationIdleInterval
+	}
+	if next == 0 {
 		return notificationIdleInterval
 	}
 	delay := time.Unix(next, 0).Sub(now)
