@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -53,10 +54,43 @@ func TestResetPasswordEnforcesPolicyAndRejectsAmbiguity(t *testing.T) {
 	if _, err = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-a','Same name','violet',1),('profile-b','Same name','mint',2)"); err != nil {
 		t.Fatal(err)
 	}
-	if err = resetPasswordValue(ctx, db, resetConfig(), "Same name", "temporary-pass"); err == nil {
+	err = resetPasswordValue(ctx, db, resetConfig(), "Same name", "temporary-pass")
+	if err == nil {
 		t.Fatal("ambiguous display name was accepted")
+	}
+	if !strings.Contains(err.Error(), "tally reset-password") {
+		t.Fatalf("ambiguity error does not explain how to find profile IDs: %v", err)
 	}
 	if err = resetPasswordValue(ctx, db, resetConfig(), "profile-a", "x"); err == nil {
 		t.Fatal("password policy was bypassed")
+	}
+}
+
+func TestListProfilesIncludesRoleAuthenticationAndID(t *testing.T) {
+	ctx := context.Background()
+	db, err := database.Open(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err = db.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('profile-a','Alex','violet',1),('profile-b','Alex','mint',2)"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec("UPDATE profiles SET auth_method='password' WHERE id='profile-a'"); err != nil {
+		t.Fatal(err)
+	}
+
+	profiles, err := listProfiles(ctx, db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(profiles) != 2 {
+		t.Fatalf("expected 2 profiles, got %d", len(profiles))
+	}
+	if profiles[0].ID != "profile-a" || profiles[0].Name != "Alex" || profiles[0].Role != "Administrator" || profiles[0].Authentication != "Password" {
+		t.Fatalf("unexpected first profile: %+v", profiles[0])
+	}
+	if profiles[1].ID != "profile-b" || profiles[1].Role != "User" || profiles[1].Authentication != "None" {
+		t.Fatalf("unexpected second profile: %+v", profiles[1])
 	}
 }
