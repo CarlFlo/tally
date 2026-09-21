@@ -49,10 +49,13 @@ func (s *Server) registerProfile(w http.ResponseWriter, r *http.Request, _ auth.
 		if in.Password == "" {
 			return bad("password is required")
 		}
+		if err := s.Auth.Policy(in.Password); err != nil {
+			return bad(err.Error())
+		}
 		var err error
 		hash, err = s.Auth.HashPassword(r.Context(), in.Password)
 		if err != nil {
-			return bad(err.Error())
+			return err
 		}
 	}
 	profile, err := (profiles.Repository{DB: s.DB, Limit: s.Config.MaxProfiles}).Create(r.Context(), in.Name, in.Avatar, in.Locale, hash, "")
