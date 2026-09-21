@@ -15,16 +15,6 @@ Commands:
   reset-password [profile-id-or-name] Reset a password; omit profile to list profiles
   delete-backup <filename.zip>        Delete a backup
   help                                Show this help
-
-Backup files:
-  Backup filenames are resolved from Tally's backup directory (normally /config/backups).
-  restore and verify-backup also accept an absolute archive path.
-
-Examples:
-  tally backup
-  tally verify-backup tally-manual-20260921-180000-a1b2c3d4.zip
-  tally restore tally-manual-20260921-180000-a1b2c3d4.zip
-  tally reset-password
 `
 
 func printHelp() {
