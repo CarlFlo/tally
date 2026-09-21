@@ -13,7 +13,7 @@ func (s *Server) refreshShow(w http.ResponseWriter, r *http.Request, session aut
 	}
 	id, e := s.Jobs.Trigger("metadata", "manual_refresh", r.PathValue("id"))
 	if e != nil {
-		return bad(e.Error())
+		return jobRequestError(e)
 	}
 	var name string
 	if e = s.DB.QueryRowContext(r.Context(), "SELECT name FROM shows WHERE id=?", r.PathValue("id")).Scan(&name); e != nil {
