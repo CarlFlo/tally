@@ -59,7 +59,11 @@ func TestJobDedupCancellationAndDeadline(t *testing.T) {
 	if _, e = s.Trigger("metadata", "manual_refresh", "show"); e == nil {
 		t.Fatal("duplicate logical job accepted")
 	}
-	if !s.Cancel(id) {
+	cancelled, cancelErr := s.Cancel(id)
+	if cancelErr != nil {
+		t.Fatal(cancelErr)
+	}
+	if !cancelled {
 		t.Fatal("cancellation not accepted")
 	}
 	deadline := time.Now().Add(3 * time.Second)
@@ -160,5 +164,8 @@ func TestUnknownJobAndScheduleStorageFailuresAreNotSuccessful(t *testing.T) {
 	}
 	if _, err = service.Trigger("metadata", "scheduled_refresh", ""); err == nil {
 		t.Fatal("schedule database failure was treated as a disabled schedule")
+	}
+	if _, err = service.Cancel("missing-run"); err == nil {
+		t.Fatal("cancellation database failure was treated as a stopped job")
 	}
 }
