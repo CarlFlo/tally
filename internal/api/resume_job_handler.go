@@ -11,7 +11,7 @@ func (s *Server) resumeJob(w http.ResponseWriter, r *http.Request, session auth.
 		return e
 	}
 	if e := s.Jobs.Resume(r.Context(), r.PathValue("kind")); e != nil {
-		return bad(e.Error())
+		return jobRequestError(e)
 	}
 	jsonResponse(w, 200, map[string]bool{"ok": true})
 	return nil
