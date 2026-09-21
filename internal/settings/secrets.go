@@ -28,11 +28,15 @@ func RedactWebhookSecrets(value Webhook, defaultTimezone string) (Webhook, map[s
 	return value, configured
 }
 
-func MergeWebhookSecrets(next, current Webhook) Webhook {
-	if next.URL == "" {
+func MergeWebhookSecrets(next, current Webhook, clear ...map[string]bool) Webhook {
+	clearSecrets := map[string]bool{}
+	if len(clear) > 0 && clear[0] != nil {
+		clearSecrets = clear[0]
+	}
+	if next.URL == "" && !clearSecrets["url"] {
 		next.URL = current.URL
 	}
-	if next.DiscordURL == "" {
+	if next.DiscordURL == "" && !clearSecrets["discord_url"] {
 		next.DiscordURL = current.DiscordURL
 	}
 	return next
