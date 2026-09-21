@@ -9,8 +9,8 @@ import (
 
 func (s *Server) clearWatchHistory(w http.ResponseWriter, r *http.Request, session auth.Session) error {
 	ctx, id := r.Context(), r.PathValue("id")
-	if !s.follows(r, session.Profile, id) {
-		return apiError{404, "show not found in your library"}
+	if err := s.requireFollow(r.Context(), session.Profile, id); err != nil {
+		return err
 	}
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
