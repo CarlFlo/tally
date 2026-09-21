@@ -21,9 +21,9 @@ func (s *Server) updateProfileAdmin(w http.ResponseWriter, r *http.Request, sess
 		return err
 	}
 
-	var current bool
-	if err := s.DB.QueryRowContext(r.Context(), "SELECT is_admin FROM profile_roles WHERE profile_id=?", id).Scan(&current); err != nil {
-		return apiError{404, "profile not found"}
+	current, err := s.profileIsAdmin(r.Context(), id)
+	if err != nil {
+		return err
 	}
 	if current == in.Admin {
 		jsonResponse(w, 200, map[string]bool{"ok": true, "is_admin": current})
@@ -35,7 +35,7 @@ func (s *Server) updateProfileAdmin(w http.ResponseWriter, r *http.Request, sess
 		}
 	}
 
-	err := (profiles.Repository{DB: s.DB, Limit: s.Config.MaxProfiles}).SetAdmin(r.Context(), session.Profile, id, in.Admin)
+	err = (profiles.Repository{DB: s.DB, Limit: s.Config.MaxProfiles}).SetAdmin(r.Context(), session.Profile, id, in.Admin)
 	if errors.Is(err, profiles.ErrNotFound) {
 		return apiError{404, err.Error()}
 	}
