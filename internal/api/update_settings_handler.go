@@ -32,17 +32,23 @@ func (s *Server) updateSettings(w http.ResponseWriter, r *http.Request, session 
 		value, revision = in.Data, in.Revision
 	case "notifications":
 		var in struct {
-			Data     settings.Webhook `json:"data"`
-			Revision int64            `json:"revision"`
+			Data         settings.Webhook `json:"data"`
+			Revision     int64            `json:"revision"`
+			ClearSecrets map[string]bool  `json:"clear_secrets,omitempty"`
 		}
 		if e := decode(r, &in); e != nil {
 			return e
+		}
+		for key := range in.ClearSecrets {
+			if key != "url" && key != "discord_url" {
+				return bad("unknown notification secret")
+			}
 		}
 		var current settings.Webhook
 		if _, e := s.settingsStore().Load(r.Context(), "notifications", &current); e != nil {
 			return e
 		}
-		in.Data = settings.MergeWebhookSecrets(in.Data, current)
+		in.Data = settings.MergeWebhookSecrets(in.Data, current, in.ClearSecrets)
 		if e := settings.ValidateWebhook(in.Data, s.Config.Timezone); e != nil {
 			return bad(e.Error())
 		}
