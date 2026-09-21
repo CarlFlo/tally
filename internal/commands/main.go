@@ -106,7 +106,7 @@ func Run(args []string) error {
 
 	switch command {
 	case "reset-password":
-		return resetPassword(ctx, db, args)
+		return resetPassword(ctx, db, c, args)
 	case "backup":
 		return createBackup(ctx, b)
 	default:
