@@ -12,17 +12,6 @@ import (
 	"golang.org/x/term"
 )
 
-func resetPassword(ctx context.Context, db *database.Store, c config.Config, args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("usage: tally reset-password <profile-id-or-name>")
-	}
-	password, err := readResetPassword()
-	if err != nil {
-		return err
-	}
-	return resetPasswordValue(ctx, db, c, args[0], password)
-}
-
 func readResetPassword() (string, error) {
 	fd := int(os.Stdin.Fd())
 	if !term.IsTerminal(fd) {
@@ -56,28 +45,9 @@ func resetPasswordValue(ctx context.Context, db *database.Store, c config.Config
 	if err != nil {
 		return err
 	}
-	authService := auth.New(db, c)
-	hash, err := authService.HashPassword(ctx, password)
-	if err != nil {
-		return err
-	}
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	if _, err = tx.ExecContext(ctx, "UPDATE profiles SET auth_method='password' WHERE id=?", profileID); err != nil {
-		return err
-	}
-	if _, err = tx.ExecContext(ctx, "INSERT INTO local_credentials VALUES(?,?,1) ON CONFLICT(profile_id) DO UPDATE SET hash=excluded.hash,must_change=1", profileID, hash); err != nil {
-		return err
-	}
-	if _, err = tx.ExecContext(ctx, "DELETE FROM sessions WHERE profile_id=?", profileID); err != nil {
-		return err
-	}
-	if err = tx.Commit(); err != nil {
-		return err
-	}
+	return auth.New(db, c).ResetPassword(ctx, profileID, password)
+}
+
+func printPasswordResetSuccess() {
 	fmt.Fprintln(os.Stderr, "Password reset. Existing sessions were revoked; the profile must replace this password after signing in.")
-	return nil
 }
