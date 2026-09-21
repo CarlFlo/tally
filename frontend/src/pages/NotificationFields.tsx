@@ -22,6 +22,7 @@ export function NotificationFields({
   timeText,
   timeFormat,
   changeTime,
+  secretsConfigured = {},
 }: {
   data: any;
   change: (key: string, value: any) => void;
@@ -29,6 +30,7 @@ export function NotificationFields({
   timeText: string;
   timeFormat: string;
   changeTime: (value: string) => void;
+  secretsConfigured?: Record<string, boolean>;
 }) {
   const { t } = useTranslation();
   return (
@@ -44,9 +46,9 @@ export function NotificationFields({
         </select>
       </label>
       {data.type === "discord" ? (
-        <DiscordFields data={data} change={change} errors={errors} />
+        <DiscordFields data={data} change={change} errors={errors} secretsConfigured={secretsConfigured} />
       ) : (
-        <WebhookFields data={data} change={change} errors={errors} />
+        <WebhookFields data={data} change={change} errors={errors} secretsConfigured={secretsConfigured} />
       )}
       <fieldset className="notification-events">
         <legend>{t("notifications.subscribe")}</legend>
@@ -82,7 +84,7 @@ export function NotificationFields({
   );
 }
 
-function DiscordFields({ data, change, errors }: any) {
+function DiscordFields({ data, change, errors, secretsConfigured }: any) {
   const { t } = useTranslation();
   return (
     <>
@@ -94,7 +96,11 @@ function DiscordFields({ data, change, errors }: any) {
           type="url"
           value={data.discord_url}
           maxLength={4096}
-          placeholder="https://discord.com/api/webhooks/..."
+          placeholder={
+            secretsConfigured.discord_url
+              ? t("connection.savedPlaceholder")
+              : "https://discord.com/api/webhooks/..."
+          }
           aria-invalid={!!errors.discord_url}
           onChange={(e) => change("discord_url", e.target.value)}
         />
@@ -121,7 +127,7 @@ function DiscordFields({ data, change, errors }: any) {
   );
 }
 
-function WebhookFields({ data, change, errors }: any) {
+function WebhookFields({ data, change, errors, secretsConfigured }: any) {
   const { t } = useTranslation();
   const preview = webhookPreview(data.body);
   return (
@@ -134,7 +140,11 @@ function WebhookFields({ data, change, errors }: any) {
           type="url"
           value={data.url}
           maxLength={4096}
-          placeholder="https://your-service.example/webhook"
+          placeholder={
+            secretsConfigured.url
+              ? t("connection.savedPlaceholder")
+              : "https://your-service.example/webhook"
+          }
           aria-invalid={!!errors.url}
           onChange={(e) => change("url", e.target.value)}
         />
