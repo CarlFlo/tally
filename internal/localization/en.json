@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 31
+    "catalogVersion": 32
   },
   "common": {
     "save": "Save",
@@ -952,7 +952,18 @@
     "environment": "Deployment environment",
     "previewsHelp": "Show preview controls in Jobs and Add Show to check failure and paused states. Previews leave real jobs and library data alone.",
     "enable": "Enable debug mode",
-    "environmentHelp": "Effective non-sensitive environment values loaded when Tally started. Secrets and credential values are intentionally not shown."
+    "environmentHelp": "Effective non-sensitive environment values loaded when Tally started. Secrets and credential values are intentionally not shown.",
+    "seasonalTitle": "Seasonal logo effect",
+    "seasonalHelp": "Preview holiday overlays on the Tally logo without changing the system date.",
+    "seasonalOverride": "Override seasonal effect",
+    "seasonalEffect": "Effect",
+    "seasonalEffects": {
+      "halloween": "Halloween",
+      "christmas": "Christmas",
+      "newYear": "New Year",
+      "swedenNationalDay": "Sweden National Day",
+      "ukraineIndependenceDay": "Ukraine Independence Day"
+    }
   },
   "admin": {
     "granted": "Administrator access granted",
