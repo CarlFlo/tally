@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { useNow } from "./releaseTime";
 
 type SeasonalDateRule = {
   month: number;
@@ -89,6 +90,12 @@ export type SeasonalEffectOverride = {
 const OVERRIDE_ENABLED_KEY = "tally-seasonal-effect-override";
 const OVERRIDE_EFFECT_KEY = "tally-seasonal-effect-id";
 const OVERRIDE_CHANGED_EVENT = "tally-seasonal-effect-change";
+const DEFAULT_EFFECT_ID = SEASONAL_EFFECTS[0].id;
+
+let volatileOverride: SeasonalEffectOverride = {
+  enabled: false,
+  effectId: DEFAULT_EFFECT_ID,
+};
 
 function isSeasonalEffectId(value: string | null): value is SeasonalEffectId {
   return SEASONAL_EFFECTS.some((effect) => effect.id === value);
@@ -118,30 +125,35 @@ export function resolveSeasonalEffect(
 }
 
 export function readSeasonalEffectOverride(): SeasonalEffectOverride {
-  const fallbackEffectId = SEASONAL_EFFECTS[0].id;
   try {
     const storedEffectId = sessionStorage.getItem(OVERRIDE_EFFECT_KEY);
-    return {
+    volatileOverride = {
       enabled: sessionStorage.getItem(OVERRIDE_ENABLED_KEY) === "true",
       effectId: isSeasonalEffectId(storedEffectId)
         ? storedEffectId
-        : fallbackEffectId,
+        : DEFAULT_EFFECT_ID,
     };
   } catch {
-    return { enabled: false, effectId: fallbackEffectId };
+    // Keep the in-memory session value when browser storage is unavailable.
   }
+  return volatileOverride;
 }
 
 export function writeSeasonalEffectOverride(
   override: SeasonalEffectOverride,
 ): void {
+  volatileOverride = override;
   try {
     sessionStorage.setItem(OVERRIDE_ENABLED_KEY, String(override.enabled));
     sessionStorage.setItem(OVERRIDE_EFFECT_KEY, override.effectId);
   } catch {
-    // Debug previews must remain usable even when browser storage is unavailable.
+    // The in-memory value still keeps the preview usable for this document.
   }
-  window.dispatchEvent(new Event(OVERRIDE_CHANGED_EVENT));
+  window.dispatchEvent(
+    new CustomEvent<SeasonalEffectOverride>(OVERRIDE_CHANGED_EVENT, {
+      detail: override,
+    }),
+  );
 }
 
 export function useSeasonalEffectOverride() {
@@ -150,7 +162,13 @@ export function useSeasonalEffectOverride() {
   );
 
   useEffect(() => {
-    const refresh = () => setOverride(readSeasonalEffectOverride());
+    const refresh = (event: Event) => {
+      const next =
+        event instanceof CustomEvent
+          ? (event as CustomEvent<SeasonalEffectOverride>).detail
+          : readSeasonalEffectOverride();
+      setOverride(next);
+    };
     window.addEventListener(OVERRIDE_CHANGED_EVENT, refresh);
     return () => window.removeEventListener(OVERRIDE_CHANGED_EVENT, refresh);
   }, []);
@@ -165,5 +183,6 @@ export function useSeasonalEffectOverride() {
 
 export function useActiveSeasonalEffect(): SeasonalEffect | null {
   const [override] = useSeasonalEffectOverride();
-  return resolveSeasonalEffect(new Date(), override);
+  const now = useNow(60_000);
+  return resolveSeasonalEffect(new Date(now), override);
 }
