@@ -1013,7 +1013,7 @@
   "connection": {
     "show": "Show {{label}}",
     "hide": "Hide {{label}}",
-    "savedPlaceholder": "Saved — leave blank to keep it",
+    "savedPlaceholder": "Saved - leave blank to keep it",
     "clearSaved": "Clear saved {{label}}",
     "test": "Test connection",
     "reload": "Reload saved settings"

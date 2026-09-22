@@ -69,7 +69,7 @@ test("configure, test, save and use a shared torrent client with redacted API ke
   await expect(card.getByLabel("API key", { exact: true })).toHaveValue("");
   await expect(card.getByLabel("API key", { exact: true })).toHaveAttribute(
     "placeholder",
-    "Saved — leave blank to keep it",
+    "Saved - leave blank to keep it",
   );
   await expect(card.getByLabel("API key", { exact: true })).toHaveClass(
     "concealed-secret",
