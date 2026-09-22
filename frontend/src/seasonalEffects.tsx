@@ -1,5 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { useNow } from "./releaseTime";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 
 type SeasonalDateRule = {
   month: number;
@@ -89,13 +88,28 @@ export type SeasonalEffectOverride = {
 
 const OVERRIDE_ENABLED_KEY = "tally-seasonal-effect-override";
 const OVERRIDE_EFFECT_KEY = "tally-seasonal-effect-id";
-const OVERRIDE_CHANGED_EVENT = "tally-seasonal-effect-change";
 const DEFAULT_EFFECT_ID = SEASONAL_EFFECTS[0].id;
 
-let volatileOverride: SeasonalEffectOverride = {
-  enabled: false,
-  effectId: DEFAULT_EFFECT_ID,
-};
+function defaultOverride(): SeasonalEffectOverride {
+  return { enabled: false, effectId: DEFAULT_EFFECT_ID };
+}
+
+function loadSeasonalEffectOverride(): SeasonalEffectOverride {
+  try {
+    const storedEffectId = sessionStorage.getItem(OVERRIDE_EFFECT_KEY);
+    return {
+      enabled: sessionStorage.getItem(OVERRIDE_ENABLED_KEY) === "true",
+      effectId: isSeasonalEffectId(storedEffectId)
+        ? storedEffectId
+        : DEFAULT_EFFECT_ID,
+    };
+  } catch {
+    return defaultOverride();
+  }
+}
+
+let volatileOverride = loadSeasonalEffectOverride();
+const overrideSubscribers = new Set<() => void>();
 
 function isSeasonalEffectId(value: string | null): value is SeasonalEffectId {
   return SEASONAL_EFFECTS.some((effect) => effect.id === value);
@@ -125,17 +139,6 @@ export function resolveSeasonalEffect(
 }
 
 export function readSeasonalEffectOverride(): SeasonalEffectOverride {
-  try {
-    const storedEffectId = sessionStorage.getItem(OVERRIDE_EFFECT_KEY);
-    volatileOverride = {
-      enabled: sessionStorage.getItem(OVERRIDE_ENABLED_KEY) === "true",
-      effectId: isSeasonalEffectId(storedEffectId)
-        ? storedEffectId
-        : DEFAULT_EFFECT_ID,
-    };
-  } catch {
-    // Keep the in-memory session value when browser storage is unavailable.
-  }
   return volatileOverride;
 }
 
@@ -149,40 +152,41 @@ export function writeSeasonalEffectOverride(
   } catch {
     // The in-memory value still keeps the preview usable for this document.
   }
-  window.dispatchEvent(
-    new CustomEvent<SeasonalEffectOverride>(OVERRIDE_CHANGED_EVENT, {
-      detail: override,
-    }),
-  );
+  overrideSubscribers.forEach((notify) => notify());
+}
+
+function subscribeToSeasonalEffectOverride(notify: () => void) {
+  overrideSubscribers.add(notify);
+  return () => overrideSubscribers.delete(notify);
 }
 
 export function useSeasonalEffectOverride() {
-  const [override, setOverride] = useState<SeasonalEffectOverride>(
+  const override = useSyncExternalStore(
+    subscribeToSeasonalEffectOverride,
+    readSeasonalEffectOverride,
     readSeasonalEffectOverride,
   );
 
+  return [override, writeSeasonalEffectOverride] as const;
+}
+
+function useLocalDateNow() {
+  const [now, setNow] = useState(Date.now);
+
   useEffect(() => {
-    const refresh = (event: Event) => {
-      const next =
-        event instanceof CustomEvent
-          ? (event as CustomEvent<SeasonalEffectOverride>).detail
-          : readSeasonalEffectOverride();
-      setOverride(next);
-    };
-    window.addEventListener(OVERRIDE_CHANGED_EVENT, refresh);
-    return () => window.removeEventListener(OVERRIDE_CHANGED_EVENT, refresh);
-  }, []);
+    const current = new Date();
+    const nextDay = new Date(current);
+    nextDay.setHours(24, 0, 0, 0);
+    const delay = Math.max(1, nextDay.getTime() - current.getTime() + 50);
+    const timer = window.setTimeout(() => setNow(Date.now()), delay);
+    return () => window.clearTimeout(timer);
+  }, [now]);
 
-  const updateOverride = (next: SeasonalEffectOverride) => {
-    setOverride(next);
-    writeSeasonalEffectOverride(next);
-  };
-
-  return [override, updateOverride] as const;
+  return now;
 }
 
 export function useActiveSeasonalEffect(): SeasonalEffect | null {
   const [override] = useSeasonalEffectOverride();
-  const now = useNow(60_000);
+  const now = useLocalDateNow();
   return resolveSeasonalEffect(new Date(now), override);
 }
