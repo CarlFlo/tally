@@ -83,6 +83,21 @@ test("profile settings use browser history and signing out stays signed out with
   ).toBeVisible();
 });
 
+test("header breadcrumb reflects profile and system locations", async ({ page }) => {
+  await selectProfileByName(page, "My profile");
+  await page.goto("/calendar");
+  const breadcrumb = page.locator(".topbar-breadcrumb");
+  await expect(breadcrumb).toContainText("Calendar");
+
+  await openProfile(page);
+  await expect(breadcrumb).toContainText("My profile");
+
+  await openProfileMenu(page);
+  await page.getByRole("link", { name: "System", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/operations\/jobs$/);
+  await expect(breadcrumb).toContainText("Administration");
+});
+
 test("document load paints the active profile theme before bootstrap finishes", async ({ page }) => {
   await selectProfileByName(page, "My profile");
   const bootstrap = await (await page.request.get("/api/bootstrap")).json();

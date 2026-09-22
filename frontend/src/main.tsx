@@ -282,7 +282,7 @@ function App() {
                   <span className="topbar-breadcrumb">
                     {t("nav.yourSpace")} <span>/</span>{" "}
                     <strong>
-                      {pageKey ? pageLabel : t("nav.calendar")}
+                      {pageLabel}
                     </strong>
                   </span>
                 </div>
