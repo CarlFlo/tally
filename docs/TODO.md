@@ -4,11 +4,6 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 ## Current work
 
-- [ ] Finalize seasonal logo overlays after branch review.
-  - [ ] Reuse the existing frontend clock so date-based effects change without navigation or reload.
-  - [ ] Keep debug overrides functional for the current document when session storage is unavailable.
-  - [ ] Add focused rollover and layout regression coverage and remove temporary branch tracking.
-
 - [ ] Restructure administration and account navigation for clearer scope.
   - [x] Establish canonical admin/account route hierarchy while preserving legacy deep links.
   - [x] Separate personal notification preferences from deployment notification delivery.
