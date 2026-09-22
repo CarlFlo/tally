@@ -94,7 +94,7 @@ function isSeasonalEffectId(value: string | null): value is SeasonalEffectId {
   return SEASONAL_EFFECTS.some((effect) => effect.id === value);
 }
 
-function matchesDate(effect: SeasonalEffect, date: Date) {
+function matchesDate(effect: SeasonalEffectDefinition, date: Date) {
   const month = date.getMonth() + 1;
   const day = date.getDate();
   return effect.dates.some(
