@@ -56,17 +56,23 @@ func (s *Server) updateSettings(w http.ResponseWriter, r *http.Request, session 
 		revision = in.Revision
 	case "search":
 		var in struct {
-			Data     settings.Search `json:"data"`
-			Revision int64           `json:"revision"`
+			Data         settings.Search `json:"data"`
+			Revision     int64           `json:"revision"`
+			ClearSecrets map[string]bool `json:"clear_secrets,omitempty"`
 		}
 		if e := decode(r, &in); e != nil {
 			return e
+		}
+		for key := range in.ClearSecrets {
+			if key != "api_key" {
+				return bad("unknown search secret")
+			}
 		}
 		var current settings.Search
 		if _, e := s.settingsStore().Load(r.Context(), "search", &current); e != nil {
 			return e
 		}
-		in.Data = settings.MergeSearchSecrets(in.Data, current)
+		in.Data = settings.MergeSearchSecrets(in.Data, current, in.ClearSecrets)
 		if e := settings.ValidateSearch(in.Data); e != nil {
 			return bad(e.Error())
 		}

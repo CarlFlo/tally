@@ -67,6 +67,21 @@ func TestSettingsSecretRedactionAndPreservation(t *testing.T) {
 		t.Fatal("blank redacted Jackett credential replaced the stored value")
 	}
 
+	clearSearch := redactedSearch
+	clearSearch.Enabled = false
+	response = request(t, h, "PUT", "/api/settings/search", map[string]any{
+		"revision":      searchRevision + 1,
+		"data":          clearSearch,
+		"clear_secrets": map[string]bool{"api_key": true},
+	})
+	expect(t, response, http.StatusOK)
+	if _, err := s.settingsStore().Load(ctx, "search", &storedSearch); err != nil {
+		t.Fatal(err)
+	}
+	if storedSearch.APIKey != "" || storedSearch.Enabled {
+		t.Fatal("explicit Jackett API key clear was ignored")
+	}
+
 	notificationResponse := request(t, h, "GET", "/api/settings/notifications", nil)
 	var notificationEnvelope map[string]json.RawMessage
 	if err := json.Unmarshal(notificationResponse.Body.Bytes(), &notificationEnvelope); err != nil { t.Fatal(err) }

@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Plug } from "lucide-react";
+import { CheckCircle2, Plug, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ConnectionInput } from "../ConnectionInput";
 import { useLatestRequest } from "../useLatestRequest";
@@ -105,20 +105,28 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
   const [apiKeyConfigured, setApiKeyConfigured] = useState(
     !!saved.secrets_configured?.api_key,
   );
+  const [clearedApiKey, setClearedApiKey] = useState(false);
   const [revision, setRevision] = useState(saved.revision);
   const [busy, setBusy] = useState<"test" | "save" | null>(null);
   const [feedback, setFeedback] = useState<{ message: string; error: boolean } | null>(null);
-  const hasChanges = JSON.stringify(data) !== JSON.stringify(previous.current.data);
+  const hasChanges =
+    JSON.stringify(data) !== JSON.stringify(previous.current.data) ||
+    clearedApiKey;
   useUnsavedChangesWarning(hasChanges, busy !== null, t("common.unsavedNavigation", { defaultValue: "You have unsaved changes. Leave this page without saving?" }));
   useEffect(() => {
-    if (JSON.stringify(data) === JSON.stringify(previous.current.data)) {
+    if (
+      !clearedApiKey &&
+      JSON.stringify(data) === JSON.stringify(previous.current.data)
+    ) {
       setData(saved.data);
       setApiKeyConfigured(!!saved.secrets_configured?.api_key);
+      setClearedApiKey(false);
       setRevision(saved.revision);
     }
     previous.current = saved;
-  }, [data, saved]);
+  }, [clearedApiKey, data, saved]);
   function change(next: Partial<JackettConfig>) {
+    if (next.api_key) setClearedApiKey(false);
     setData((current) => ({ ...current, ...next }));
     setFeedback(null);
   }
@@ -134,13 +142,16 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
         setFeedback({ message: result.message, error: false });
       } else {
         const result = await api<{ revision: number }>("/settings/search", "PUT", {
-          data: { ...data, enabled: saved.data.enabled },
+          data: { ...data, enabled: clearedApiKey ? false : saved.data.enabled },
           revision,
+          clear_secrets: clearedApiKey ? { api_key: true } : undefined,
         });
-        const configured = apiKeyConfigured || data.api_key.trim() !== "";
+        const configured =
+          !clearedApiKey && (apiKeyConfigured || data.api_key.trim() !== "");
         const redacted = { ...data, api_key: "" };
         setData(redacted);
         setApiKeyConfigured(configured);
+        setClearedApiKey(false);
         setRevision(result.revision);
         previous.current = {
           data: redacted,
@@ -182,6 +193,7 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
                 secret
                 hiddenByDefault
                 value={data.api_key}
+                disabled={clearedApiKey}
                 required={!apiKeyConfigured}
                 maxLength={4096}
                 placeholder={
@@ -195,9 +207,23 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
             <p className="small-text muted client-field-help">{t("searchSettings.keyHelp")}</p>
           </div>
           <div className="client-actions">
-            <button type="button" className="button" onClick={() => run("test")}>
+            <button type="button" className="button" disabled={clearedApiKey} onClick={() => run("test")}>
               {busy === "test" ? <Busy /> : <Plug size={17} />}{t("connection.test")}
             </button>
+            {apiKeyConfigured && !clearedApiKey && (
+              <button
+                type="button"
+                className="button danger"
+                onClick={() => {
+                  setData((current) => ({ ...current, api_key: "", enabled: false }));
+                  setClearedApiKey(true);
+                  setFeedback(null);
+                }}
+              >
+                <Trash2 size={17} />
+                {t("common.reset")}
+              </button>
+            )}
           </div>
         </fieldset>
         {feedback && <div className={feedback.error ? "error-box" : "client-test-success"} role={feedback.error ? "alert" : "status"}>
@@ -210,6 +236,7 @@ function JackettForm({ saved }: { saved: SavedSearch }) {
         onRevert={() => {
           setData(previous.current.data);
           setApiKeyConfigured(!!previous.current.secrets_configured?.api_key);
+          setClearedApiKey(false);
           setFeedback(null);
         }}
         onSave={() => void run("save")}

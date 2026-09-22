@@ -3,10 +3,11 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 34
+    "catalogVersion": 35
   },
   "common": {
     "save": "Save",
+    "reset": "Reset",
     "unsavedChanges": "Unsaved changes",
     "revertChanges": "Revert changes",
     "saveChanges": "Save changes",

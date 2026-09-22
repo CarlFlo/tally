@@ -262,9 +262,7 @@ function NotificationForm({ saved }: { saved: any }) {
                 onClick={() => clearSecret("discord_url", true)}
               >
                 <Trash2 size={17} />
-                {t("connection.clearSaved", {
-                  label: t("notifications.discordURL").toLowerCase(),
-                })}
+                {t("common.reset")}
               </button>
             )}
         </div>

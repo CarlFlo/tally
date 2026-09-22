@@ -480,6 +480,14 @@ test("settings categories persist connections, schedules, debug previews and sta
   await expect(key).toHaveAttribute("placeholder", "Saved - leave blank to keep it");
   await expect(key).toHaveAttribute("type", "text");
   await expect(key).toHaveAttribute("autocomplete", "off");
+  await page
+    .getByRole("button", { name: "Reset", exact: true })
+    .click();
+  await expect(key).toBeDisabled();
+  await page
+    .getByRole("button", { name: "Revert changes", exact: true })
+    .click();
+  await expect(key).toBeEnabled();
   const disabledSearchSettings = await (
     await page.request.get("/api/settings/search")
   ).json();

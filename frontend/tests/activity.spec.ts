@@ -286,7 +286,7 @@ test("notification forms test Webhook and Discord locally, preserve settings whe
   );
   const discordURL = page.getByLabel("Discord webhook URL", { exact: true });
   const clearDiscord = page.getByRole("button", {
-    name: "Clear saved discord webhook url",
+    name: "Reset",
     exact: true,
   });
   await expect(clearDiscord).toBeVisible();

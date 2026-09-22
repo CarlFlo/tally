@@ -9,9 +9,13 @@ func RedactSearchSecrets(value Search) (Search, map[string]bool) {
 	return value, configured
 }
 
-func MergeSearchSecrets(next, current Search) Search {
+func MergeSearchSecrets(next, current Search, clear ...map[string]bool) Search {
+	clearSecrets := map[string]bool{}
+	if len(clear) > 0 && clear[0] != nil {
+		clearSecrets = clear[0]
+	}
 	current = current.Effective()
-	if next.APIKey == "" && strings.TrimSpace(next.BaseURL) != "" {
+	if next.APIKey == "" && strings.TrimSpace(next.BaseURL) != "" && !clearSecrets["api_key"] {
 		next.APIKey = current.APIKey
 	}
 	return next

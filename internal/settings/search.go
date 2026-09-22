@@ -51,7 +51,14 @@ func ValidateSearch(s Search) error {
 	if len(s.Providers) > 0 {
 		return fmt.Errorf("save one Jackett connection instead of search providers")
 	}
-	if !s.Enabled && s.BaseURL == "" && s.APIKey == "" {
+	if !s.Enabled && s.APIKey == "" {
+		if s.BaseURL == "" {
+			return nil
+		}
+		u, err := url.Parse(s.BaseURL)
+		if err != nil || config.ValidateURL(s.BaseURL) != nil || u.RawQuery != "" || u.ForceQuery {
+			return fmt.Errorf("enter a Jackett HTTP(S) base URL without a query, credentials, or fragment")
+		}
 		return nil
 	}
 	if strings.TrimSpace(s.BaseURL) == "" {

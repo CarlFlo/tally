@@ -2,7 +2,7 @@ import { ConnectionInput } from "../ConnectionInput";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLatestRequest } from "../useLatestRequest";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Plug } from "lucide-react";
+import { CheckCircle2, Plug, Trash2 } from "lucide-react";
 import { api, Busy, ErrorState, useApp, useLocal, type Boot } from "../lib";
 import { invalidateResources } from "../queryInvalidation";
 import { useTranslation } from "react-i18next";
@@ -290,23 +290,6 @@ function ClientForm({
                   {field.help}
                 </p>
               )}
-              {field.secret && saved && !field.required && (
-                <label className="client-clear-secret">
-                  <input
-                    type="checkbox"
-                    checked={!!cleared[field.key]}
-                    onChange={(event) => {
-                      setChanged(true);
-                      setCleared((old) => ({
-                        ...old,
-                        [field.key]: event.target.checked,
-                      }));
-                      setFeedback(null);
-                    }}
-                  />
-                  {t("connection.clearSaved", { label: field.label.toLowerCase() })}
-                </label>
-              )}
             </div>
           );
         })}
@@ -324,6 +307,28 @@ function ClientForm({
           >
             {busy === "test" ? <Busy /> : <Plug size={17} />}{t("connection.test")}
           </button>
+          {definition?.fields.some(
+            (field) =>
+              field.secret &&
+              adapter === savedSettings.adapter &&
+              savedSettings.secrets_configured[field.key],
+          ) && (
+            <button
+              type="button"
+              className="button danger"
+              onClick={() => {
+                setChanged(true);
+                setAdapter("");
+                setFields({});
+                setTouched({});
+                setCleared({});
+                setFeedback(null);
+              }}
+            >
+              <Trash2 size={17} />
+              {t("common.reset")}
+            </button>
+          )}
         </div>
       </fieldset>
       {feedback && (

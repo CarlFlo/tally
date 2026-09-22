@@ -3,10 +3,11 @@
     "locale": "uk",
     "name": "Українська",
     "direction": "ltr",
-    "catalogVersion": 34
+    "catalogVersion": 35
   },
   "common": {
     "save": "Зберегти",
+    "reset": "Скинути",
     "unsavedChanges": "Незбережені зміни",
     "revertChanges": "Скасувати зміни",
     "saveChanges": "Зберегти зміни",

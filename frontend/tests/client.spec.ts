@@ -129,5 +129,19 @@ test("configure, test, save and use a shared torrent client with redacted API ke
       .first()
       .getByRole("button", { name: "Added", exact: true }),
   ).toBeDisabled();
+  await page.goto("/admin/configuration/integrations/downloader");
+  await card
+    .getByRole("button", { name: "Reset", exact: true })
+    .click();
+  await expect(
+    card.getByRole("combobox", { name: "Torrent client", exact: true }),
+  ).toHaveValue("");
+  await card.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByRole("status")).toContainText(
+    "Torrent client disabled",
+  );
+  expect(
+    (await (await page.request.get("/api/downloader")).json()).settings.adapter,
+  ).toBe("");
   expect(errors).toEqual([]);
 });
