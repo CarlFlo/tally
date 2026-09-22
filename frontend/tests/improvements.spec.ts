@@ -446,7 +446,7 @@ test("settings categories persist connections, schedules, debug previews and sta
   await expect(page.getByLabel("Webhook URL", { exact: true })).toHaveValue("");
   await expect(page.getByLabel("Webhook URL", { exact: true })).toHaveAttribute(
     "placeholder",
-    "Saved — leave blank to keep it",
+    "Saved - leave blank to keep it",
   );
   await page
     .getByRole("switch", { name: "Enable all notifications" })
@@ -477,7 +477,7 @@ test("settings categories persist connections, schedules, debug previews and sta
   await page.reload();
   const key = page.getByLabel("API key", { exact: true });
   await expect(key).toHaveValue("");
-  await expect(key).toHaveAttribute("placeholder", "Saved — leave blank to keep it");
+  await expect(key).toHaveAttribute("placeholder", "Saved - leave blank to keep it");
   await expect(key).toHaveAttribute("type", "text");
   await expect(key).toHaveAttribute("autocomplete", "off");
   const disabledSearchSettings = await (

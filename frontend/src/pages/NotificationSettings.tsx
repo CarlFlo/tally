@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Bell, Send } from "lucide-react";
+import { Bell, Send, Trash2 } from "lucide-react";
 import { api, Busy, ErrorState, useApp, useLocal } from "../lib";
 import { NotificationFields } from "./NotificationFields";
 import { useLatestRequest } from "../useLatestRequest";
@@ -81,7 +81,9 @@ function NotificationForm({ saved }: { saved: any }) {
   const toggleMessage = savedValid
     ? ""
     : t("notifications.saveBeforeEnable");
-  const hasChanges = JSON.stringify(normalized) !== JSON.stringify(stored);
+  const hasChanges =
+    JSON.stringify(normalized) !== JSON.stringify(stored) ||
+    Object.values(clearedSecrets).some(Boolean);
   useUnsavedChangesWarning(
     hasChanges,
     busy,
@@ -250,6 +252,21 @@ function NotificationForm({ saved }: { saved: any }) {
             <Send size={17} />
             {t("notifications.testNotification")}
           </button>
+          {data.type === "discord" &&
+            secretsConfigured.discord_url &&
+            !clearedSecrets.discord_url && (
+              <button
+                className="button danger"
+                type="button"
+                disabled={busy}
+                onClick={() => clearSecret("discord_url", true)}
+              >
+                <Trash2 size={17} />
+                {t("connection.clearSaved", {
+                  label: t("notifications.discordURL").toLowerCase(),
+                })}
+              </button>
+            )}
         </div>
       </form>
       <UnsavedChangesBar

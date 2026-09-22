@@ -3,18 +3,27 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api, useApp, useLocal } from "../lib";
 import { invalidateResources } from "../queryInvalidation";
+import {
+  formatSeasonalEffectDates,
+  SEASONAL_EFFECTS,
+  useSeasonalEffectOverride,
+} from "../seasonalEffects";
 
 export function DebugSettings() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { boot, notify } = useApp();
   const cache = useQueryClient();
   const deployment = useLocal<any>("settings", "/settings");
   const [enabled, setEnabled] = useState(boot.preferences.debug_mode);
   const [saving, setSaving] = useState(false);
+  const [seasonalOverride, setSeasonalOverride] = useSeasonalEffectOverride();
   useEffect(() => {
     if (!saving) setEnabled(boot.preferences.debug_mode);
   }, [boot.preferences.debug_mode, saving]);
   const environment = deployment.data?.environment || {};
+  const selectedSeasonalEffect = SEASONAL_EFFECTS.find(
+    (effect) => effect.id === seasonalOverride.effectId,
+  );
   return (
     <div className="settings-card-list">
       <section className="panel settings-card">
@@ -44,6 +53,56 @@ export function DebugSettings() {
           />
           {t("debug.enable")}
         </label>
+      </section>
+      <section className="panel settings-card">
+        <h3>{t("debug.seasonalTitle")}</h3>
+        <p className="muted">{t("debug.seasonalHelp")}</p>
+        <div className="seasonal-debug-controls">
+          <label className="toggle-setting">
+            <input
+              type="checkbox"
+              checked={seasonalOverride.enabled}
+              onChange={(event) =>
+                setSeasonalOverride({
+                  ...seasonalOverride,
+                  enabled: event.target.checked,
+                })
+              }
+            />
+            {t("debug.seasonalOverride")}
+          </label>
+          <div className="seasonal-effect-details">
+            <label className="seasonal-effect-select">
+              <span>{t("debug.seasonalEffect")}</span>
+              <select
+                aria-label={t("debug.seasonalEffect")}
+                value={seasonalOverride.effectId}
+                onChange={(event) =>
+                  setSeasonalOverride({
+                    ...seasonalOverride,
+                    effectId: event.target.value as typeof seasonalOverride.effectId,
+                  })
+                }
+              >
+                {SEASONAL_EFFECTS.map((effect) => (
+                  <option key={effect.id} value={effect.id}>
+                    {t(effect.labelKey)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {selectedSeasonalEffect && (
+              <p className="seasonal-effect-dates">
+                {t("debug.seasonalDates", {
+                  dates: formatSeasonalEffectDates(
+                    selectedSeasonalEffect,
+                    i18n.language,
+                  ),
+                })}
+              </p>
+            )}
+          </div>
+        </div>
       </section>
       {deployment.data?.operator && (
         <section className="panel settings-card">

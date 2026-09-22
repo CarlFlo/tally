@@ -56,7 +56,6 @@ export function NotificationFields({
           errors={errors}
           secretsConfigured={secretsConfigured}
           clearedSecrets={clearedSecrets}
-          clearSecret={clearSecret}
         />
       ) : (
         <WebhookFields
@@ -102,7 +101,7 @@ export function NotificationFields({
   );
 }
 
-function DiscordFields({ data, change, errors, secretsConfigured, clearedSecrets, clearSecret }: any) {
+function DiscordFields({ data, change, errors, secretsConfigured, clearedSecrets }: any) {
   const { t } = useTranslation();
   return (
     <>
@@ -124,16 +123,6 @@ function DiscordFields({ data, change, errors, secretsConfigured, clearedSecrets
           onChange={(e) => change("discord_url", e.target.value)}
         />
       </Field>
-      {secretsConfigured.discord_url && (
-        <label className="client-clear-secret">
-          <input
-            type="checkbox"
-            checked={!!clearedSecrets.discord_url}
-            onChange={(event) => clearSecret?.("discord_url", event.target.checked)}
-          />
-          {t("connection.clearSaved", { label: t("notifications.discordURL").toLowerCase() })}
-        </label>
-      )}
       <Field label={t("notifications.botName")} error={errors.bot_name}>
         <input
           value={data.bot_name}

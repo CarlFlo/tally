@@ -284,6 +284,36 @@ test("notification forms test Webhook and Discord locally, preserve settings whe
   await expect(page.getByRole("status")).toContainText(
     "Notification settings saved",
   );
+  const discordURL = page.getByLabel("Discord webhook URL", { exact: true });
+  const clearDiscord = page.getByRole("button", {
+    name: "Clear saved discord webhook url",
+    exact: true,
+  });
+  await expect(clearDiscord).toBeVisible();
+  await expect(
+    page.locator(".notification-buttons").getByRole("button"),
+  ).toHaveCount(2);
+  await clearDiscord.click();
+  await expect(discordURL).toBeDisabled();
+  await expect(clearDiscord).toHaveCount(0);
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText(
+    "Notification settings saved",
+  );
+  await expect
+    .poll(async () => {
+      const settings = await (
+        await page.request.get("/api/settings/notifications")
+      ).json();
+      return settings.secrets_configured.discord_url;
+    })
+    .toBe(false);
+  await expect(discordURL).toBeEnabled();
+  await discordURL.fill(fixture.url);
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText(
+    "Notification settings saved",
+  );
   await page.getByRole("switch", { name: "Enable all notifications" }).check();
   await expect(
     page.getByRole("switch", { name: "Enable all notifications" }),
