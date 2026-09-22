@@ -3,7 +3,7 @@
     "locale": "uk",
     "name": "Українська",
     "direction": "ltr",
-    "catalogVersion": 33
+    "catalogVersion": 34
   },
   "common": {
     "save": "Зберегти",
@@ -972,9 +972,14 @@
     "seasonalDates": "Застосовується: {{dates}}",
     "seasonalEffects": {
       "halloween": "Гелловін",
+      "valentinesDay": "День святого Валентина",
+      "aprilFoolsDay": "День сміху",
+      "easter": "Великдень",
       "christmas": "Різдво",
       "newYear": "Новий рік",
       "swedenNationalDay": "Національний день Швеції",
+      "swedishMidsummer": "Шведський Мідсоммар",
+      "stLuciaDay": "День святої Люсії",
       "ukraineIndependenceDay": "День Незалежності України"
     }
   },

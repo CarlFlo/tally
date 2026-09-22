@@ -489,6 +489,27 @@ code {
   width: 19px;
   height: 19px;
 }
+.seasonal-logo-overlay--valentines-day {
+  right: -7px;
+  bottom: -7px;
+  width: 19px;
+  height: 19px;
+  transform: rotate(8deg);
+}
+.seasonal-logo-overlay--april-fools-day {
+  top: -11px;
+  right: -9px;
+  width: 22px;
+  height: 22px;
+  transform: rotate(5deg);
+}
+.seasonal-logo-overlay--easter {
+  top: -9px;
+  right: -7px;
+  width: 18px;
+  height: 21px;
+  transform: rotate(8deg);
+}
 .seasonal-logo-overlay--christmas {
   top: -10px;
   right: -5px;
@@ -509,6 +530,19 @@ code {
   width: 20px;
   height: 15px;
   transform: rotate(5deg);
+}
+.seasonal-logo-overlay--swedish-midsummer {
+  top: -11px;
+  right: -10px;
+  width: 23px;
+  height: 19px;
+  transform: rotate(4deg);
+}
+.seasonal-logo-overlay--st-lucia-day {
+  top: -13px;
+  right: -9px;
+  width: 22px;
+  height: 22px;
 }
 .workspace-label {
   font-size: 8px;

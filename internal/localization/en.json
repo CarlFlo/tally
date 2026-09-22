@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 33
+    "catalogVersion": 34
   },
   "common": {
     "save": "Save",
@@ -960,9 +960,14 @@
     "seasonalDates": "Applies: {{dates}}",
     "seasonalEffects": {
       "halloween": "Halloween",
+      "valentinesDay": "Valentine's Day",
+      "aprilFoolsDay": "April Fools' Day",
+      "easter": "Easter",
       "christmas": "Christmas",
       "newYear": "New Year",
       "swedenNationalDay": "Sweden National Day",
+      "swedishMidsummer": "Swedish Midsummer",
+      "stLuciaDay": "St. Lucia Day",
       "ukraineIndependenceDay": "Ukraine Independence Day"
     }
   },

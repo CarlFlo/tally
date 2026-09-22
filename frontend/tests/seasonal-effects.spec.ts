@@ -11,6 +11,22 @@ test.describe("seasonal logo effects", () => {
     await selectProfileByName(page, "My profile");
 
     const cases: Array<[string, string | null]> = [
+      ["2026-02-13T12:00:00Z", null],
+      ["2026-02-14T12:00:00Z", "valentines-day"],
+      ["2026-02-15T12:00:00Z", null],
+      ["2026-03-31T12:00:00Z", null],
+      ["2026-04-01T12:00:00Z", "april-fools-day"],
+      ["2026-04-02T12:00:00Z", null],
+      ["2026-04-02T12:00:00Z", null],
+      ["2026-04-03T12:00:00Z", "easter"],
+      ["2026-04-04T12:00:00Z", "easter"],
+      ["2026-04-05T12:00:00Z", "easter"],
+      ["2026-04-06T12:00:00Z", "easter"],
+      ["2026-04-07T12:00:00Z", null],
+      ["2026-06-18T12:00:00Z", null],
+      ["2026-06-19T12:00:00Z", "swedish-midsummer"],
+      ["2026-06-20T12:00:00Z", "swedish-midsummer"],
+      ["2026-06-21T12:00:00Z", null],
       ["2026-06-05T12:00:00Z", null],
       ["2026-06-06T12:00:00Z", "sweden-national-day"],
       ["2026-06-07T12:00:00Z", null],
@@ -21,6 +37,9 @@ test.describe("seasonal logo effects", () => {
       ["2026-10-31T12:00:00Z", "halloween"],
       ["2026-11-01T12:00:00Z", null],
       ["2026-12-23T12:00:00Z", null],
+      ["2026-12-12T12:00:00Z", null],
+      ["2026-12-13T12:00:00Z", "st-lucia-day"],
+      ["2026-12-14T12:00:00Z", null],
       ["2026-12-24T12:00:00Z", "christmas"],
       ["2026-12-25T12:00:00Z", "christmas"],
       ["2026-12-26T12:00:00Z", "christmas"],
@@ -135,17 +154,22 @@ test.describe("seasonal logo effects", () => {
 
     await expect(overrideToggle).not.toBeChecked();
     await expect(effectSelect.locator("option")).toHaveText([
+      "Valentine's Day",
+      "April Fools' Day",
+      "Easter",
       "Halloween",
       "Christmas",
       "New Year",
       "Sweden National Day",
+      "Swedish Midsummer",
+      "St. Lucia Day",
       "Ukraine Independence Day",
     ]);
-    await expect(page.getByText("Applies: October 31")).toBeVisible();
+    await expect(page.getByText("Applies: February 14")).toBeVisible();
     const overrideBox = await overrideToggle.boundingBox();
     const selectBox = await effectSelect.boundingBox();
     const datesBox = await page
-      .getByText("Applies: October 31")
+      .getByText("Applies: February 14")
       .boundingBox();
     expect(overrideBox).not.toBeNull();
     expect(selectBox).not.toBeNull();
@@ -158,6 +182,14 @@ test.describe("seasonal logo effects", () => {
     await effectSelect.selectOption("ukraine-independence-day");
     await expect(page.getByText("Applies: August 24")).toBeVisible();
     await expect(page.locator(".sidebar [data-seasonal-effect]")).toHaveCount(0);
+
+    await effectSelect.selectOption("easter");
+    await expect(page.getByText(/Applies: April 3.*6/)).toBeVisible();
+
+    await effectSelect.selectOption("swedish-midsummer");
+    await expect(page.getByText(/Applies: June 19.*20/)).toBeVisible();
+
+    await effectSelect.selectOption("ukraine-independence-day");
 
     await overrideToggle.check();
     await expect(
