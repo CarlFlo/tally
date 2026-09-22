@@ -4,12 +4,13 @@ import { useTranslation } from "react-i18next";
 import { api, useApp, useLocal } from "../lib";
 import { invalidateResources } from "../queryInvalidation";
 import {
+  formatSeasonalEffectDates,
   SEASONAL_EFFECTS,
   useSeasonalEffectOverride,
 } from "../seasonalEffects";
 
 export function DebugSettings() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { boot, notify } = useApp();
   const cache = useQueryClient();
   const deployment = useLocal<any>("settings", "/settings");
@@ -20,6 +21,9 @@ export function DebugSettings() {
     if (!saving) setEnabled(boot.preferences.debug_mode);
   }, [boot.preferences.debug_mode, saving]);
   const environment = deployment.data?.environment || {};
+  const selectedSeasonalEffect = SEASONAL_EFFECTS.find(
+    (effect) => effect.id === seasonalOverride.effectId,
+  );
   return (
     <div className="settings-card-list">
       <section className="panel settings-card">
@@ -67,25 +71,37 @@ export function DebugSettings() {
             />
             {t("debug.seasonalOverride")}
           </label>
-          <label className="seasonal-effect-select">
-            <span>{t("debug.seasonalEffect")}</span>
-            <select
-              aria-label={t("debug.seasonalEffect")}
-              value={seasonalOverride.effectId}
-              onChange={(event) =>
-                setSeasonalOverride({
-                  ...seasonalOverride,
-                  effectId: event.target.value as typeof seasonalOverride.effectId,
-                })
-              }
-            >
-              {SEASONAL_EFFECTS.map((effect) => (
-                <option key={effect.id} value={effect.id}>
-                  {t(effect.labelKey)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="seasonal-effect-details">
+            <label className="seasonal-effect-select">
+              <span>{t("debug.seasonalEffect")}</span>
+              <select
+                aria-label={t("debug.seasonalEffect")}
+                value={seasonalOverride.effectId}
+                onChange={(event) =>
+                  setSeasonalOverride({
+                    ...seasonalOverride,
+                    effectId: event.target.value as typeof seasonalOverride.effectId,
+                  })
+                }
+              >
+                {SEASONAL_EFFECTS.map((effect) => (
+                  <option key={effect.id} value={effect.id}>
+                    {t(effect.labelKey)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {selectedSeasonalEffect && (
+              <p className="seasonal-effect-dates">
+                {t("debug.seasonalDates", {
+                  dates: formatSeasonalEffectDates(
+                    selectedSeasonalEffect,
+                    i18n.language,
+                  ),
+                })}
+              </p>
+            )}
+          </div>
         </div>
       </section>
       {deployment.data?.operator && (

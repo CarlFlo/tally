@@ -141,9 +141,22 @@ test.describe("seasonal logo effects", () => {
       "Sweden National Day",
       "Ukraine Independence Day",
     ]);
+    await expect(page.getByText("Applies: October 31")).toBeVisible();
+    const overrideBox = await overrideToggle.boundingBox();
+    const selectBox = await effectSelect.boundingBox();
+    const datesBox = await page
+      .getByText("Applies: October 31")
+      .boundingBox();
+    expect(overrideBox).not.toBeNull();
+    expect(selectBox).not.toBeNull();
+    expect(datesBox).not.toBeNull();
+    expect(Math.abs(overrideBox!.y - selectBox!.y)).toBeLessThan(6);
+    expect(datesBox!.x).toBeGreaterThan(selectBox!.x + selectBox!.width);
+    expect(Math.abs(datesBox!.y - selectBox!.y)).toBeLessThan(12);
     await expect(page.locator(".sidebar [data-seasonal-effect]")).toHaveCount(0);
 
     await effectSelect.selectOption("ukraine-independence-day");
+    await expect(page.getByText("Applies: August 24")).toBeVisible();
     await expect(page.locator(".sidebar [data-seasonal-effect]")).toHaveCount(0);
 
     await overrideToggle.check();
@@ -154,9 +167,17 @@ test.describe("seasonal logo effects", () => {
     ).toBeVisible();
 
     await effectSelect.selectOption("christmas");
+    await expect(page.getByText(/Applies: December 24.*26/)).toBeVisible();
     await expect(
       page.locator('.sidebar [data-seasonal-effect="christmas"]'),
     ).toBeVisible();
+
+    await effectSelect.selectOption("new-year");
+    await expect(
+      page.getByText("Applies: December 31 and January 1"),
+    ).toBeVisible();
+
+    await effectSelect.selectOption("christmas");
 
     await page.reload();
     await expect(overrideToggle).toBeChecked();

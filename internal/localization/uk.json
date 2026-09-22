@@ -3,7 +3,7 @@
     "locale": "uk",
     "name": "Українська",
     "direction": "ltr",
-    "catalogVersion": 32
+    "catalogVersion": 33
   },
   "common": {
     "save": "Зберегти",
@@ -969,6 +969,7 @@
     "seasonalHelp": "Перевіряйте святкові накладки на логотип Tally, не змінюючи системну дату.",
     "seasonalOverride": "Замінити сезонний ефект",
     "seasonalEffect": "Ефект",
+    "seasonalDates": "Застосовується: {{dates}}",
     "seasonalEffects": {
       "halloween": "Гелловін",
       "christmas": "Різдво",

@@ -32,10 +32,11 @@ export const SEASONAL_EFFECTS = [
     labelKey: "debug.seasonalEffects.christmas",
     dates: [{ month: 12, startDay: 24, endDay: 26 }],
     renderOverlay: () => (
-      <svg viewBox="0 0 28 24" focusable="false">
-        <path d="M5 15.5C8 7.6 13.2 3.2 22.4 3.1c-3 2.4-4.7 5.5-5.1 9.4Z" fill="#D64045" />
-        <path d="M4.2 14.4h14.6a2.1 2.1 0 0 1 2.1 2.1v1.7H2.1v-1.7a2.1 2.1 0 0 1 2.1-2.1Z" fill="#FFF9F2" />
-        <circle cx="23.2" cy="3.5" r="2.8" fill="#FFF9F2" />
+      <svg viewBox="0 0 32 26" focusable="false">
+        <path d="M5.1 16.9C7.1 8.6 13.9 3.1 24 3c-3.2 2.5-5.2 6.5-5.1 11-4.3-1.3-9.3-.4-13.8 2.9Z" fill="#D64045" />
+        <path d="M4.6 15.1c5.6-1.7 12.4-1.6 18.3.2 1.1.4 1.8 1.5 1.5 2.7l-.4 2H2.7l-.5-1.9c-.3-1.3.7-2.6 2.4-3Z" fill="#FFF9F2" />
+        <path d="M4.7 18.8c5.1-1.1 11.1-1.1 17.2.2" fill="none" opacity=".42" stroke="#D8CABE" strokeLinecap="round" strokeWidth="1.2" />
+        <circle cx="25.4" cy="3.5" r="3.1" fill="#FFF9F2" />
       </svg>
     ),
   },
@@ -124,6 +125,27 @@ function matchesDate(effect: SeasonalEffectDefinition, date: Date) {
       day >= rule.startDay &&
       day <= (rule.endDay ?? rule.startDay),
   );
+}
+
+export function formatSeasonalEffectDates(
+  effect: SeasonalEffectDefinition,
+  locale: string,
+): string {
+  const format = new Intl.DateTimeFormat(locale, {
+    month: "long",
+    day: "numeric",
+  });
+  const ranges = effect.dates.map((rule) => {
+    const start = new Date(2024, rule.month - 1, rule.startDay);
+    if (!rule.endDay) return format.format(start);
+    const end = new Date(2024, rule.month - 1, rule.endDay);
+    return format.formatRange(start, end);
+  });
+
+  return new Intl.ListFormat(locale, {
+    style: "long",
+    type: "conjunction",
+  }).format(ranges);
 }
 
 export function resolveSeasonalEffect(

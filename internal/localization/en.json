@@ -3,7 +3,7 @@
     "locale": "en",
     "name": "English",
     "direction": "ltr",
-    "catalogVersion": 32
+    "catalogVersion": 33
   },
   "common": {
     "save": "Save",
@@ -957,6 +957,7 @@
     "seasonalHelp": "Preview holiday overlays on the Tally logo without changing the system date.",
     "seasonalOverride": "Override seasonal effect",
     "seasonalEffect": "Effect",
+    "seasonalDates": "Applies: {{dates}}",
     "seasonalEffects": {
       "halloween": "Halloween",
       "christmas": "Christmas",
