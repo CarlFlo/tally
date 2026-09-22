@@ -432,6 +432,15 @@ code {
 .logo-period {
   color: var(--accent);
 }
+.logo-mark-wrap {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 33px;
+  width: 33px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+}
 .logo-mark {
   width: 33px;
   height: 34px;
@@ -460,6 +469,46 @@ code {
   background: #272035;
   transform: rotate(-24deg);
   border-radius: 3px;
+}
+.seasonal-logo-overlay {
+  position: absolute;
+  z-index: 2;
+  display: block;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 1.5px #0005);
+}
+.seasonal-logo-overlay svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.seasonal-logo-overlay--halloween {
+  right: -8px;
+  bottom: -6px;
+  width: 19px;
+  height: 19px;
+}
+.seasonal-logo-overlay--christmas {
+  top: -12px;
+  right: -9px;
+  width: 27px;
+  height: 23px;
+  transform: rotate(7deg);
+}
+.seasonal-logo-overlay--new-year {
+  top: -11px;
+  right: -10px;
+  width: 21px;
+  height: 21px;
+}
+.seasonal-logo-overlay--sweden-national-day,
+.seasonal-logo-overlay--ukraine-independence-day {
+  top: -8px;
+  right: -10px;
+  width: 20px;
+  height: 15px;
+  transform: rotate(5deg);
 }
 .workspace-label {
   font-size: 8px;
@@ -2354,6 +2403,28 @@ td .table-error {
 }
 .feature-toggle-setting {
   padding: 18px 20px;
+}
+.seasonal-debug-controls {
+  display: flex;
+  align-items: end;
+  gap: 18px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+.seasonal-debug-controls .toggle-setting {
+  min-height: 38px;
+  margin: 0;
+}
+.seasonal-effect-select {
+  display: grid;
+  gap: 6px;
+  min-width: min(280px, 100%);
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+.seasonal-effect-select select {
+  min-width: 240px;
 }
 .feature-toggle-setting > label {
   margin-top: 0;
