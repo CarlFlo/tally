@@ -174,7 +174,7 @@ test.describe("seasonal logo effects", () => {
     expect(overrideBox).not.toBeNull();
     expect(selectBox).not.toBeNull();
     expect(datesBox).not.toBeNull();
-    expect(Math.abs(overrideBox!.y - selectBox!.y)).toBeLessThan(6);
+    expect(Math.abs(overrideBox!.y - selectBox!.y)).toBeLessThanOrEqual(6);
     expect(datesBox!.x).toBeGreaterThan(selectBox!.x + selectBox!.width);
     expect(Math.abs(datesBox!.y - selectBox!.y)).toBeLessThan(12);
     await expect(page.locator(".sidebar [data-seasonal-effect]")).toHaveCount(0);

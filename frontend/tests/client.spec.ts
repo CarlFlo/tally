@@ -1,6 +1,31 @@
 import { test, expect } from "@playwright/test";
 import { selectProfileByName } from "./navigation";
 
+let downloaderSnapshot: any;
+
+const fixtureAPIKey = "qbt_0123456789abcdefghijklmnopqr";
+
+test.afterEach(async ({ page }) => {
+  if (!downloaderSnapshot) return;
+  const currentResponse = await page.request.get("/api/downloader");
+  expect(currentResponse.ok()).toBe(true);
+  const current = await currentResponse.json();
+  const fields = { ...downloaderSnapshot.settings.fields };
+  if (downloaderSnapshot.settings.secrets_configured?.api_key) {
+    fields.api_key = fixtureAPIKey;
+  }
+  const restore = await page.request.put("/api/downloader", {
+    headers: { "X-Tally-CSRF": "1" },
+    data: {
+      adapter: downloaderSnapshot.settings.adapter,
+      fields,
+      revision: current.settings.revision,
+    },
+  });
+  expect(restore.ok()).toBe(true);
+  downloaderSnapshot = undefined;
+});
+
 test("configure, test, save and use a shared torrent client with redacted API key controls and protected general APIs", async ({
   page,
 }) => {
@@ -8,6 +33,7 @@ test("configure, test, save and use a shared torrent client with redacted API ke
   page.on("pageerror", (error) => errors.push(error.message));
   await selectProfileByName(page, "My profile");
   const initial = await (await page.request.get("/api/downloader")).json();
+  downloaderSnapshot = initial;
   const clientURL = initial.settings.fields.url;
   await page.goto("/admin/configuration/integrations/downloader");
   const card = page.locator(".client-settings");
@@ -53,7 +79,7 @@ test("configure, test, save and use a shared torrent client with redacted API ke
   await expect(card.getByRole("alert")).toContainText("external service request failed");
   await card
     .getByLabel("API key", { exact: true })
-    .fill("qbt_0123456789abcdefghijklmnopqr");
+    .fill(fixtureAPIKey);
   await card.getByRole("button", { name: "Test connection" }).click();
   await expect(card.getByRole("status")).toContainText(
     "Authentication and API access verified",
