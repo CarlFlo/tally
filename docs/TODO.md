@@ -4,12 +4,6 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 ## Current work
 
-- [ ] Add seasonal logo overlays with debug preview controls.
-  - [ ] Register Halloween, Christmas, New Year, Sweden National Day, and Ukraine Independence Day date rules and artwork.
-  - [ ] Render the active effect as a non-interactive overlay on the shared Tally logo.
-  - [ ] Add session-scoped debug override controls with a toggle and effect selector.
-  - [ ] Add localization and browser regression coverage, then validate the final branch head.
-
 - [ ] Restructure administration and account navigation for clearer scope.
   - [x] Establish canonical admin/account route hierarchy while preserving legacy deep links.
   - [x] Separate personal notification preferences from deployment notification delivery.
