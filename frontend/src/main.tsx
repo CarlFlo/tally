@@ -60,6 +60,9 @@ const ProfilesSettingsPage = lazy(() =>
 const SystemPage = lazy(() =>
   import("./pages/System").then((module) => ({ default: module.SystemPage })),
 );
+const AdvancedFlowsPage = lazy(() =>
+  import("./pages/AdvancedFlows").then((module) => ({ default: module.AdvancedFlowsPage })),
+);
 
 function LocaleFallbackNotice() {
   const { t } = useTranslation();
@@ -339,6 +342,10 @@ function App() {
                           <Navigate to="/calendar" replace />
                         )
                       }
+                    />
+                    <Route
+                      path="/search/flows"
+                      element={boot.profile.is_admin ? <AdvancedFlowsPage /> : <Navigate to="/search/runs" replace />}
                     />
                     <Route
                       path="/downloads"

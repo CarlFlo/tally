@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import type { TFunction } from "i18next";
 import {
   api,
@@ -390,6 +391,7 @@ export function PreviousTorrentRunsPage() {
 
 function RunInspection({ run }: { run: AutomationRun }) {
   const { t } = useTranslation();
+  const { boot } = useApp();
   return (
     <>
       <div className="torrent-run-inspection-head">
@@ -398,6 +400,7 @@ function RunInspection({ run }: { run: AutomationRun }) {
         </span>
         <h2>{run.show_name} · {episodeLabel(run)}</h2>
         <p className="muted">{dateLabel(run.started_at)}</p>
+        {!!boot.profile?.is_admin && <Link to={`/search/flows?source=${encodeURIComponent(run.id)}`}>{t("advancedFlows.openDebugger")}</Link>}
         <div className="torrent-run-statuses">
           <span className={`badge ${run.status === "downloaded" ? "success" : run.status === "failed" ? "failed" : ""}`}>
             {runStatusLabel(t, run.status)}

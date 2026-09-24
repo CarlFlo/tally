@@ -321,6 +321,10 @@ Use traces, logs, and the changed-file surface to determine whether a failure is
 
 Browser tests should exercise freshly built production assets when the application embeds or serves generated frontend output. Testing stale assets can produce misleading passes and failures.
 
+### Exercise the first interaction from an empty state
+
+An editor can work after loading a template while its empty state blocks the first action. Test adding the first item with each supported input method, and check where a dragged item lands. Automatic canvas fitting should apply when loading a graph, not move a node immediately after the user drops it.
+
 ## Maintenance and dependencies
 
 ### Remove superseded paths once the replacement is authoritative

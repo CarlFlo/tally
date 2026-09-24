@@ -31,6 +31,7 @@ Tally is one Go service serving an embedded React application and a permanent SQ
 | `internal/inbox` | Profile-scoped inbox/read/dismissal state |
 | `internal/library` | Transactional library/follow changes |
 | `internal/torrent` | Jackett discovery, normalized release metadata, confidence evaluation, local `.torrent` inspection, automation decisions/history/feedback, client adapters, qBittorrent protocol |
+| `internal/flows` | Experimental advanced flow registry, typed graph validation, immutable revisions, dry-run execution, and bounded run snapshots |
 | `internal/database` | SQLite opening, migrations, validation, snapshots |
 | `internal/backup` | Backup creation, verification, inventory, retention, restore |
 | `internal/localization` | Bundled locale catalogs, validation, registry and filesystem watching |
@@ -41,7 +42,7 @@ Keep new code in the owning domain. Prefer narrow interfaces at boundaries and c
 
 ## Database and identity
 
-SQLite runs with foreign keys and WAL enabled. Schema changes are explicit sequential migrations; schema 14 is current. Existing databases receive a validated pre-upgrade snapshot before migration. Migration work is transactional and validated before commit; downgrades from a newer unsupported schema are refused.
+SQLite runs with foreign keys and WAL enabled. Schema changes are explicit sequential migrations; schema 15 is current. Existing databases receive a validated pre-upgrade snapshot before migration. Migration work is transactional and validated before commit; downgrades from a newer unsupported schema are refused.
 
 Profiles use generated opaque IDs. Each profile explicitly chooses Password or No authentication. Administrator privileges live in explicit role data rather than a special account ID. Database constraints protect invariants such as retaining an administrator while profiles remain, with API and UI checks providing additional defense in depth.
 
@@ -94,6 +95,12 @@ Shared requests continue only while at least one caller still needs the result. 
 Background jobs are bounded and cancellable. Schedules are persisted, wake the scheduler when relevant state changes, and use deployment timezone for execution. Profile timezone affects presentation, not server execution semantics. Torrent automation is a normal scheduler job with a 15-minute cadence and is disabled by default while the feature is experimental. The persisted scheduler-job enabled state is the single server-wide automation master switch; there is no second automation-settings toggle.
 
 Prefer event-driven refresh and filesystem watchers to frequent polling. Watchers are intentionally not masked by a polling fallback on unusual network filesystems unless a future requirement explicitly adds one.
+
+## Advanced Automation Flows
+
+Advanced Automation Flows are an administrator-only experimental editor and replay surface. They do not replace or intercept the scheduler-owned torrent automation pipeline. A saved flow contains a small typed acyclic graph, node configuration, and canvas positions. The backend registry validates node kinds, configuration, port compatibility, graph cycles, and bounded size before saving or replaying. Every save, including a rename, creates an immutable revision; replay records its trigger event, flow snapshot, sanitized node trace, and revision. An unsaved editor draft is recorded as revision 0 with its full snapshot. Deleting a flow also deletes its revisions and recorded flow runs through database cascades and requires an explicit UI confirmation.
+
+Replay uses a historical torrent automation run as the trigger fixture and performs fresh Jackett discovery through the existing provider path. Its filter node calls the shared release evaluator for episode identity and confidence. Search observations in flow history are limited to a bounded, credential-free candidate summary; provider URLs, magnets, and API keys are excluded. Action nodes only describe intended effects during replay. They never submit a torrent, send a notification, change episode state, or write an operational log. The visual playback uses the recorded trace after the server run completes. This first slice does not select flows for live shows, execute scheduled flow actions, or capture live advanced-flow runs.
 
 ## Torrent capabilities and decision pipeline
 

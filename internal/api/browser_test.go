@@ -178,6 +178,22 @@ func TestBrowserServer(t *testing.T) {
 	if _, e := s.Clients.Save(context.Background(), torrent.ClientUpdate{Adapter: "qbittorrent", Fields: map[string]string{"url": client.URL, "api_key": fixtureClientKey}}); e != nil {
 		t.Fatal(e)
 	}
+	if mode == "disabled" {
+		if _, err := s.DB.Exec("INSERT INTO shows(id,name) VALUES('flow-fixture-show','Flow Fixture Show'); INSERT INTO episodes(id,show_id,season,number,name) VALUES('flow-fixture-episode','flow-fixture-show',1,1,'Pilot')"); err != nil {
+			t.Fatal(err)
+		}
+		store := torrent.AutomationStore{DB: s.DB}
+		runID, err := store.StartRun(context.Background(), torrent.AutomationRun{ShowID: "flow-fixture-show", EpisodeID: "flow-fixture-episode", ShowName: "Flow Fixture Show", Season: 1, Episode: 1, Query: "Flow Fixture Show S01E01"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = store.AppendDecision(context.Background(), runID, torrent.DecisionStep{Stage: "search", Status: "success", Summary: "Fixture search completed"}); err != nil {
+			t.Fatal(err)
+		}
+		if err = store.FinishRun(context.Background(), runID, torrent.RunNoVerifiedCandidate, torrent.ReleaseAssessment{}, ""); err != nil {
+			t.Fatal(err)
+		}
+	}
 	s.Assets = web.Assets()
 	server := http.Server{Addr: "127.0.0.1:" + port, Handler: notificationBrowserFixture(t, s.Handler()), ReadHeaderTimeout: 5 * time.Second}
 	if e := server.ListenAndServe(); e != nil && e != http.ErrServerClosed {

@@ -4,6 +4,8 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 ## Current work
 
+- [ ] Verify authoritative CI for the completed Advanced Automation Flows vertical slice on `feature/advanced-automation-flows` before merging; branch detail is in the temporary root `BRANCH-TODO.md`.
+
 - [ ] Restructure administration and account navigation for clearer scope.
   - [x] Establish canonical admin/account route hierarchy while preserving legacy deep links.
   - [x] Separate personal notification preferences from deployment notification delivery.

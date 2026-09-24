@@ -156,6 +156,17 @@ func ValidateSchema(ctx context.Context, db Querier) error {
 		}
 		rows.Close()
 	}
+	if version >= 15 {
+		for _, query := range []string{
+			"SELECT id,name,revision,created_at,updated_at FROM automation_flows LIMIT 0",
+			"SELECT flow_id,revision,definition,created_at FROM automation_flow_revisions LIMIT 0",
+			"SELECT id,flow_id,flow_revision,source_run_id,trigger_event,definition,trace,status,started_at,duration_ms FROM automation_flow_runs LIMIT 0",
+		} {
+			rows, err := db.QueryContext(ctx, query)
+			if err != nil { return fmt.Errorf("database advanced automation schema is incomplete: %w", err) }
+			rows.Close()
+		}
+	}
 	profileQuery := "SELECT id,display_name,avatar,created_at FROM profiles LIMIT 0"
 	if version >= 7 {
 		profileQuery = "SELECT id,display_name,avatar,created_at,locale FROM profiles LIMIT 0"
