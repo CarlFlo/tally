@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM node:24-alpine AS frontend
+FROM node:26-alpine AS frontend
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci
