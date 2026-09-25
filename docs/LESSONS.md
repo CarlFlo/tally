@@ -197,6 +197,10 @@ The base schema and historical fixtures represent the schema version they claim 
 
 Build genuine legacy fixtures rather than taking the current schema and merely lowering its version number. Otherwise upgrade tests can pass while real old deployments fail.
 
+### Seed new editable defaults from the current policy
+
+When a new preset layer starts taking precedence over existing settings, creating it from factory values can silently change behavior on upgrade. Capture the deployment's effective settings once, preserve subsequent preset edits, and make reset to factory values explicit. Test an upgraded configuration with nondefault filters as well as the reset path, and explain precedence where both controls remain visible.
+
 ### Restore tests must model relational side effects
 
 Foreign-key cascades can destroy rows that were inserted earlier in the same restore procedure. Restore order matters. A backup test should verify complete relationships after restore, not merely that individual tables contain rows.

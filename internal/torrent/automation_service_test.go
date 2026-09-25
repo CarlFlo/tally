@@ -1050,3 +1050,80 @@ func TestAutomationReconcilesAmbiguousClientFailureByInfoHash(t *testing.T) {
 		t.Fatalf("reconciled submission was not persisted as downloaded: %+v", runs)
 	}
 }
+
+func TestSelectedChainSettingsAreBoundedAndShowScoped(t *testing.T) {
+	ctx := context.Background()
+	db, err := database.Open(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err = db.Exec(`INSERT INTO shows(id,name) VALUES('one','One');
+ INSERT INTO automation_flows(id,name,revision,created_at,updated_at) VALUES('preset','Preset',1,1,1);
+ INSERT INTO automation_flow_revisions(flow_id,revision,definition,created_at) VALUES('preset',1,'{"blocks":[{"type":"query.build","config":{"title_override":"Alt Name","prefix":"WEB-DL","suffix":"1080p"}},{"type":"jackett.search"},{"type":"torrent.filter","config":{"min_seeders":"20"}},{"type":"torrent.best"},{"type":"action.download"}]}',1);
+ INSERT INTO torrent_show_chain(show_id,flow_id) VALUES('one','preset');`); err != nil {
+		t.Fatal(err)
+	}
+	service := AutomationService{DB: db}
+	chain, err := service.chainSettings(ctx, "one", MediaProfileLive)
+	if err != nil || chain.ID != "preset" || chain.TitleOverride != "Alt Name" || chain.Prefix != "WEB-DL" || chain.Suffix != "1080p" || chain.Filter["min_seeders"] != "20" {
+		t.Fatalf("wrong chain: %+v %v", chain, err)
+	}
+	if _, err = db.Exec(`UPDATE automation_flow_revisions SET definition='{"blocks":[]}' WHERE flow_id='preset'`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = service.chainSettings(ctx, "one", MediaProfileLive); err == nil {
+		t.Fatal("invalid saved chain accepted")
+	}
+}
+
+func TestUnassignedShowUsesMediaProfileDefaultChain(t *testing.T) {
+	ctx := context.Background()
+	db, err := database.Open(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err = db.Exec(`INSERT INTO shows(id,name) VALUES('one','One');
+ INSERT INTO automation_flows(id,name,revision,created_at,updated_at) VALUES('default-live','Live',1,1,1),('default-animated','Animated',1,1,1);
+ INSERT INTO automation_flow_revisions(flow_id,revision,definition,created_at) VALUES
+ ('default-live',1,'{"blocks":[{"type":"query.build","config":{}},{"type":"jackett.search"},{"type":"torrent.filter","config":{"min_mb_per_minute":"8","max_mb_per_minute":"220"}},{"type":"torrent.best"},{"type":"action.download"}]}',1),
+ ('default-animated',1,'{"blocks":[{"type":"query.build","config":{}},{"type":"jackett.search"},{"type":"torrent.filter","config":{"min_mb_per_minute":"4","max_mb_per_minute":"140"}},{"type":"torrent.best"},{"type":"action.download"}]}',1);`); err != nil {
+		t.Fatal(err)
+	}
+	service := AutomationService{DB: db}
+	live, err := service.chainSettings(ctx, "one", MediaProfileLive)
+	if err != nil || live.ID != "default-live" || live.Filter["max_mb_per_minute"] != "220" {
+		t.Fatalf("wrong live default: %+v %v", live, err)
+	}
+	animated, err := service.chainSettings(ctx, "one", MediaProfileAnimated)
+	if err != nil || animated.ID != "default-animated" || animated.Filter["max_mb_per_minute"] != "140" {
+		t.Fatalf("wrong animated default: %+v %v", animated, err)
+	}
+}
+
+func TestSelectedChainChangesScheduledQueryAndTightensFilter(t *testing.T) {
+	now := time.Date(2026, 9, 17, 19, 0, 0, 0, time.UTC)
+	db := automationTestStore(t, now)
+	if _, err := db.Exec(`INSERT INTO automation_flows(id,name,revision,created_at,updated_at) VALUES('chain','Preset',1,1,1);
+ INSERT INTO automation_flow_revisions(flow_id,revision,definition,created_at) VALUES('chain',1,'{"blocks":[{"id":"step-1","type":"query.build","config":{"title_override":"Alt Show","prefix":"WEB-DL","suffix":"1080p"}},{"id":"step-2","type":"jackett.search","config":{}},{"id":"step-3","type":"torrent.filter","config":{"min_seeders":"90"}},{"id":"step-4","type":"torrent.best","config":{}},{"id":"step-5","type":"action.download","config":{}}]}',1);
+ INSERT INTO torrent_show_chain(show_id,flow_id) VALUES('show-a','chain');`); err != nil {
+		t.Fatal(err)
+	}
+	queries := []string{}
+	client := &automationClient{}
+	processed, err := automationService(db, automationRequester{queries: &queries}, client, now).Run(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if processed != 1 || len(queries) != 1 || queries[0] != "WEB-DL Alt Show S01E02 1080p" || client.added != 0 {
+		t.Fatalf("chain did not control guarded run: processed=%d queries=%v added=%d", processed, queries, client.added)
+	}
+	runs, err := (AutomationStore{DB: db}).ListRuns(context.Background(), 10)
+	if err != nil || len(runs) != 1 {
+		t.Fatalf("run missing: %+v %v", runs, err)
+	}
+	if !strings.Contains(string(runs[0].SettingsSnapshot), `"chain_id":"chain"`) || !strings.Contains(string(runs[0].SettingsSnapshot), `"min_seeders":90`) {
+		t.Fatalf("chain settings missing from run snapshot: %s", runs[0].SettingsSnapshot)
+	}
+}

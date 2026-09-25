@@ -125,6 +125,17 @@ func detectShowMediaProfile(showType, genresJSON string) string {
 	return MediaProfileLive
 }
 
+func ResolveShowMediaProfile(showType, genresJSON, override string) ShowMediaProfile {
+	detected := detectShowMediaProfile(showType, genresJSON)
+	mode := MediaProfileAuto
+	effective := detected
+	if override == MediaProfileLive || override == MediaProfileAnimated {
+		mode = override
+		effective = override
+	}
+	return ShowMediaProfile{Mode: mode, Detected: detected, Effective: effective}
+}
+
 func (s AutomationStore) ShowMediaProfile(ctx context.Context, showID string) (ShowMediaProfile, error) {
 	var showType, genres, override string
 	err := s.DB.QueryRowContext(ctx, `SELECT s.show_type,s.genres,COALESCE(p.profile,'')
@@ -132,14 +143,7 @@ func (s AutomationStore) ShowMediaProfile(ctx context.Context, showID string) (S
 	if err != nil {
 		return ShowMediaProfile{}, err
 	}
-	detected := detectShowMediaProfile(showType, genres)
-	mode := MediaProfileAuto
-	effective := detected
-	if override == MediaProfileLive || override == MediaProfileAnimated {
-		mode = override
-		effective = override
-	}
-	return ShowMediaProfile{Mode: mode, Detected: detected, Effective: effective}, nil
+	return ResolveShowMediaProfile(showType, genres, override), nil
 }
 
 func (s AutomationStore) SetShowMediaProfile(ctx context.Context, showID, mode string) error {

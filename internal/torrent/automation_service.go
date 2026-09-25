@@ -2,12 +2,16 @@ package torrent
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/CarlFlo/tally/internal/automationchain"
 
 	"github.com/CarlFlo/tally/internal/database"
 	"github.com/CarlFlo/tally/internal/providers"
@@ -248,8 +252,25 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 	if err != nil {
 		return false, err
 	}
-	query := fmt.Sprintf("%s S%02dE%02d", episode.ShowName, episode.Season, episode.Episode)
+	queryTitle := episode.ShowName
+	chain, err := s.chainSettings(ctx, episode.ShowID, mediaProfile.Effective)
+	if err != nil {
+		return false, err
+	}
+	if chain.ID != "" {
+		if chain.TitleOverride != "" {
+			queryTitle = chain.TitleOverride
+			target.ShowTitle = chain.TitleOverride
+		}
+		caps.Automation, err = automationchain.Apply(caps.Automation, chain.Filter, chain.Selection, mediaProfile.Effective)
+		if err != nil {
+			return false, err
+		}
+	}
+	query := strings.TrimSpace(strings.Join([]string{chain.Prefix, fmt.Sprintf("%s S%02dE%02d", queryTitle, episode.Season, episode.Episode), chain.Suffix}, " "))
 	snapshot, _ := json.Marshal(map[string]any{
+		"chain_id":           chain.ID,
+		"chain_revision":     chain.Revision,
 		"automation":         caps.Automation,
 		"show_policy":        episode.Policy,
 		"show_media_profile": mediaProfile,
@@ -572,6 +593,55 @@ func (s *AutomationService) runEpisode(ctx context.Context, episode automationEp
 	}
 	s.publishChange()
 	return true, nil
+}
+
+type selectedChain struct {
+	ID             string
+	Revision       int
+	TitleOverride  string
+	Prefix, Suffix string
+	Filter         map[string]string
+	Selection      map[string]string
+}
+
+func (s *AutomationService) chainSettings(ctx context.Context, showID, profile string) (selectedChain, error) {
+	var chain selectedChain
+	var raw string
+	err := s.DB.QueryRowContext(ctx, `SELECT f.id,f.revision,r.definition FROM torrent_show_chain c
+		JOIN automation_flows f ON f.id=c.flow_id
+		JOIN automation_flow_revisions r ON r.flow_id=f.id AND r.revision=f.revision
+		WHERE c.show_id=? AND (f.show_id IS NULL OR f.show_id=?)`, showID, showID).Scan(&chain.ID, &chain.Revision, &raw)
+	if errors.Is(err, sql.ErrNoRows) {
+		err = s.DB.QueryRowContext(ctx, `SELECT f.id,f.revision,r.definition FROM automation_flows f
+			JOIN automation_flow_revisions r ON r.flow_id=f.id AND r.revision=f.revision WHERE f.id=?`, automationchain.DefaultID(profile)).Scan(&chain.ID, &chain.Revision, &raw)
+		if errors.Is(err, sql.ErrNoRows) {
+			return selectedChain{}, nil
+		}
+	}
+	if err != nil {
+		return chain, err
+	}
+	var definition struct {
+		Blocks []struct {
+			Type   string            `json:"type"`
+			Config map[string]string `json:"config"`
+		} `json:"blocks"`
+	}
+	if err := json.Unmarshal([]byte(raw), &definition); err != nil {
+		return chain, err
+	}
+	if len(definition.Blocks) != 5 || definition.Blocks[0].Type != "query.build" || definition.Blocks[1].Type != "jackett.search" || definition.Blocks[2].Type != "torrent.filter" || definition.Blocks[3].Type != "torrent.best" || definition.Blocks[4].Type != "action.download" {
+		return chain, fmt.Errorf("selected automation chain is invalid")
+	}
+	chain.Prefix = strings.TrimSpace(definition.Blocks[0].Config["prefix"])
+	chain.Suffix = strings.TrimSpace(definition.Blocks[0].Config["suffix"])
+	chain.TitleOverride = strings.TrimSpace(definition.Blocks[0].Config["title_override"])
+	if len(chain.TitleOverride) > 200 || len(chain.Prefix) > 200 || len(chain.Suffix) > 200 {
+		return chain, fmt.Errorf("selected automation chain has invalid query text")
+	}
+	chain.Filter = definition.Blocks[2].Config
+	chain.Selection = definition.Blocks[3].Config
+	return chain, nil
 }
 
 func (s *AutomationService) capabilities(ctx context.Context) (automationCapabilities, error) {

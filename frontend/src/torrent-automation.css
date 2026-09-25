@@ -691,9 +691,9 @@
 }
 
 .automation-show-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 118px minmax(180px, 220px);
   align-items: center;
-  justify-content: space-between;
   gap: 18px;
   padding: 12px 2px;
   border-bottom: 1px solid var(--border);
@@ -714,7 +714,6 @@
 }
 
 .automation-show-toggle {
-  flex: 0 0 auto;
   margin: 0;
   width: 118px;
   min-height: 34px;
@@ -797,7 +796,7 @@
   }
 
   .automation-show-row {
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .automation-show-toggle {
@@ -812,3 +811,6 @@
     padding: 18px;
   }
 }
+.automation-chain-choice { display: grid; gap: 5px; min-width: 180px; color: var(--muted); font-size: .8rem; }
+.automation-chain-choice select { min-width: 0; width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 8px; color: var(--text); background: var(--surface2); }
+@media (max-width: 680px) { .automation-chain-choice { width: 100%; } }

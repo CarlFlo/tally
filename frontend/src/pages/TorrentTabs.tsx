@@ -1,4 +1,4 @@
-import { Bot, GitBranch, History, Search } from "lucide-react";
+import { Bot, History, ListOrdered, Search } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useApp } from "../lib";
@@ -23,7 +23,7 @@ export function TorrentTabs() {
         <History size={17} />
         {t("torrentAutomation.previousRunsTab", { defaultValue: "Previous Runs" })}
       </NavLink>
-      {!!boot.profile?.is_admin && <NavLink to="/search/flows"><GitBranch size={17} />{t("advancedFlows.title")}</NavLink>}
+      {!!boot.profile?.is_admin && <NavLink to="/search/flows"><ListOrdered size={17} />{t("advancedFlows.title")}</NavLink>}
     </nav>
   );
 }

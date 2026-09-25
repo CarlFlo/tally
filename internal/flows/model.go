@@ -4,197 +4,123 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
-	"sort"
 	"strings"
+
+	"github.com/CarlFlo/tally/internal/automationchain"
+	"github.com/CarlFlo/tally/internal/settings"
 )
 
-// The registry is the server-owned contract for both validation and execution.
-type Port struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
-}
-type NodeKind struct {
-	Type       string   `json:"type"`
-	Inputs     []Port   `json:"inputs"`
-	Outputs    []Port   `json:"outputs"`
-	Config     []string `json:"config"`
-	InputMode  string   `json:"input_mode,omitempty"`
-	Deprecated bool     `json:"deprecated,omitempty"`
-	execute    executor `json:"-"`
-}
-type Node struct {
-	ID     string                     `json:"id"`
-	Type   string                     `json:"type"`
-	Config map[string]json.RawMessage `json:"config"`
-	X      float64                    `json:"x"`
-	Y      float64                    `json:"y"`
-}
-type Edge struct {
-	ID         string `json:"id"`
-	Source     string `json:"source"`
-	SourcePort string `json:"source_port"`
-	Target     string `json:"target"`
-	TargetPort string `json:"target_port"`
+type Block struct {
+	ID     string            `json:"id"`
+	Type   string            `json:"type"`
+	Config map[string]string `json:"config"`
 }
 type Definition struct {
-	Nodes []Node `json:"nodes"`
-	Edges []Edge `json:"edges"`
+	Blocks []Block `json:"blocks"`
 }
 type Flow struct {
 	ID         string     `json:"id"`
 	Name       string     `json:"name"`
+	ShowID     string     `json:"show_id,omitempty"`
 	Revision   int        `json:"revision"`
 	Definition Definition `json:"definition"`
 	CreatedAt  int64      `json:"created_at"`
 	UpdatedAt  int64      `json:"updated_at"`
 }
 
-func Kinds() []NodeKind {
-	out := make([]NodeKind, 0, len(registry))
-	for _, kind := range registry {
-		if kind.Inputs == nil {
-			kind.Inputs = []Port{}
-		}
-		if kind.Outputs == nil {
-			kind.Outputs = []Port{}
-		}
-		if kind.Config == nil {
-			kind.Config = []string{}
-		}
-		out = append(out, kind)
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Type < out[j].Type })
-	return out
+// The stages are deliberately fixed. The scheduler has one guarded search and
+// submission path, so a saved chain can configure it without bypassing checks.
+var stages = []string{"query.build", "jackett.search", "torrent.filter", "torrent.best", "action.download"}
+
+type BlockKind struct {
+	Type   string   `json:"type"`
+	Config []string `json:"config"`
 }
 
+func Kinds() []BlockKind {
+	return []BlockKind{{stages[0], []string{"title_override", "prefix", "suffix"}}, {stages[1], []string{}}, {stages[2], []string{"min_seeders", "include_keywords", "exclude_keywords", "allowed_groups", "allowed_uploaders", "min_mb_per_minute", "max_mb_per_minute", "release_delay_minutes"}}, {stages[3], []string{"preferred_quality", "prefer_smaller", "preferred_groups", "preferred_uploaders", "preferred_providers", "max_candidates"}}, {stages[4], []string{}}}
+}
+func DefaultDefinition() Definition {
+	blocks := make([]Block, len(stages))
+	for i, stage := range stages {
+		blocks[i] = Block{ID: fmt.Sprintf("step-%d", i+1), Type: stage, Config: map[string]string{}}
+	}
+	return Definition{Blocks: blocks}
+}
+
+func DefaultProfileDefinition(profile string, config settings.TorrentAutomation) Definition {
+	d := DefaultDefinition()
+	config = config.Effective()
+	minimum, maximum := config.LiveMinMBPerMinute, config.LiveMaxMBPerMinute
+	if profile == "animated" {
+		minimum, maximum = config.AnimatedMinMBPerMinute, config.AnimatedMaxMBPerMinute
+	}
+	d.Blocks[2].Config = map[string]string{
+		"min_seeders":           fmt.Sprint(config.MinSeeders),
+		"include_keywords":      config.IncludeKeywords,
+		"exclude_keywords":      config.ExcludeKeywords,
+		"allowed_groups":        automationchain.Join(config.AllowedGroups),
+		"allowed_uploaders":     automationchain.Join(config.AllowedUploaders),
+		"min_mb_per_minute":     fmt.Sprint(minimum),
+		"max_mb_per_minute":     fmt.Sprint(maximum),
+		"release_delay_minutes": fmt.Sprint(config.ReleaseDelayMinutes),
+	}
+	d.Blocks[3].Config = map[string]string{
+		"preferred_quality":   config.PreferredQuality,
+		"prefer_smaller":      fmt.Sprint(config.PreferSmaller),
+		"preferred_groups":    automationchain.Join(config.PreferredGroups),
+		"preferred_uploaders": automationchain.Join(config.PreferredUploaders),
+		"preferred_providers": automationchain.Join(config.PreferredProviders),
+		"max_candidates":      fmt.Sprint(config.MaxCandidates),
+	}
+	return d
+}
 func Validate(name string, definition Definition) error {
 	if len(strings.TrimSpace(name)) < 1 || len(name) > 100 {
-		return errors.New("flow name must be 1–100 characters")
+		return errors.New("chain name must be 1–100 characters")
 	}
-	if len(definition.Nodes) < 1 || len(definition.Nodes) > 40 || len(definition.Edges) > 80 {
-		return errors.New("flow must have 1–40 nodes and at most 80 connections")
+	if len(definition.Blocks) != len(stages) {
+		return errors.New("chain requires the five automation stages")
 	}
-	nodes := make(map[string]Node, len(definition.Nodes))
-	triggers := 0
-	for _, node := range definition.Nodes {
-		kind, ok := registry[node.Type]
-		if !ok {
-			return fmt.Errorf("unknown node type %q", node.Type)
+	ids := map[string]bool{}
+	for i, block := range definition.Blocks {
+		if block.Type != stages[i] || !validID(block.ID) || ids[block.ID] {
+			return fmt.Errorf("invalid block at step %d", i+1)
 		}
-		if !validID(node.ID) || math.IsNaN(node.X) || math.IsNaN(node.Y) || math.IsInf(node.X, 0) || math.IsInf(node.Y, 0) || math.Abs(node.X) > 100000 || math.Abs(node.Y) > 100000 {
-			return fmt.Errorf("invalid node identity or position")
+		ids[block.ID] = true
+		allowed := map[string]bool{}
+		for _, key := range Kinds()[i].Config {
+			allowed[key] = true
 		}
-		if _, exists := nodes[node.ID]; exists {
-			return fmt.Errorf("duplicate node %q", node.ID)
-		}
-		if strings.HasPrefix(node.Type, "trigger.") {
-			triggers++
-		}
-		if err := validateConfig(kind, node.Config); err != nil {
-			return fmt.Errorf("node %s: %w", node.ID, err)
-		}
-		nodes[node.ID] = node
-	}
-	if triggers != 1 {
-		return errors.New("flow requires exactly one trigger")
-	}
-	edges := make(map[string]bool, len(definition.Edges))
-	incoming := make(map[string]bool)
-	incomingType := make(map[string]string)
-	incomingCount := make(map[string]int)
-	adjacency := make(map[string][]string)
-	for _, edge := range definition.Edges {
-		if !validID(edge.ID) || edges[edge.ID] {
-			return errors.New("invalid or duplicate connection ID")
-		}
-		edges[edge.ID] = true
-		source, a := nodes[edge.Source]
-		target, b := nodes[edge.Target]
-		if !a || !b || edge.Source == edge.Target {
-			return fmt.Errorf("connection %s has invalid endpoints", edge.ID)
-		}
-		out, okOut := findPort(registry[source.Type].Outputs, edge.SourcePort)
-		in, okIn := findPort(registry[target.Type].Inputs, edge.TargetPort)
-		if !okOut || !okIn || out.Type != in.Type {
-			return fmt.Errorf("connection %s has incompatible ports", edge.ID)
-		}
-		key := edge.Target + "/" + edge.TargetPort
-		if incoming[key] {
-			return fmt.Errorf("node %s input %s has multiple connections", edge.Target, edge.TargetPort)
-		}
-		incoming[key] = true
-		incomingType[edge.Target] = in.Type
-		incomingCount[edge.Target]++
-		adjacency[edge.Source] = append(adjacency[edge.Source], edge.Target)
-	}
-	for _, node := range definition.Nodes {
-		kind := registry[node.Type]
-		if kind.InputMode == "one" {
-			if incomingCount[node.ID] != 1 {
-				return fmt.Errorf("node %s requires exactly one input", node.ID)
+		for key, value := range block.Config {
+			limit := 200
+			if key == "include_keywords" || key == "exclude_keywords" {
+				limit = 500
 			}
-			if node.Type == "text.replace" {
-				attribute := config(node, "attribute")
-				inputType := incomingType[node.ID]
-				if attribute != "" && !replaceAttributeAllowed(inputType, attribute) {
-					return fmt.Errorf("node %s attribute is incompatible with its input", node.ID)
-				}
-				for _, edge := range definition.Edges {
-					if edge.Source == node.ID {
-						out, _ := findPort(kind.Outputs, edge.SourcePort)
-						if out.Type != inputType {
-							return fmt.Errorf("node %s output is incompatible with its input", node.ID)
-						}
-					}
+			if strings.HasSuffix(key, "_groups") || strings.HasSuffix(key, "_uploaders") || key == "preferred_providers" {
+				limit = 8192
+			}
+			if !allowed[key] || len(value) > limit {
+				return fmt.Errorf("invalid configuration for step %d", i+1)
+			}
+		}
+		if block.Type == "torrent.filter" {
+			v := block.Config["min_seeders"]
+			if v != "" {
+				var n int
+				if _, err := fmt.Sscanf(v, "%d", &n); err != nil || n < 0 || n > 1_000_000 || fmt.Sprint(n) != v {
+					return errors.New("min seeders must be 0–1000000")
 				}
 			}
-			continue
-		}
-		for _, port := range registry[node.Type].Inputs {
-			if !incoming[node.ID+"/"+port.Name] {
-				return fmt.Errorf("node %s has unconnected input %s", node.ID, port.Name)
-			}
 		}
 	}
-	state := map[string]int{}
-	var visit func(string) error
-	visit = func(id string) error {
-		if state[id] == 1 {
-			return errors.New("flow contains a cycle")
-		}
-		if state[id] == 2 {
-			return nil
-		}
-		state[id] = 1
-		for _, next := range adjacency[id] {
-			if err := visit(next); err != nil {
-				return err
-			}
-		}
-		state[id] = 2
-		return nil
-	}
-	for id := range nodes {
-		if err := visit(id); err != nil {
+	for _, profile := range []string{"live", "animated"} {
+		if _, err := automationchain.Apply(settings.DefaultTorrentAutomation(), definition.Blocks[2].Config, definition.Blocks[3].Config, profile); err != nil {
 			return err
 		}
 	}
 	return nil
 }
-
-func replaceAttributeAllowed(inputType, attribute string) bool {
-	switch inputType {
-	case "event":
-		return attribute == "show_name"
-	case "candidate":
-		return attribute == "name" || attribute == "provider"
-	case "text":
-		return attribute == "" || attribute == "value"
-	}
-	return false
-}
-
 func validID(id string) bool {
 	if len(id) < 1 || len(id) > 64 {
 		return false
@@ -206,53 +132,38 @@ func validID(id string) bool {
 	}
 	return true
 }
-func findPort(ports []Port, name string) (Port, bool) {
-	for _, p := range ports {
-		if p.Name == name {
-			return p, true
-		}
+
+// Older saved editor definitions are converted at the storage boundary. The
+// fixed stages retain the settings that can safely affect scheduled runs.
+func decodeDefinition(raw string) (Definition, error) {
+	var d Definition
+	if err := json.Unmarshal([]byte(raw), &d); err != nil {
+		return d, err
 	}
-	return Port{}, false
-}
-func validateConfig(kind NodeKind, config map[string]json.RawMessage) error {
-	if kind.Type == "text.replace" && len(config["find"]) == 0 {
-		return errors.New("find text is required")
+	if len(d.Blocks) > 0 {
+		return d, nil
 	}
-	for key, raw := range config {
-		allowed := false
-		for _, candidate := range kind.Config {
-			if key == candidate {
-				allowed = true
+	var old struct {
+		Nodes []struct {
+			Type   string            `json:"type"`
+			Config map[string]string `json:"config"`
+		} `json:"nodes"`
+	}
+	if err := json.Unmarshal([]byte(raw), &old); err != nil {
+		return d, err
+	}
+	d = DefaultDefinition()
+	for _, node := range old.Nodes {
+		for i := range d.Blocks {
+			if d.Blocks[i].Type == node.Type {
+				for _, key := range Kinds()[i].Config {
+					if value, ok := node.Config[key]; ok {
+						d.Blocks[i].Config[key] = value
+					}
+				}
 				break
 			}
 		}
-		if !allowed {
-			return fmt.Errorf("unknown configuration %q", key)
-		}
-		if len(raw) > 1024 {
-			return fmt.Errorf("configuration %q is too large", key)
-		}
-		var value string
-		if err := json.Unmarshal(raw, &value); err != nil || len(value) > 500 {
-			return fmt.Errorf("configuration %q must be short text", key)
-		}
-		if kind.Type == "text.replace" && key == "find" && value == "" {
-			return errors.New("find text is required")
-		}
-		if kind.Type == "text.replace" && key == "attribute" && value != "" && value != "value" && value != "show_name" && value != "name" && value != "provider" {
-			return errors.New("unknown replacement attribute")
-		}
-		if kind.Type == "text.replace" && key == "trim" && value != "true" && value != "false" {
-			return errors.New("trim must be true or false")
-		}
-		if kind.Type == "torrent.filter" && key == "min_seeders" {
-			if value != "" {
-				var n int
-				if _, err := fmt.Sscanf(value, "%d", &n); err != nil || n < 0 || n > 10000 || fmt.Sprint(n) != value {
-					return errors.New("min seeders must be 0–10000")
-				}
-			}
-		}
 	}
-	return nil
+	return d, nil
 }

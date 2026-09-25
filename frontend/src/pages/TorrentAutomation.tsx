@@ -172,6 +172,7 @@ export function TorrentAutomationPage() {
   const [revision, setRevision] = useState(0);
   const [busy, setBusy] = useState(false);
   const [enrollmentDraft, setEnrollmentDraft] = useState<Record<string, boolean>>({});
+  const [chainDraft, setChainDraft] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!query.data) return;
@@ -206,7 +207,7 @@ export function TorrentAutomationPage() {
     !!ruleText &&
     !!savedData &&
     JSON.stringify(configForSave(data, ruleText)) !== JSON.stringify(savedData);
-  const hasUnsavedChanges = hasSettingsChanges || Object.keys(enrollmentDraft).length > 0;
+  const hasUnsavedChanges = hasSettingsChanges || Object.keys(enrollmentDraft).length > 0 || Object.keys(chainDraft).length > 0;
 
   useUnsavedChangesWarning(
     hasUnsavedChanges,
@@ -237,11 +238,19 @@ export function TorrentAutomationPage() {
       return { ...current, [id]: enabled };
     });
   }
+  function changeChain(id: string, flowID: string, saved: string) {
+    setChainDraft((current) => {
+      const next = { ...current };
+      if (flowID === saved) delete next[id]; else next[id] = flowID;
+      return next;
+    });
+  }
 
   function revert() {
     setData(savedPersistedData);
     setRuleText(ruleTextFromConfig(savedPersistedData));
     setEnrollmentDraft({});
+    setChainDraft({});
   }
 
   function resetRules() {
@@ -277,7 +286,11 @@ export function TorrentAutomationPage() {
       for (const [id, enabled] of enrollmentChanges) {
         await api(`/torrents/automation/shows/${id}`, "PUT", { enabled });
       }
+      for (const [id, flow_id] of Object.entries(chainDraft)) {
+        await api(`/torrents/automation/shows/${id}/chain`, "PUT", { flow_id });
+      }
       setEnrollmentDraft({});
+      setChainDraft({});
       await invalidateResources(cache, ["editable-settings", "settings", "jobs", "torrent-automation-shows"]);
       notify(
         t("torrentAutomation.saved", {
@@ -313,8 +326,10 @@ export function TorrentAutomationPage() {
       >
         <AutomationShowEnrollmentList
           enrollmentDraft={enrollmentDraft}
+          chainDraft={chainDraft}
           disabled={busy}
           onEnrollmentChange={changeEnrollment}
+          onChainChange={changeChain}
         />
 
         <section className="panel settings-card selection-card">

@@ -163,7 +163,21 @@ func ValidateSchema(ctx context.Context, db Querier) error {
 			"SELECT id,flow_id,flow_revision,source_run_id,trigger_event,definition,trace,status,started_at,duration_ms FROM automation_flow_runs LIMIT 0",
 		} {
 			rows, err := db.QueryContext(ctx, query)
-			if err != nil { return fmt.Errorf("database advanced automation schema is incomplete: %w", err) }
+			if err != nil {
+				return fmt.Errorf("database advanced automation schema is incomplete: %w", err)
+			}
+			rows.Close()
+		}
+	}
+	if version >= 16 {
+		for _, query := range []string{
+			"SELECT show_id FROM automation_flows LIMIT 0",
+			"SELECT show_id,flow_id FROM torrent_show_chain LIMIT 0",
+		} {
+			rows, err := db.QueryContext(ctx, query)
+			if err != nil {
+				return fmt.Errorf("database automation chain schema is incomplete: %w", err)
+			}
 			rows.Close()
 		}
 	}

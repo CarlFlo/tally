@@ -101,7 +101,7 @@ func TestLiveRestoreMigratesOlderSchemaAndReportsSourceVersion(t *testing.T) {
 	}
 	defer sourceDB.Close()
 	if _, err = sourceDB.Exec(`INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('user0','My profile','violet',1);
-DROP TABLE automation_flow_runs; DROP TABLE automation_flow_revisions; DROP TABLE automation_flows;
+DROP TABLE torrent_show_chain; DROP TABLE automation_flow_runs; DROP TABLE automation_flow_revisions; DROP TABLE automation_flows;
 ALTER TABLE episodes DROP COLUMN downloaded;
 DROP TABLE torrent_episode_downloads;
 DROP TABLE torrent_automation_episode_state; DROP TABLE torrent_magnet_verifications; DROP TABLE torrent_automation_feedback; DROP TABLE torrent_bad_hashes; DROP TABLE torrent_show_policy; DROP TABLE torrent_automation_runs; DROP TABLE torrent_show_media_profile; ALTER TABLE shows DROP COLUMN show_type;

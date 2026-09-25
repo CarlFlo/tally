@@ -13,17 +13,24 @@ type AutomationShow = {
   next_episode?: string;
   active: boolean | number;
   automation_enabled: boolean | number;
+  flow_id?: string;
+  media_profile: { effective: "live" | "animated" };
 };
+type FlowOption = { id: string; name: string; show_id?: string };
 
 type AutomationShowsResponse = { shows: AutomationShow[] };
 export function AutomationShowEnrollmentList({
   enrollmentDraft,
+  chainDraft,
   disabled,
   onEnrollmentChange,
+  onChainChange,
 }: {
   enrollmentDraft: Record<string, boolean>;
+  chainDraft: Record<string, string>;
   disabled: boolean;
   onEnrollmentChange: (id: string, enabled: boolean, saved: boolean) => void;
+  onChainChange: (id: string, flowID: string, saved: string) => void;
 }) {
   const { t } = useTranslation();
   const [filter, setFilter] = useState("");
@@ -31,6 +38,10 @@ export function AutomationShowEnrollmentList({
     queryKey: queryKeys.torrentAutomationShows(),
     queryFn: ({ signal }) =>
       api("/torrents/automation/shows", "GET", undefined, signal),
+  });
+  const flows = useQuery<{ flows: FlowOption[] }>({
+    queryKey: ["flows", "list"],
+    queryFn: ({ signal }) => api("/flows", "GET", undefined, signal),
   });
 
   const shows = query.data?.shows || [];
@@ -51,6 +62,7 @@ export function AutomationShowEnrollmentList({
             {t("torrentAutomation.showsTitle")}
           </h3>
           <p className="muted">{t("torrentAutomation.showsHelp")}</p>
+          <p className="muted small-text">{t("torrentAutomation.chainDefaultsHelp")} <Link to="/search/flows">{t("torrentAutomation.editChains")}</Link></p>
         </div>
         <span className="badge">
           {t("torrentAutomation.enrolledCount", { count: enrolled })}
@@ -79,6 +91,7 @@ export function AutomationShowEnrollmentList({
           {visible.map((show) => {
             const saved = !!show.automation_enabled;
             const enabled = enrollmentDraft[show.id] ?? saved;
+            const defaultChain = show.media_profile?.effective === "animated" ? "advancedFlows.defaultAnimated" : "advancedFlows.defaultLive";
             return (
               <div className="automation-show-row" key={show.id}>
                 <div className="automation-show-copy">
@@ -91,6 +104,7 @@ export function AutomationShowEnrollmentList({
                       : t("torrentAutomation.noUpcomingEpisode")}
                     {show.status ? ` · ${show.status}` : ""}
                   </span>
+                  <span className="muted small-text">{t("torrentAutomation.showType", { type: t(defaultChain) })}</span>
                 </div>
                 <label className="toggle-setting compact-toggle automation-show-toggle">
                   <input
@@ -104,6 +118,15 @@ export function AutomationShowEnrollmentList({
                   {enabled
                     ? t("torrentAutomation.enrolled")
                     : t("torrentAutomation.notEnrolled")}
+                </label>
+                <label className="automation-chain-choice">
+                  {t("torrentAutomation.chainChoice")}
+                  <select value={chainDraft[show.id] ?? show.flow_id ?? (show.media_profile?.effective === "animated" ? "default-animated" : "default-live")} disabled={disabled || flows.isPending} onChange={(event) => onChainChange(show.id, event.target.value, show.flow_id || "")}>
+                    <option value="">{t("torrentAutomation.automaticChain", { type: t(defaultChain) })}</option>
+                    <option value="default-live">{t("advancedFlows.defaultLive")}</option>
+                    <option value="default-animated">{t("advancedFlows.defaultAnimated")}</option>
+                    {flows.data?.flows.filter((flow) => flow.id !== "default-live" && flow.id !== "default-animated" && (!flow.show_id || flow.show_id === show.id)).map((flow) => <option key={flow.id} value={flow.id}>{flow.name}</option>)}
+                  </select>
                 </label>
               </div>
             );

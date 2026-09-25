@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/CarlFlo/tally/internal/flows"
 	"github.com/CarlFlo/tally/internal/torrent"
 )
 
@@ -38,6 +39,9 @@ func TestTorrentAutomationShowEnrollmentIsGlobalButListIsProfileScoped(t *testin
 			Name              string `json:"name"`
 			Active            int    `json:"active"`
 			AutomationEnabled int    `json:"automation_enabled"`
+			MediaProfile      struct {
+				Effective string `json:"effective"`
+			} `json:"media_profile"`
 		} `json:"shows"`
 	}
 	if err := json.Unmarshal(response.Body.Bytes(), &out); err != nil {
@@ -55,6 +59,11 @@ func TestTorrentAutomationShowEnrollmentIsGlobalButListIsProfileScoped(t *testin
 	}
 	if found["show-inactive"].active != 0 || found["show-inactive"].enabled != 0 {
 		t.Fatalf("inactive show state unexpected: %+v", found["show-inactive"])
+	}
+	for _, show := range out.Shows {
+		if show.ID == "show-active" && show.MediaProfile.Effective != torrent.MediaProfileLive {
+			t.Fatalf("live show default profile = %q", show.MediaProfile.Effective)
+		}
 	}
 	if _, ok := found["show-other"]; ok {
 		t.Fatal("another profile's My Shows leaked into the enrollment list")
@@ -77,6 +86,37 @@ func TestTorrentAutomationShowEnrollmentIsGlobalButListIsProfileScoped(t *testin
 		t.Fatalf("member list was not profile scoped: %s", response.Body.String())
 	}
 	expect(t, request(t, h, "PUT", "/api/torrents/automation/shows/show-other", map[string]any{"enabled": true}, member), http.StatusForbidden)
+}
+
+func TestAutomationChainAssignmentRequiresAdminAndMatchingShow(t *testing.T) {
+	s, h, _ := testServer(t, "disabled")
+	if _, err := s.DB.Exec(`INSERT INTO shows(id,name) VALUES('one','One'),('two','Two');
+		INSERT INTO profile_shows(profile_id,show_id,added_at) VALUES('profile-admin','one',1),('profile-admin','two',1);
+		INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('member','Member','mint',1);
+		INSERT INTO profile_shows(profile_id,show_id,added_at) VALUES('member','one',1);`); err != nil {
+		t.Fatal(err)
+	}
+	store := flows.Store{DB: s.DB}
+	general, err := store.Save(t.Context(), flows.Flow{Name: "General", Definition: flows.DefaultDefinition()}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	custom, err := store.Save(t.Context(), flows.Flow{Name: "One only", ShowID: "one", Definition: flows.DefaultDefinition()}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	member := &http.Cookie{Name: "tally_profile", Value: "member"}
+	expect(t, request(t, h, "PUT", "/api/torrents/automation/shows/one/chain", map[string]string{"flow_id": general.ID}, member), http.StatusForbidden)
+	expect(t, request(t, h, "PUT", "/api/torrents/automation/shows/two/chain", map[string]string{"flow_id": custom.ID}), http.StatusBadRequest)
+	expect(t, request(t, h, "PUT", "/api/torrents/automation/shows/one/chain", map[string]string{"flow_id": custom.ID}), http.StatusOK)
+	current := request(t, h, "GET", "/api/torrents/automation/shows/one", nil)
+	if !strings.Contains(current.Body.String(), custom.ID) {
+		t.Fatal(current.Body.String())
+	}
+	expect(t, request(t, h, "PUT", "/api/torrents/automation/shows/one/chain", map[string]string{"flow_id": ""}), http.StatusOK)
+	if id, err := store.Assigned(t.Context(), "one"); err != nil || id != "" {
+		t.Fatalf("assignment not cleared: %q %v", id, err)
+	}
 }
 
 func TestTorrentAutomationBooleanEnrollmentKeepsLegacyPolicyCompatibility(t *testing.T) {

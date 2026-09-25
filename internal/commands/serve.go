@@ -11,11 +11,13 @@ import (
 	"github.com/CarlFlo/tally/internal/backup"
 	"github.com/CarlFlo/tally/internal/config"
 	"github.com/CarlFlo/tally/internal/database"
+	"github.com/CarlFlo/tally/internal/flows"
 	"github.com/CarlFlo/tally/internal/jobs"
 	"github.com/CarlFlo/tally/internal/live"
 	"github.com/CarlFlo/tally/internal/localization"
 	"github.com/CarlFlo/tally/internal/metadata"
 	"github.com/CarlFlo/tally/internal/providers"
+	"github.com/CarlFlo/tally/internal/settings"
 	"github.com/CarlFlo/tally/internal/torrent"
 	"github.com/CarlFlo/tally/web"
 )
@@ -28,6 +30,12 @@ const (
 func serve(ctx context.Context, c config.Config, db *database.Store, b *backup.Service) (time.Time, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	if err := (settings.Store{DB: db}).Ensure(ctx); err != nil {
+		return time.Time{}, err
+	}
+	if err := (flows.Store{DB: db}).EnsureDefaults(ctx); err != nil {
+		return time.Time{}, err
+	}
 
 	p, err := providers.New(ctx, db, c.DataDir, c.ProviderConcurrency, c.JobRetries)
 	if err != nil {

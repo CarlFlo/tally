@@ -5,6 +5,7 @@ import (
 
 	"github.com/CarlFlo/tally/internal/backup"
 	"github.com/CarlFlo/tally/internal/database"
+	"github.com/CarlFlo/tally/internal/flows"
 	"github.com/CarlFlo/tally/internal/settings"
 )
 
@@ -41,6 +42,9 @@ func (c Coordinator) File(ctx context.Context, path string) (backup.Manifest, er
 
 func (c Coordinator) after(ctx context.Context) error {
 	if err := (settings.Store{DB: c.DB}).Ensure(ctx); err != nil {
+		return err
+	}
+	if err := (flows.Store{DB: c.DB}).EnsureDefaults(ctx); err != nil {
 		return err
 	}
 	if c.Jobs != nil {

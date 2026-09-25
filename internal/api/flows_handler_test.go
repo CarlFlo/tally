@@ -16,7 +16,7 @@ func TestAdvancedFlowAPIIsAdminOnlyAndReplaysHistoricalTrigger(t *testing.T) {
 		t.Fatal(err)
 	}
 	member := &http.Cookie{Name: "tally_profile", Value: "member"}
-	definition := flows.Definition{Nodes: []flows.Node{{ID: "trigger", Type: "trigger.episode"}, {ID: "query", Type: "query.build"}, {ID: "search", Type: "jackett.search"}}, Edges: []flows.Edge{{ID: "one", Source: "trigger", SourcePort: "event", Target: "query", TargetPort: "event"}, {ID: "two", Source: "query", SourcePort: "query", Target: "search", TargetPort: "query"}}}
+	definition := flows.DefaultDefinition()
 	if response := request(t, h, "POST", "/api/flows", flows.Flow{Name: "Test", Definition: definition}, member); response.Code != http.StatusForbidden {
 		t.Fatalf("member created flow: %d", response.Code)
 	}
@@ -39,7 +39,7 @@ func TestAdvancedFlowAPIIsAdminOnlyAndReplaysHistoricalTrigger(t *testing.T) {
 		t.Fatalf("member replayed flow: %d", response.Code)
 	}
 	invalid := flow
-	invalid.Definition.Nodes[1].Type = "shell.execute"
+	invalid.Definition.Blocks[1].Type = "shell.execute"
 	expect(t, request(t, h, "PUT", "/api/flows/"+flow.ID, invalid), http.StatusBadRequest)
 	sourceID, err := (torrent.AutomationStore{DB: s.DB}).StartRun(t.Context(), torrent.AutomationRun{ShowID: "show", EpisodeID: "episode", ShowName: "Example Show", Season: 1, Episode: 2, Query: "Example Show S01E02"})
 	if err != nil {
@@ -86,5 +86,35 @@ func TestAdvancedFlowAPIIsAdminOnlyAndReplaysHistoricalTrigger(t *testing.T) {
 		{"source_run_id": sourceID, "event": map[string]any{"kind": "show_available", "show_name": "Example", "season": 1, "episode": 3}},
 	} {
 		expect(t, request(t, h, "POST", "/api/flows/"+flow.ID+"/replay", payload), http.StatusBadRequest)
+	}
+}
+
+func TestDefaultChainResetRequiresAdminAndRejectsStaleRevision(t *testing.T) {
+	s, h, _ := testServer(t, "disabled")
+	if _, err := s.DB.Exec("INSERT INTO profiles(id,display_name,avatar,created_at) VALUES('member','Member','mint',1)"); err != nil {
+		t.Fatal(err)
+	}
+	member := &http.Cookie{Name: "tally_profile", Value: "member"}
+	var live flows.Flow
+	expect(t, request(t, h, "GET", "/api/flows", nil), http.StatusOK)
+	if err := json.Unmarshal(request(t, h, "GET", "/api/flows/default-live", nil).Body.Bytes(), &live); err != nil {
+		t.Fatal(err)
+	}
+	if response := request(t, h, "POST", "/api/flows/default-live/reset", map[string]int{"revision": live.Revision}, member); response.Code != http.StatusForbidden {
+		t.Fatalf("member reset default: %d", response.Code)
+	}
+	live.Definition.Blocks[2].Config["min_seeders"] = "7"
+	updated := request(t, h, "PUT", "/api/flows/default-live", live)
+	expect(t, updated, http.StatusOK)
+	if response := request(t, h, "POST", "/api/flows/default-live/reset", map[string]int{"revision": live.Revision}); response.Code != http.StatusConflict {
+		t.Fatalf("stale reset: %d", response.Code)
+	}
+	var changed flows.Flow
+	if err := json.Unmarshal(updated.Body.Bytes(), &changed); err != nil {
+		t.Fatal(err)
+	}
+	expect(t, request(t, h, "POST", "/api/flows/default-live/reset", map[string]int{"revision": changed.Revision}), http.StatusOK)
+	if response := request(t, h, "DELETE", "/api/flows/default-live", nil); response.Code != http.StatusBadRequest {
+		t.Fatalf("deleted default: %d", response.Code)
 	}
 }

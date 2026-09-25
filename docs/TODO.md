@@ -4,7 +4,7 @@ This file tracks current and future work. It is intentionally not a changelog; c
 
 ## Current work
 
-- [ ] Verify authoritative CI for the completed Advanced Automation Flows vertical slice on `feature/advanced-automation-flows` before merging; branch detail is in the temporary root `BRANCH-TODO.md`.
+- [ ] Require authoritative CI success for the exact final branch HEAD before merging.
 
 - [ ] Restructure administration and account navigation for clearer scope.
   - [x] Establish canonical admin/account route hierarchy while preserving legacy deep links.
@@ -25,6 +25,10 @@ The following are established capabilities rather than active TODO items:
 - Validated SQLite migrations, pre-upgrade snapshots, archive backups, retention, staged validation, and in-process restore.
 - Jackett discovery plus manual and guarded automated qBittorrent submission/download monitoring with operator-managed credentials and configurable episode-download completion marking.
 - Version-managed English and Ukrainian bundled locales plus validated hot-loaded custom locale files.
+
+## Planned follow-up
+
+- Move the remaining Automation controls into chains and retire the duplicate filter controls after their settings and upgrade paths are covered there.
 
 ## Deferred scope
 

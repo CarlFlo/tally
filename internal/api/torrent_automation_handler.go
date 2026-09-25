@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/CarlFlo/tally/internal/auth"
+	"github.com/CarlFlo/tally/internal/flows"
 	"github.com/CarlFlo/tally/internal/torrent"
 )
 
@@ -102,20 +103,32 @@ func (s *Server) markTorrentAutomationRunBad(w http.ResponseWriter, r *http.Requ
 	return nil
 }
 
-
 func (s *Server) torrentAutomationShows(w http.ResponseWriter, r *http.Request, session auth.Session) error {
 	rows, err := s.DB.Rows(r.Context(), `SELECT
 		s.id,s.name,s.image,s.status,s.premiered,s.network,
 		COALESCE((SELECT MIN(e.airdate) FROM episodes e WHERE e.show_id=s.id AND e.airdate>=date('now')),'') AS next_episode,
 		CASE WHEN EXISTS(SELECT 1 FROM episodes e WHERE e.show_id=s.id AND e.airdate>=date('now')) THEN 1 ELSE 0 END AS active,
-		CASE WHEN COALESCE(p.policy,'default')='auto' THEN 1 ELSE 0 END AS automation_enabled
+		CASE WHEN COALESCE(p.policy,'default')='auto' THEN 1 ELSE 0 END AS automation_enabled,
+		COALESCE(c.flow_id,'') AS flow_id,
+		s.show_type, s.genres, COALESCE(mp.profile,'') AS media_profile_override
 		FROM shows s
 		JOIN profile_shows f ON f.show_id=s.id
 		LEFT JOIN torrent_show_policy p ON p.show_id=s.id
+		LEFT JOIN torrent_show_chain c ON c.show_id=s.id
+		LEFT JOIN torrent_show_media_profile mp ON mp.show_id=s.id
 		WHERE f.profile_id=?
 		ORDER BY s.name COLLATE NOCASE`, session.Profile)
 	if err != nil {
 		return err
+	}
+	for _, row := range rows {
+		showType, _ := row["show_type"].(string)
+		genres, _ := row["genres"].(string)
+		override, _ := row["media_profile_override"].(string)
+		row["media_profile"] = torrent.ResolveShowMediaProfile(showType, genres, override)
+		delete(row, "show_type")
+		delete(row, "genres")
+		delete(row, "media_profile_override")
 	}
 	jsonResponse(w, 200, map[string]any{"shows": rows})
 	return nil
@@ -130,7 +143,11 @@ func (s *Server) torrentShowPolicy(w http.ResponseWriter, r *http.Request, sessi
 	if err != nil {
 		return err
 	}
-	jsonResponse(w, 200, map[string]any{"policy": policy, "enabled": policy == "auto"})
+	flowID, err := s.flowStore().Assigned(r.Context(), showID)
+	if err != nil {
+		return err
+	}
+	jsonResponse(w, 200, map[string]any{"policy": policy, "enabled": policy == "auto", "flow_id": flowID})
 	return nil
 }
 
@@ -172,7 +189,35 @@ func (s *Server) updateTorrentShowPolicy(w http.ResponseWriter, r *http.Request,
 	if s.Events != nil {
 		s.Events.Publish("", "torrent-automation-shows")
 	}
-	jsonResponse(w, 200, map[string]any{"policy": policy, "enabled": policy == "auto"})
+	flowID, err := s.flowStore().Assigned(r.Context(), showID)
+	if err != nil {
+		return err
+	}
+	jsonResponse(w, 200, map[string]any{"policy": policy, "enabled": policy == "auto", "flow_id": flowID})
+	return nil
+}
+
+func (s *Server) updateTorrentShowChain(w http.ResponseWriter, r *http.Request, session auth.Session) error {
+	if err := s.operator(session); err != nil {
+		return err
+	}
+	showID := r.PathValue("id")
+	if err := s.requireTorrentShowAccess(r.Context(), session, showID); err != nil {
+		return err
+	}
+	var in struct {
+		FlowID string `json:"flow_id"`
+	}
+	if err := decode(r, &in); err != nil {
+		return err
+	}
+	if err := (flows.Store{DB: s.DB}).Assign(r.Context(), showID, in.FlowID); err != nil {
+		return bad(err.Error())
+	}
+	if s.Events != nil {
+		s.Events.Publish("", "torrent-automation-shows")
+	}
+	jsonResponse(w, 200, map[string]string{"flow_id": in.FlowID})
 	return nil
 }
 
