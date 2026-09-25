@@ -50,6 +50,11 @@ func (s Store) Save(ctx context.Context, flow Flow, expectedRevision int) (Flow,
 	if err != nil {
 		return Flow{}, err
 	}
+	// Keep one saved definition per flow. Replay records already carry their own
+	// immutable definition snapshot, so older editable revisions are redundant.
+	if _, err = tx.ExecContext(ctx, "DELETE FROM automation_flow_revisions WHERE flow_id=?", flow.ID); err != nil {
+		return Flow{}, err
+	}
 	_, err = tx.ExecContext(ctx, "INSERT INTO automation_flow_revisions(flow_id,revision,definition,created_at) VALUES(?,?,?,?)", flow.ID, flow.Revision, string(definition), now)
 	if err != nil {
 		return Flow{}, err

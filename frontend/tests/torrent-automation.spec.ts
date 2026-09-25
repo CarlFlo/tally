@@ -283,10 +283,13 @@ test("automation page exposes release filters trust rules and disabled capabilit
   ).toHaveCount(0);
   await expect(page.getByText("Shows in automation", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Save changes", exact: true })).toHaveCount(0);
+  await page.reload();
 
   const minimumSeeders = page.getByLabel("Minimum seeders", { exact: true });
   const savedMinimumSeeders = await minimumSeeders.inputValue();
   await minimumSeeders.fill("4");
+  const saveBar = page.locator(".unsaved-changes-bar.has-unsaved-changes");
+  await expect(saveBar).toHaveCSS("position", "fixed");
   await expect(page.getByRole("button", { name: "Save changes", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Revert changes", exact: true })).toBeVisible();
   await expect(page.getByText("Unsaved changes", { exact: true })).toBeVisible();

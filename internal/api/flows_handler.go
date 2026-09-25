@@ -3,11 +3,16 @@ package api
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
+	"time"
+	"unicode/utf8"
 
+	"github.com/CarlFlo/tally/internal/activity"
 	"github.com/CarlFlo/tally/internal/auth"
+	"github.com/CarlFlo/tally/internal/database"
 	"github.com/CarlFlo/tally/internal/flows"
 	"github.com/CarlFlo/tally/internal/torrent"
 )
@@ -98,10 +103,16 @@ func (s *Server) flowRun(w http.ResponseWriter, r *http.Request, _ auth.Session)
 	jsonResponse(w, 200, run)
 	return nil
 }
-func (s *Server) flowReplay(w http.ResponseWriter, r *http.Request, _ auth.Session) error {
+func (s *Server) flowReplay(w http.ResponseWriter, r *http.Request, session auth.Session) error {
 	var in struct {
-		SourceRunID string            `json:"source_run_id"`
-		Definition  *flows.Definition `json:"definition,omitempty"`
+		SourceRunID string `json:"source_run_id"`
+		Event       *struct {
+			Kind     string `json:"kind"`
+			ShowName string `json:"show_name"`
+			Season   int    `json:"season"`
+			Episode  int    `json:"episode"`
+		} `json:"event,omitempty"`
+		Definition *flows.Definition `json:"definition,omitempty"`
 	}
 	if err := decode(r, &in); err != nil {
 		return err
@@ -120,14 +131,26 @@ func (s *Server) flowReplay(w http.ResponseWriter, r *http.Request, _ auth.Sessi
 	if err = flows.Validate(flow.Name, flow.Definition); err != nil {
 		return bad(err.Error())
 	}
-	source, err := s.torrentAutomationStore().GetRun(r.Context(), in.SourceRunID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return apiError{404, "historical trigger not found"}
+	if (in.SourceRunID == "") == (in.Event == nil) {
+		return bad("select one historical or custom event")
 	}
-	if err != nil {
-		return err
+	var event flows.Event
+	if in.Event != nil {
+		name := strings.TrimSpace(in.Event.ShowName)
+		if in.Event.Kind != "show_available" || name == "" || utf8.RuneCountInString(name) > 200 || in.Event.Season < 0 || in.Event.Season > 100 || in.Event.Episode < 1 || in.Event.Episode > 1000 {
+			return bad("invalid custom show event")
+		}
+		event = flows.Event{Kind: in.Event.Kind, ShowID: "custom-" + database.ID(), EpisodeID: "custom-" + database.ID(), ShowName: name, Season: in.Event.Season, Episode: in.Event.Episode, TriggeredAt: time.Now().Unix()}
+	} else {
+		source, sourceErr := s.torrentAutomationStore().GetRun(r.Context(), in.SourceRunID)
+		if errors.Is(sourceErr, sql.ErrNoRows) {
+			return apiError{404, "historical trigger not found"}
+		}
+		if sourceErr != nil {
+			return sourceErr
+		}
+		event = flows.Event{Kind: "episode_released", SourceRunID: source.ID, ShowID: source.ShowID, EpisodeID: source.EpisodeID, ShowName: source.ShowName, Season: source.Season, Episode: source.Episode, TriggeredAt: source.StartedAt}
 	}
-	event := flows.Event{SourceRunID: source.ID, ShowID: source.ShowID, EpisodeID: source.EpisodeID, ShowName: source.ShowName, Season: source.Season, Episode: source.Episode, TriggeredAt: source.StartedAt}
 	searchEnabled, err := s.torrentSearchEnabled(r.Context())
 	if err != nil {
 		return err
@@ -154,6 +177,33 @@ func (s *Server) flowReplay(w http.ResponseWriter, r *http.Request, _ auth.Sessi
 	run, err = s.flowStore().Record(r.Context(), run)
 	if err != nil {
 		return err
+	}
+	logged := false
+	nodeTypes := make(map[string]string, len(flow.Definition.Nodes))
+	for _, node := range flow.Definition.Nodes {
+		nodeTypes[node.ID] = node.Type
+	}
+	for _, step := range run.Steps {
+		if nodeTypes[step.NodeID] != "action.log" || step.Status != "successful" || step.Input == nil {
+			continue
+		}
+		value, marshalErr := json.Marshal(step.Input)
+		if marshalErr != nil {
+			return marshalErr
+		}
+		if err = activity.Record(r.Context(), s.DB, activity.Event{
+			Action:   "flow_test_log",
+			Profile:  session.Profile,
+			ShowID:   run.Event.ShowID,
+			ShowName: run.Event.ShowName,
+			Message:  "TEST log from flow \"" + flow.Name + "\": " + string(value),
+		}); err != nil {
+			return err
+		}
+		logged = true
+	}
+	if logged && s.Events != nil {
+		s.Events.Publish("", "logs")
 	}
 	jsonResponse(w, 201, run)
 	return nil

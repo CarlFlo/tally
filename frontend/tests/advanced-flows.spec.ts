@@ -95,8 +95,21 @@ test("create, edit, reload, and dry-run an advanced flow from an original event"
   await page.reload();
   await expect(canvas.locator(".react-flow__edge")).toHaveCount(6);
   await expect(
-    page.getByRole("combobox", { name: "Historical event" }),
+    page.getByRole("combobox", { name: "Event" }),
   ).not.toHaveValue("");
+  const eventPicker = page.getByRole("combobox", { name: "Event" });
+  const historicalEvent = await eventPicker.inputValue();
+  await eventPicker.selectOption("custom");
+  await page.getByRole("textbox", { name: "Show name" }).fill("Custom Show");
+  await page.getByRole("spinbutton", { name: "Season" }).fill("2");
+  await page.getByRole("spinbutton", { name: "Episode" }).fill("4");
+  await expect(page.locator(".advanced-inspector")).toContainText("Custom Show");
+  await page.getByRole("button", { name: "Test using this event" }).click();
+  await expect(page.getByRole("status")).toContainText("Dry-run test complete");
+  await canvas.locator('.react-flow__node[data-id="trigger"]').click();
+  await expect(page.locator(".advanced-inspector")).toContainText("show_available");
+  await expect(page.locator(".advanced-inspector")).toContainText("Custom Show");
+  await eventPicker.selectOption(historicalEvent);
   await page.getByRole("button", { name: "Test using this event" }).click();
   await expect(page.getByRole("status")).toContainText("Dry-run test complete");
   await expect(page.getByText("Test run:")).toBeVisible();

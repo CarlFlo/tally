@@ -34,6 +34,8 @@ Publish state changes after the authoritative operation has actually completed. 
 
 When multiple pages need the same interaction or visual treatment, implement it in one reusable component or shared style and let each page provide only its content and layout-specific options. Do not copy a polished header, toggle, save bar, or navigation guard into individual routes; duplicated implementations drift in dimensions, accessibility, animation, and bug fixes. Before adding a second implementation, search for the existing template and extend it with explicit slots or props. Add coverage that exercises the shared behavior so one change protects every consumer.
 
+A shared component must load its own required styles. If a lazy route imports those styles instead, the component can render differently on a direct visit and after navigating through that route. Test the direct-load state before any other route has loaded the stylesheet, and assert the visible layout property that failed.
+
 ### Distinguish draft state from applied state
 
 A form value is not saved merely because the UI displays it. Staged forms should apply only after an explicit save succeeds; immediate toggles should be used only when the toggle itself is intentionally the save action.

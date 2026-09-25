@@ -8,11 +8,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/CarlFlo/tally/internal/torrent"
 )
 
 type Event struct {
+	Kind        string `json:"kind"`
 	SourceRunID string `json:"source_run_id,omitempty"`
 	ShowID      string `json:"show_id"`
 	EpisodeID   string `json:"episode_id"`
@@ -60,6 +62,7 @@ type Run struct {
 }
 type SearchFunc func(context.Context, string) ([]torrent.SearchResult, error)
 type value struct {
+	kind      string
 	event     Event
 	text      string
 	results   []torrent.SearchResult
@@ -71,15 +74,15 @@ type executor func(context.Context, Node, value, Event, SearchFunc) (map[string]
 var registry = map[string]NodeKind{
 	"trigger.episode":   {Type: "trigger.episode", Outputs: []Port{{"event", "event"}}, execute: executeTrigger},
 	"trigger.manual":    {Type: "trigger.manual", Outputs: []Port{{"event", "event"}}, execute: executeTrigger},
-	"query.build":       {Type: "query.build", Inputs: []Port{{"event", "event"}}, Outputs: []Port{{"query", "text"}}, Config: []string{"prefix"}, execute: executeQuery},
-	"text.replace":      {Type: "text.replace", Inputs: []Port{{"text", "text"}}, Outputs: []Port{{"text", "text"}}, Config: []string{"find", "replace"}, execute: executeReplace},
+	"query.build":       {Type: "query.build", Inputs: []Port{{"event", "event"}}, Outputs: []Port{{"query", "text"}}, Config: []string{"prefix", "suffix"}, execute: executeQuery},
+	"text.replace":      {Type: "text.replace", Inputs: []Port{{"event", "event"}, {"text", "text"}, {"candidate", "candidate"}}, Outputs: []Port{{"event", "event"}, {"text", "text"}, {"candidate", "candidate"}}, Config: []string{"attribute", "find", "replace", "trim"}, InputMode: "one", execute: executeReplace},
 	"jackett.search":    {Type: "jackett.search", Inputs: []Port{{"query", "text"}}, Outputs: []Port{{"results", "results"}, {"no_results", "results"}, {"error", "results"}}, execute: executeSearch},
 	"torrent.filter":    {Type: "torrent.filter", Inputs: []Port{{"results", "results"}}, Outputs: []Port{{"results", "results"}}, Config: []string{"min_seeders"}, execute: executeFilter},
-	"logic.has_results": {Type: "logic.has_results", Inputs: []Port{{"results", "results"}}, Outputs: []Port{{"true", "results"}, {"false", "results"}}, execute: executeHasResults},
+	"logic.has_results": {Type: "logic.has_results", Inputs: []Port{{"results", "results"}}, Outputs: []Port{{"true", "results"}, {"false", "results"}}, Deprecated: true, execute: executeHasResults},
 	"torrent.best":      {Type: "torrent.best", Inputs: []Port{{"results", "results"}}, Outputs: []Port{{"candidate", "candidate"}, {"no_candidate", "results"}}, execute: executeBest},
 	"action.download":   {Type: "action.download", Inputs: []Port{{"candidate", "candidate"}}, execute: executeDownload},
-	"action.log":        {Type: "action.log", Inputs: []Port{{"candidate", "candidate"}}, execute: executeLog},
-	"action.stop":       {Type: "action.stop", Inputs: []Port{{"results", "results"}}, execute: executeStop},
+	"action.log":        {Type: "action.log", Inputs: []Port{{"event", "event"}, {"text", "text"}, {"results", "results"}, {"candidate", "candidate"}}, InputMode: "one", execute: executeLog},
+	"action.stop":       {Type: "action.stop", Inputs: []Port{{"event", "event"}, {"text", "text"}, {"results", "results"}, {"candidate", "candidate"}}, InputMode: "one", execute: executeStop},
 }
 
 func config(node Node, key string) string {
@@ -90,8 +93,18 @@ func config(node Node, key string) string {
 func executeTrigger(_ context.Context, _ Node, _ value, event Event, _ SearchFunc) (map[string]value, string, error) {
 	return map[string]value{"event": {event: event, trace: event}}, "Trigger received", nil
 }
-func executeQuery(_ context.Context, node Node, _ value, event Event, _ SearchFunc) (map[string]value, string, error) {
-	query := strings.TrimSpace(config(node, "prefix") + " " + fmt.Sprintf("%s S%02dE%02d", event.ShowName, event.Season, event.Episode))
+func executeQuery(_ context.Context, node Node, in value, _ Event, _ SearchFunc) (map[string]value, string, error) {
+	event := in.event
+	parts := make([]string, 0, 4)
+	if prefix := strings.TrimSpace(config(node, "prefix")); prefix != "" {
+		parts = append(parts, prefix)
+	}
+	parts = append(parts, event.ShowName)
+	parts = append(parts, fmt.Sprintf("S%02dE%02d", event.Season, event.Episode))
+	if suffix := strings.TrimSpace(config(node, "suffix")); suffix != "" {
+		parts = append(parts, suffix)
+	}
+	query := strings.Join(parts, " ")
 	return map[string]value{"query": {text: query, trace: query}}, query, nil
 }
 func executeReplace(_ context.Context, node Node, in value, _ Event, _ SearchFunc) (map[string]value, string, error) {
@@ -99,8 +112,68 @@ func executeReplace(_ context.Context, node Node, in value, _ Event, _ SearchFun
 	if find == "" {
 		return nil, "", fmt.Errorf("find text is required")
 	}
-	result := strings.ReplaceAll(in.text, find, config(node, "replace"))
-	return map[string]value{"text": {text: result, trace: result}}, result, nil
+	replace := func(text string, limit int) (string, error) {
+		result := strings.ReplaceAll(text, find, config(node, "replace"))
+		if config(node, "trim") != "false" {
+			result = strings.TrimSpace(result)
+		}
+		if utf8.RuneCountInString(result) > limit {
+			return "", fmt.Errorf("replaced value is too long")
+		}
+		return result, nil
+	}
+	attribute := config(node, "attribute")
+	switch in.kind {
+	case "event":
+		event := in.event
+		if attribute != "" && attribute != "show_name" {
+			return nil, "", fmt.Errorf("invalid event attribute")
+		}
+		name, err := replace(event.ShowName, 200)
+		if err != nil {
+			return nil, "", err
+		}
+		if strings.TrimSpace(name) == "" {
+			return nil, "", fmt.Errorf("show name cannot be empty")
+		}
+		event.ShowName = name
+		return map[string]value{"event": {event: event, trace: event}}, name, nil
+	case "candidate":
+		candidate := in.candidate
+		summary, ok := in.trace.(Candidate)
+		if !ok {
+			summary = Candidate{Name: candidate.Name, Provider: candidate.Provider, Size: candidate.Size, Seeders: candidate.Seeders}
+		}
+		if attribute == "" || attribute == "name" {
+			name, err := replace(candidate.Name, 500)
+			if err != nil {
+				return nil, "", err
+			}
+			if strings.TrimSpace(name) == "" {
+				return nil, "", fmt.Errorf("candidate name cannot be empty")
+			}
+			candidate.Name, summary.Name = name, name
+		} else if attribute == "provider" {
+			provider, err := replace(candidate.Provider, 200)
+			if err != nil {
+				return nil, "", err
+			}
+			candidate.Provider, summary.Provider = provider, provider
+		} else {
+			return nil, "", fmt.Errorf("invalid candidate attribute")
+		}
+		return map[string]value{"candidate": {candidate: candidate, trace: summary}}, summary.Name, nil
+	case "text":
+		if attribute != "" && attribute != "value" {
+			return nil, "", fmt.Errorf("invalid text attribute")
+		}
+		result, err := replace(in.text, 500)
+		if err != nil {
+			return nil, "", err
+		}
+		return map[string]value{"text": {text: result, trace: result}}, result, nil
+	}
+	return nil, "", fmt.Errorf("unsupported replacement input")
 }
 func executeSearch(ctx context.Context, _ Node, in value, _ Event, search SearchFunc) (map[string]value, string, error) {
 	if search == nil {
@@ -193,7 +266,10 @@ func executeDownload(_ context.Context, _ Node, in value, _ Event, _ SearchFunc)
 	return nil, "Would inspect and submit if verified: " + in.candidate.Name, nil
 }
 func executeLog(_ context.Context, _ Node, in value, _ Event, _ SearchFunc) (map[string]value, string, error) {
-	return nil, "Would log " + in.candidate.Name, nil
+	if in.trace == nil {
+		return nil, "", fmt.Errorf("unsupported log input")
+	}
+	return nil, "Test log entry recorded", nil
 }
 func executeStop(_ context.Context, _ Node, _ value, _ Event, _ SearchFunc) (map[string]value, string, error) {
 	return nil, "Stopped", nil
@@ -261,6 +337,8 @@ func Execute(ctx context.Context, flow Flow, event Event, search SearchFunc) Run
 		for _, edge := range flow.Definition.Edges {
 			if edge.Source == node.ID {
 				if output, ok := outputs[edge.SourcePort]; ok {
+					port, _ := findPort(registry[nodes[edge.Target].Type].Inputs, edge.TargetPort)
+					output.kind = port.Type
 					queue = append(queue, pending{node: edge.Target, input: output})
 				}
 			}

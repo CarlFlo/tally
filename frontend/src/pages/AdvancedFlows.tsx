@@ -32,7 +32,7 @@ import { TorrentTabs } from "./TorrentTabs";
 import "../advanced-flows.css";
 
 type Port = { name: string; type: string };
-type Kind = { type: string; inputs: Port[]; outputs: Port[]; config: string[] };
+type Kind = { type: string; inputs: Port[]; outputs: Port[]; config: string[]; input_mode?: "one"; deprecated?: boolean };
 type FlowNode = {
   id: string;
   type: string;
@@ -70,6 +70,9 @@ type Run = {
   flow_revision: number;
   source_run_id?: string;
   event: {
+    kind: string;
+    show_id: string;
+    episode_id: string;
     show_name: string;
     season: number;
     episode: number;
@@ -84,6 +87,8 @@ type Run = {
 type RunSummary = Omit<Run, "definition" | "steps">;
 type HistoricalRun = {
   id: string;
+  show_id: string;
+  episode_id: string;
   show_name: string;
   season: number;
   episode: number;
@@ -92,6 +97,59 @@ type HistoricalRun = {
   query: string;
   decision_log: Array<{ stage: string; status: string; summary: string }>;
 };
+type CustomEvent = {
+  kind: "show_available";
+  show_name: string;
+  season: number;
+  episode: number;
+};
+type Preview = { input?: unknown; output?: unknown; note?: string; previousInput?: boolean };
+
+function previewFor(
+  id: string,
+  graph: Definition,
+  event: Record<string, unknown> | null,
+  previous: Run | null,
+  visited = new Set<string>(),
+): Preview {
+  const node = graph.nodes.find((item) => item.id === id);
+  if (!node || visited.has(id)) return { note: "needsInput" };
+  visited.add(id);
+  if (node.type.startsWith("trigger."))
+    return event ? { output: event } : { note: "chooseEvent" };
+  const edge = graph.edges.find((item) => item.target === id);
+  const upstream: Preview = edge ? previewFor(edge.source, graph, event, previous, visited) : {};
+  const previousInput = previous?.steps.find((step) => step.node_id === id)?.input;
+  const input = upstream.output ?? previousInput;
+  const fromPrevious = upstream.output === undefined && previousInput !== undefined;
+  if (input === undefined) return { note: upstream.note || (edge ? "runTest" : "needsInput") };
+  if (node.type === "query.build") {
+    const source = input as Record<string, unknown>;
+    if (typeof source.show_name !== "string" || typeof source.season !== "number" || typeof source.episode !== "number")
+      return { input, previousInput: fromPrevious, note: "runTest" };
+    const episode = `S${String(source.season).padStart(2, "0")}E${String(source.episode).padStart(2, "0")}`;
+    const parts = [node.config.prefix?.trim(), source.show_name, episode, node.config.suffix?.trim()].filter(Boolean);
+    return { input, output: parts.join(" "), previousInput: fromPrevious };
+  }
+  if (node.type === "text.replace") {
+    const key = node.config.attribute || (typeof input === "string" ? "value" : edge?.target_port === "candidate" ? "name" : "show_name");
+    if (!node.config.find) return { input, previousInput: fromPrevious, note: "findText" };
+    if (typeof input === "string") {
+      if (key !== "value") return { input, previousInput: fromPrevious, note: "chooseField" };
+      const replaced = input.replaceAll(node.config.find, node.config.replace || "");
+      return { input, output: node.config.trim !== "false" ? replaced.trim() : replaced, previousInput: fromPrevious };
+    }
+    if (!input || typeof input !== "object" || typeof (input as Record<string, unknown>)[key] !== "string")
+      return { input, previousInput: fromPrevious, note: "chooseField" };
+    const output = { ...(input as Record<string, unknown>) };
+    const replaced = (output[key] as string).replaceAll(node.config.find, node.config.replace || "");
+    output[key] = node.config.trim !== "false" ? replaced.trim() : replaced;
+    return { input, output, previousInput: fromPrevious };
+  }
+  if (node.type === "action.log" || node.type === "action.stop" || node.type === "action.download")
+    return { input, previousInput: fromPrevious, note: "terminal" };
+  return { input, previousInput: fromPrevious, note: "runTest" };
+}
 type CanvasData = { kind: Kind; status?: string; label: string } & Record<
   string,
   unknown
@@ -103,7 +161,7 @@ function FlowCard({ data }: NodeProps<CanvasNode>) {
   return (
     <div className={`advanced-node advanced-node-${data.status || "waiting"}`}>
       {data.kind.inputs.map((port) => (
-        <div className="advanced-port-row input" key={port.name}>
+        <div className={`advanced-port-row input port-${port.type}`} key={port.name}>
           <Handle
             type="target"
             position={Position.Left}
@@ -125,7 +183,7 @@ function FlowCard({ data }: NodeProps<CanvasNode>) {
         )}
       </div>
       {data.kind.outputs.map((port) => (
-        <div className="advanced-port-row output" key={port.name}>
+        <div className={`advanced-port-row output port-${port.type}`} key={port.name}>
           <small>
             <span className="advanced-port-direction">{t("advancedFlows.outputPort")}</span>
             {t(`advancedFlows.ports.${port.name}`)}
@@ -223,6 +281,12 @@ export function AdvancedFlowsPage() {
   const [selected, setSelected] = useState("");
   const [selectedEdge, setSelectedEdge] = useState("");
   const [sourceID, setSourceID] = useState(params.get("source") || "");
+  const [customEvent, setCustomEvent] = useState<CustomEvent>({
+    kind: "show_available",
+    show_name: "",
+    season: 1,
+    episode: 1,
+  });
   const [inspection, setInspection] = useState<Run | null>(null);
   const [visibleSteps, setVisibleSteps] = useState(0);
   const [recorded, setRecorded] = useState(false);
@@ -315,6 +379,15 @@ export function AdvancedFlowsPage() {
   };
   useUnsavedChangesWarning(hasChanges, busy, t("common.unsavedNavigation"));
   const original = history.data?.runs.find((run) => run.id === sourceID);
+  const customReady =
+    customEvent.show_name.trim().length > 0 &&
+    customEvent.show_name.length <= 200 &&
+    Number.isInteger(customEvent.season) &&
+    customEvent.season >= 0 &&
+    customEvent.season <= 100 &&
+    Number.isInteger(customEvent.episode) &&
+    customEvent.episode >= 1 &&
+    customEvent.episode <= 1000;
   useEffect(() => {
     if (!inspection || visibleSteps >= inspection.steps.length) return;
     const timer = window.setTimeout(
@@ -385,6 +458,25 @@ export function AdvancedFlowsPage() {
           targetHandle: edge.target_port,
         }))
       : edges;
+  const selectedInputEdge = graphEdges.find((edge) => edge.target === selected);
+  const selectedInputType = activeNodes
+    .find((node) => node.id === selected)
+    ?.data.kind.inputs.find((port) => port.name === selectedInputEdge?.targetHandle)?.type;
+  const previewEvent: Record<string, unknown> | null = sourceID === "custom"
+    ? customReady ? { ...customEvent } : null
+    : original ? {
+        kind: "episode_released",
+        source_run_id: original.id,
+        show_id: original.show_id,
+        episode_id: original.episode_id,
+        show_name: original.show_name,
+        season: original.season,
+        episode: original.episode,
+        triggered_at: original.started_at,
+      } : inspection ? { ...inspection.event } : null;
+  const selectedPreview = selected && !recorded
+    ? previewFor(selected, definition(), previewEvent, inspection)
+    : null;
   const followed = new Set(
     steps
       .filter((step) => step.status !== "skipped")
@@ -408,6 +500,15 @@ export function AdvancedFlowsPage() {
     const input = to?.inputs.find(
       (port) => port.name === connection.targetHandle,
     );
+    const replacementInput = activeEdges.find((edge) => edge.target === connection.source);
+    const replacementInputType = from?.type === "text.replace"
+      ? from.inputs.find((port) => port.name === replacementInput?.targetHandle)?.type
+      : undefined;
+    const replacementOutputMismatch = to?.type === "text.replace" && activeEdges.some((edge) => {
+      if (edge.source !== connection.target) return false;
+      const outputPort = to?.outputs.find((port) => port.name === edge.sourceHandle);
+      return outputPort?.type !== input?.type;
+    });
     const reachable = new Set<string>();
     const stack = [connection.target];
     while (stack.length) {
@@ -422,12 +523,14 @@ export function AdvancedFlowsPage() {
       !!output &&
       !!input &&
       output.type === input.type &&
+      (!replacementInputType || replacementInputType === output.type) &&
+      !replacementOutputMismatch &&
       connection.source !== connection.target &&
       !reachable.has(connection.source) &&
       !activeEdges.some(
         (edge) =>
           edge.target === connection.target &&
-          edge.targetHandle === connection.targetHandle,
+          (to?.input_mode === "one" || edge.targetHandle === connection.targetHandle),
       )
     );
   };
@@ -446,7 +549,18 @@ export function AdvancedFlowsPage() {
         targetHandle: connection.targetHandle,
       },
     ]);
+    if (connection.target && activeNodes.find((node) => node.id === connection.target)?.data.kind.type === "text.replace") {
+      const attribute = connection.targetHandle === "candidate" ? "name" : connection.targetHandle === "text" ? "value" : "show_name";
+      setNodes((old) => old.map((node) => node.id === connection.target
+        ? { ...node, data: { ...node.data, config: { ...(node.data.config as Record<string, string>), attribute } } }
+        : node));
+    }
     setFeedback("");
+  };
+  const changeSelectedConfig = (key: string, value: string) => {
+    setNodes((old) => old.map((node) => node.id === selected
+      ? { ...node, data: { ...node.data, config: { ...(node.data.config as Record<string, string>), [key]: value } } }
+      : node));
   };
   const addNode = (kind: Kind, position?: { x: number; y: number }) => {
     if (!current) {
@@ -470,7 +584,11 @@ export function AdvancedFlowsPage() {
         id,
         type: "flow",
         position: position || { x: 140 + old.length * 35, y: 360 + old.length * 20 },
-        data: { kind, label: label(kind.type), config: {} },
+        data: {
+          kind,
+          label: label(kind.type),
+          config: kind.type === "text.replace" ? { trim: "true" } : {},
+        },
       },
     ]);
     setEdges((old) =>
@@ -521,12 +639,14 @@ export function AdvancedFlowsPage() {
     setFeedback(t("advancedFlows.flowDeleted"));
   };
   const test = async () => {
-    if (!current?.id || !sourceID) return;
+    if (!current?.id || !sourceID || (sourceID === "custom" && !customReady)) return;
     setBusy(true);
     setFeedback("");
     try {
       const run: Run = await api(`/flows/${current.id}/replay`, "POST", {
-        source_run_id: sourceID,
+        ...(sourceID === "custom"
+          ? { event: customEvent }
+          : { source_run_id: sourceID }),
         definition: hasChanges ? definition() : undefined,
       });
       setInspection(run);
@@ -550,7 +670,15 @@ export function AdvancedFlowsPage() {
       setInspection(run);
       setVisibleSteps(run.steps.length);
       setRecorded(true);
-      setSourceID(run.source_run_id || "");
+      setSourceID(run.source_run_id || (run.event.kind === "show_available" ? "custom" : ""));
+      if (run.event.kind === "show_available") {
+        setCustomEvent({
+          kind: "show_available",
+          show_name: run.event.show_name,
+          season: run.event.season,
+          episode: run.event.episode,
+        });
+      }
       setSelected("");
     } catch (error) {
       setFeedback(String(error));
@@ -591,117 +719,149 @@ export function AdvancedFlowsPage() {
         </div>
       </div>
       <TorrentTabs />
-      <div className="advanced-toolbar panel">
-        <div className="advanced-toolbar-main">
-          <div className="advanced-flow-picker">
-            <label>
-              <span>{t("advancedFlows.flow")}</span>
-              <select
-                aria-label={t("advancedFlows.flow")}
-                value={current?.id || "new"}
-                onChange={(event) => {
-                  const flow = flows.data.flows.find(
-                    (item) => item.id === event.target.value,
-                  );
-                  if (flow && discardAllowed()) selectFlow(flow);
-                }}
-              >
-                <option value="new">
-                  {current?.id
-                    ? t("advancedFlows.chooseFlow")
-                    : name || t("advancedFlows.newName")}
-                </option>
-                {flows.data.flows.map((flow) => (
-                  <option key={flow.id} value={flow.id}>
-                    {flow.name} · v{flow.revision}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              type="button"
-              className="button advanced-new-flow"
-              onClick={newFlow}
-            >
+      <div className="advanced-layout">
+        <div className="advanced-left-rail">
+          <section className="panel advanced-flow-setup" aria-label={t("advancedFlows.flow")}>
+            <button type="button" className="button advanced-new-flow" onClick={newFlow}>
               <Plus size={17} />
               {t("advancedFlows.newFlow")}
             </button>
-          </div>
-          <label className="advanced-flow-name">
-            <span>{t("advancedFlows.name")}</span>
-            <input
-              aria-label={t("advancedFlows.name")}
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              maxLength={100}
-              placeholder={t("advancedFlows.newName")}
-            />
-            <small>{t("advancedFlows.nameHelp")}</small>
-          </label>
-          <div className="advanced-flow-actions">
-            {current?.id && (
+            <label>
+              <span>{t("advancedFlows.savedFlows")}</span>
+              <select
+                value={current?.id || ""}
+                onChange={(event) => {
+                  const flow = flows.data.flows.find((item) => item.id === event.target.value);
+                  if (flow && discardAllowed()) selectFlow(flow);
+                }}
+              >
+                <option value="">{t("advancedFlows.chooseFlow")}</option>
+                {flows.data.flows.map((flow) => (
+                  <option key={flow.id} value={flow.id}>{flow.name}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>{t("advancedFlows.name")}</span>
+              <input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                maxLength={100}
+                placeholder={t("advancedFlows.newName")}
+              />
+              <small>{t("advancedFlows.nameHelp")}</small>
+            </label>
+            <div className="advanced-flow-actions">
               <button
                 type="button"
-                className="button danger advanced-delete-flow"
-                disabled={busy}
-                onClick={() => setConfirmFlowDelete(true)}
+                className="button primary advanced-save-flow"
+                disabled={!current || busy || (!!current.id && !hasChanges)}
+                onClick={save}
               >
-                <Trash2 size={15} />
-                {t("advancedFlows.deleteFlow")}
+                {current?.id && !hasChanges ? <Check size={16} /> : <Save size={16} />}
+                {current?.id && !hasChanges
+                  ? t("advancedFlows.savedState")
+                  : t("advancedFlows.saveChanges")}
               </button>
-            )}
-            <button
-              type="button"
-              className="button primary advanced-save-flow"
-              disabled={!current || busy || (!!current.id && !hasChanges)}
-              onClick={save}
-            >
-              {current?.id && !hasChanges ? (
-                <Check size={16} />
-              ) : (
-                <Save size={16} />
+              {current?.id && (
+                <button
+                  type="button"
+                  className="button danger advanced-delete-flow"
+                  disabled={busy}
+                  onClick={() => setConfirmFlowDelete(true)}
+                >
+                  <Trash2 size={15} />
+                  {t("advancedFlows.deleteFlow")}
+                </button>
               )}
-              {current?.id && !hasChanges
-                ? t("advancedFlows.savedState")
-                : t("advancedFlows.saveChanges")}
-            </button>
-          </div>
-        </div>
-        <div className="advanced-toolbar-replay">
-          <label className="advanced-event-picker">
-            <span>{t("advancedFlows.historicalEvent")}</span>
-            <select
-              aria-label={t("advancedFlows.historicalEvent")}
-              value={sourceID}
-              onChange={(event) => {
-                setSourceID(event.target.value);
-                setInspection(null);
-              }}
-            >
-              <option value="">{t("advancedFlows.chooseEvent")}</option>
-              {history.data?.runs.map((run) => (
-                <option key={run.id} value={run.id}>
-                  {run.show_name} S{String(run.season).padStart(2, "0")}E
-                  {String(run.episode).padStart(2, "0")} ·{" "}
-                  {dateLabel(run.started_at)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="advanced-replay-actions">
-            <button
-              type="button"
-              className="button advanced-test-flow"
-              disabled={!current?.id || !sourceID || busy}
-              onClick={test}
-            >
-              <FlaskConical size={16} />
-              {t("advancedFlows.testEvent")}
-            </button>
+            </div>
+            <div className="advanced-event-setup">
+              <label>
+                <span>{t("advancedFlows.historicalEvent")}</span>
+                <select
+                  value={sourceID}
+                  onChange={(event) => {
+                    setSourceID(event.target.value);
+                    setInspection(null);
+                    setRecorded(false);
+                  }}
+                >
+                  <option value="">{t("advancedFlows.chooseEvent")}</option>
+                  {sourceID === "custom" && (
+                    <option value="custom">{t("advancedFlows.customEvent")}</option>
+                  )}
+                  {history.data?.runs.map((run) => (
+                    <option key={run.id} value={run.id}>
+                      {run.show_name} S{String(run.season).padStart(2, "0")}E
+                      {String(run.episode).padStart(2, "0")} {" / "}
+                      {dateLabel(run.started_at)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {sourceID !== "custom" && (
+                <button
+                  type="button"
+                  className="button advanced-create-event"
+                  onClick={() => {
+                    setSourceID("custom");
+                    setInspection(null);
+                    setRecorded(false);
+                  }}
+                >
+                  <Plus size={15} />
+                  {t("advancedFlows.createEvent")}
+                </button>
+              )}
+              {sourceID === "custom" && (
+                <div className="advanced-custom-event">
+                  <label>
+                    <span>{t("advancedFlows.showName")}</span>
+                    <input
+                      value={customEvent.show_name}
+                      maxLength={200}
+                      onChange={(event) => {
+                        setCustomEvent((current) => ({ ...current, show_name: event.target.value }));
+                        setInspection(null);
+                        setRecorded(false);
+                      }}
+                    />
+                  </label>
+                  <label>
+                    <span>{t("advancedFlows.season")}</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={Number.isNaN(customEvent.season) ? "" : customEvent.season}
+                      onChange={(event) => {
+                        setCustomEvent((current) => ({ ...current, season: event.target.valueAsNumber }));
+                        setInspection(null);
+                        setRecorded(false);
+                      }}
+                    />
+                  </label>
+                  <label>
+                    <span>{t("advancedFlows.episode")}</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={1000}
+                      value={Number.isNaN(customEvent.episode) ? "" : customEvent.episode}
+                      onChange={(event) => {
+                        setCustomEvent((current) => ({ ...current, episode: event.target.valueAsNumber }));
+                        setInspection(null);
+                        setRecorded(false);
+                      }}
+                    />
+                  </label>
+                </div>
+              )}
+            </div>
             {inspection && (
               <button
                 type="button"
-                className="button"
+                className="button advanced-recorded-toggle"
                 onClick={() => setRecorded(!recorded)}
               >
                 {recorded
@@ -709,43 +869,49 @@ export function AdvancedFlowsPage() {
                   : t("advancedFlows.viewRecorded")}
               </button>
             )}
-          </div>
-        </div>
-      </div>
-      {feedback && (
-        <p role="status" className="advanced-feedback">
-          {feedback}
-        </p>
-      )}
-      <div className="advanced-layout">
-        <aside className="panel advanced-sidebar">
-          <div className="advanced-sidebar-heading">
-            <div>
-              <span className="eyebrow">{t("advancedFlows.buildLabel")}</span>
-              <h2>{t("advancedFlows.nodesHeading")}</h2>
-            </div>
-            <span className="advanced-node-count">{nodes.length}</span>
-          </div>
-          <p className="advanced-sidebar-help">{t("advancedFlows.addHelp")}</p>
-          {kinds.data.nodes.map((kind) => (
             <button
               type="button"
-              key={kind.type}
-              disabled={recorded}
-              draggable={!recorded}
-              onDragStart={(event) => {
-                event.dataTransfer.setData("text/plain", kind.type);
-                event.dataTransfer.setData(nodeDragType, kind.type);
-                event.dataTransfer.effectAllowed = "copy";
-              }}
-              onDragEnd={() => setCanvasDropActive(false)}
-              onClick={() => addNode(kind)}
+              className="button primary advanced-test-flow"
+              disabled={!current?.id || !sourceID || (sourceID === "custom" && !customReady) || busy}
+              onClick={test}
             >
-              <GripVertical size={15} aria-hidden="true" />
-              {label(kind.type)}
+              <FlaskConical size={16} />
+              {t("advancedFlows.testEvent")}
             </button>
-          ))}
-        </aside>
+            {!current?.id && <small className="advanced-test-help">{t("advancedFlows.saveBeforeTest")}</small>}
+            {feedback && (
+              <p role="status" className="advanced-feedback">{feedback}</p>
+            )}
+          </section>
+          <aside className="panel advanced-sidebar">
+            <div className="advanced-sidebar-heading">
+              <div>
+                <span className="eyebrow">{t("advancedFlows.buildLabel")}</span>
+                <h2>{t("advancedFlows.nodesHeading")}</h2>
+              </div>
+              <span className="advanced-node-count">{nodes.length}</span>
+            </div>
+            <p className="advanced-sidebar-help">{t("advancedFlows.addHelp")}</p>
+            {kinds.data.nodes.filter((kind) => !kind.deprecated).map((kind) => (
+              <button
+                type="button"
+                key={kind.type}
+                disabled={recorded}
+                draggable={!recorded}
+                onDragStart={(event) => {
+                  event.dataTransfer.setData("text/plain", kind.type);
+                  event.dataTransfer.setData(nodeDragType, kind.type);
+                  event.dataTransfer.effectAllowed = "copy";
+                }}
+                onDragEnd={() => setCanvasDropActive(false)}
+                onClick={() => addNode(kind)}
+              >
+                <GripVertical size={15} aria-hidden="true" />
+                {label(kind.type)}
+              </button>
+            ))}
+          </aside>
+        </div>
         <div
           className={`advanced-canvas${canvasDropActive ? " is-drop-target" : ""}`}
           aria-label={t("advancedFlows.canvas")}
@@ -773,7 +939,7 @@ export function AdvancedFlowsPage() {
               event.dataTransfer.getData("text/plain");
             const kind = kindMap.get(draggedType);
             setCanvasDropActive(false);
-            if (!kind || recorded || !screenToFlowPosition.current) return;
+            if (!kind || kind.deprecated || recorded || !screenToFlowPosition.current) return;
             event.preventDefault();
             addNode(
               kind,
@@ -843,10 +1009,6 @@ export function AdvancedFlowsPage() {
                 {inspection.event.show_name} S{inspection.event.season}E
                 {inspection.event.episode}
               </span>
-              <span>
-                {t("advancedFlows.revision")}:{" "}
-                {inspection.flow_revision || t("advancedFlows.draft")}
-              </span>
               <span>{inspection.duration_ms} ms</span>
               {!traceMatches && <span>{t("advancedFlows.graphChanged")}</span>}
             </div>
@@ -892,41 +1054,74 @@ export function AdvancedFlowsPage() {
               {!recorded &&
                 nodes
                   .find((node) => node.id === selected)
-                  ?.data.kind.config.map((key) => (
-                    <label key={key}>
-                      {t(`advancedFlows.config.${key}`)}
-                      <input
-                        value={
-                          (
-                            nodes.find((node) => node.id === selected)?.data
-                              .config as Record<string, string>
-                          )?.[key] || ""
-                        }
-                        onChange={(event) =>
-                          setNodes((old) =>
-                            old.map((node) =>
-                              node.id === selected
-                                ? {
-                                    ...node,
-                                    data: {
-                                      ...node.data,
-                                      config: {
-                                        ...(node.data.config as Record<
-                                          string,
-                                          string
-                                        >),
-                                        [key]: event.target.value,
-                                      },
-                                    },
-                                  }
-                                : node,
-                            ),
-                          )
-                        }
-                        maxLength={500}
-                      />
-                    </label>
-                  ))}
+                  ?.data.kind.config.map((key) => {
+                    if (key === "attribute") {
+                      const config = nodes.find((node) => node.id === selected)?.data.config as Record<string, string>;
+                      const options = selectedInputType === "candidate"
+                        ? ["name", "provider"]
+                        : selectedInputType === "event" ? ["show_name"]
+                        : selectedInputType === "text" ? ["value"] : [];
+                      return (
+                        <label key={key}>
+                          {t("advancedFlows.config.attribute")}
+                          <select
+                            value={config?.attribute || ""}
+                            onChange={(event) => changeSelectedConfig(key, event.target.value)}
+                            disabled={!selectedInputType}
+                          >
+                            <option value="">{t(selectedInputType ? "advancedFlows.config.defaultField" : "advancedFlows.config.connectInput")}</option>
+                            {options.map((option) => <option value={option} key={option}>{t(`advancedFlows.config.${option}`)}</option>)}
+                          </select>
+                        </label>
+                      );
+                    }
+                    if (key === "trim") {
+                      const config = nodes.find((node) => node.id === selected)?.data.config as Record<string, string>;
+                      return (
+                        <div className="advanced-trim-option" key={key}>
+                          <label className="toggle-setting">
+                            <input type="checkbox" role="switch" checked={config?.trim !== "false"}
+                              onChange={(event) => changeSelectedConfig(key, event.target.checked ? "true" : "false")} />
+                            <span>{t("advancedFlows.config.trim")}</span>
+                          </label>
+                          <small>{t("advancedFlows.config.trimHelp")}</small>
+                        </div>
+                      );
+                    }
+                    return (
+                      <label key={key}>
+                        {t(`advancedFlows.config.${key}`)}
+                        <input
+                          value={(nodes.find((node) => node.id === selected)?.data.config as Record<string, string>)?.[key] || ""}
+                          onChange={(event) => changeSelectedConfig(key, event.target.value)}
+                          maxLength={500}
+                        />
+                      </label>
+                    );
+                  })}
+              {!recorded && selectedNodeType === "query.build" && (
+                <p className="advanced-config-help">{t("advancedFlows.config.prefixHelp")}</p>
+              )}
+              {selectedPreview && (
+                <div className="advanced-preview">
+                  <strong>{t("advancedFlows.preview.title")}</strong>
+                  <div className="advanced-preview-grid">
+                    <div>
+                      <h4>{t("advancedFlows.preview.input")}</h4>
+                      {selectedPreview.input === undefined
+                        ? <p>{t(`advancedFlows.preview.${selectedPreview.note || "needsInput"}`)}</p>
+                        : <pre>{JSON.stringify(selectedPreview.input, null, 2)}</pre>}
+                      {selectedPreview.previousInput && <small>{t("advancedFlows.preview.previousInput")}</small>}
+                    </div>
+                    <div>
+                      <h4>{t("advancedFlows.preview.output")}</h4>
+                      {selectedPreview.output === undefined
+                        ? <p>{t(`advancedFlows.preview.${selectedPreview.note || "runTest"}`)}</p>
+                        : <pre>{JSON.stringify(selectedPreview.output, null, 2)}</pre>}
+                    </div>
+                  </div>
+                </div>
+              )}
               {selectedStep && (
                 <div className="advanced-step">
                   <strong>{statusLabel(selectedStep.status)}</strong>
@@ -1022,7 +1217,19 @@ export function AdvancedFlowsPage() {
               ))}
             </div>
           )}
-          {!selected && !original && <p>{t("advancedFlows.inspectHelp")}</p>}
+          {sourceID === "custom" && !inspection && (
+            <div className="advanced-original">
+              <h3>{t("advancedFlows.customEvent")}</h3>
+              <pre>{JSON.stringify(customEvent, null, 2)}</pre>
+            </div>
+          )}
+          {inspection && (
+            <details className="advanced-original">
+              <summary>{t("advancedFlows.eventData")}</summary>
+              <pre>{JSON.stringify(inspection.event, null, 2)}</pre>
+            </details>
+          )}
+          {!selected && !original && sourceID !== "custom" && <p>{t("advancedFlows.inspectHelp")}</p>}
         </aside>
       </div>
       <section className="panel advanced-history">

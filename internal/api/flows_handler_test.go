@@ -62,4 +62,29 @@ func TestAdvancedFlowAPIIsAdminOnlyAndReplaysHistoricalTrigger(t *testing.T) {
 	}
 	expect(t, request(t, h, "GET", "/api/flows/runs/"+run.ID, nil), http.StatusOK)
 	expect(t, request(t, h, "GET", "/api/flows/runs/"+run.ID, nil, member), http.StatusForbidden)
+	custom := request(t, h, "POST", "/api/flows/"+flow.ID+"/replay", map[string]any{"event": map[string]any{"kind": "show_available", "show_name": "  Example Show  ", "season": 1, "episode": 3}})
+	expect(t, custom, http.StatusCreated)
+	var customRun flows.Run
+	if err = json.Unmarshal(custom.Body.Bytes(), &customRun); err != nil {
+		t.Fatal(err)
+	}
+	if customRun.SourceRunID != "" || customRun.Event.Kind != "show_available" || customRun.Event.ShowName != "Example Show" || customRun.Event.ShowID == "" || customRun.Event.EpisodeID == "" || customRun.Event.TriggeredAt == 0 || customRun.Event.Episode != 3 {
+		t.Fatalf("bad custom event: %+v", customRun.Event)
+	}
+	if len(customRun.Steps) == 0 || customRun.Steps[0].Output == nil {
+		t.Fatalf("custom trigger was not inspectable: %+v", customRun.Steps)
+	}
+	loaded := request(t, h, "GET", "/api/flows/runs/"+customRun.ID, nil)
+	expect(t, loaded, http.StatusOK)
+	if !strings.Contains(loaded.Body.String(), `"kind":"show_available"`) || !strings.Contains(loaded.Body.String(), `"episode_id":"custom-`) {
+		t.Fatal("recorded custom event lacks trigger details")
+	}
+	for _, payload := range []map[string]any{
+		{"event": map[string]any{"kind": "show_available", "show_name": "", "season": 1, "episode": 3}},
+		{"event": map[string]any{"kind": "show_available", "show_name": "Example", "season": 1, "episode": 0}},
+		{"event": map[string]any{"kind": "unknown", "show_name": "Example", "season": 1, "episode": 3}},
+		{"source_run_id": sourceID, "event": map[string]any{"kind": "show_available", "show_name": "Example", "season": 1, "episode": 3}},
+	} {
+		expect(t, request(t, h, "POST", "/api/flows/"+flow.ID+"/replay", payload), http.StatusBadRequest)
+	}
 }

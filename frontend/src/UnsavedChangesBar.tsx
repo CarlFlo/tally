@@ -1,6 +1,7 @@
 import { Undo2, Save } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useBeforeUnload } from "react-router";
+import "./unsaved-changes.css";
 
 export function useUnsavedChangesWarning(
   hasChanges: boolean,

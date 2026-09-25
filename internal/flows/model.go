@@ -15,11 +15,13 @@ type Port struct {
 	Type string `json:"type"`
 }
 type NodeKind struct {
-	Type    string   `json:"type"`
-	Inputs  []Port   `json:"inputs"`
-	Outputs []Port   `json:"outputs"`
-	Config  []string `json:"config"`
-	execute executor `json:"-"`
+	Type       string   `json:"type"`
+	Inputs     []Port   `json:"inputs"`
+	Outputs    []Port   `json:"outputs"`
+	Config     []string `json:"config"`
+	InputMode  string   `json:"input_mode,omitempty"`
+	Deprecated bool     `json:"deprecated,omitempty"`
+	execute    executor `json:"-"`
 }
 type Node struct {
 	ID     string                     `json:"id"`
@@ -99,6 +101,8 @@ func Validate(name string, definition Definition) error {
 	}
 	edges := make(map[string]bool, len(definition.Edges))
 	incoming := make(map[string]bool)
+	incomingType := make(map[string]string)
+	incomingCount := make(map[string]int)
 	adjacency := make(map[string][]string)
 	for _, edge := range definition.Edges {
 		if !validID(edge.ID) || edges[edge.ID] {
@@ -120,9 +124,33 @@ func Validate(name string, definition Definition) error {
 			return fmt.Errorf("node %s input %s has multiple connections", edge.Target, edge.TargetPort)
 		}
 		incoming[key] = true
+		incomingType[edge.Target] = in.Type
+		incomingCount[edge.Target]++
 		adjacency[edge.Source] = append(adjacency[edge.Source], edge.Target)
 	}
 	for _, node := range definition.Nodes {
+		kind := registry[node.Type]
+		if kind.InputMode == "one" {
+			if incomingCount[node.ID] != 1 {
+				return fmt.Errorf("node %s requires exactly one input", node.ID)
+			}
+			if node.Type == "text.replace" {
+				attribute := config(node, "attribute")
+				inputType := incomingType[node.ID]
+				if attribute != "" && !replaceAttributeAllowed(inputType, attribute) {
+					return fmt.Errorf("node %s attribute is incompatible with its input", node.ID)
+				}
+				for _, edge := range definition.Edges {
+					if edge.Source == node.ID {
+						out, _ := findPort(kind.Outputs, edge.SourcePort)
+						if out.Type != inputType {
+							return fmt.Errorf("node %s output is incompatible with its input", node.ID)
+						}
+					}
+				}
+			}
+			continue
+		}
 		for _, port := range registry[node.Type].Inputs {
 			if !incoming[node.ID+"/"+port.Name] {
 				return fmt.Errorf("node %s has unconnected input %s", node.ID, port.Name)
@@ -153,6 +181,18 @@ func Validate(name string, definition Definition) error {
 		}
 	}
 	return nil
+}
+
+func replaceAttributeAllowed(inputType, attribute string) bool {
+	switch inputType {
+	case "event":
+		return attribute == "show_name"
+	case "candidate":
+		return attribute == "name" || attribute == "provider"
+	case "text":
+		return attribute == "" || attribute == "value"
+	}
+	return false
 }
 
 func validID(id string) bool {
@@ -198,6 +238,12 @@ func validateConfig(kind NodeKind, config map[string]json.RawMessage) error {
 		}
 		if kind.Type == "text.replace" && key == "find" && value == "" {
 			return errors.New("find text is required")
+		}
+		if kind.Type == "text.replace" && key == "attribute" && value != "" && value != "value" && value != "show_name" && value != "name" && value != "provider" {
+			return errors.New("unknown replacement attribute")
+		}
+		if kind.Type == "text.replace" && key == "trim" && value != "true" && value != "false" {
+			return errors.New("trim must be true or false")
 		}
 		if kind.Type == "torrent.filter" && key == "min_seeders" {
 			if value != "" {

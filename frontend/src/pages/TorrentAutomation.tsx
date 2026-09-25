@@ -295,6 +295,7 @@ export function TorrentAutomationPage() {
     <div className="page torrent-automation-page">
       <PageHeader
         className="torrent-automation-heading"
+        eyebrow={t("search.eyebrow")}
         title={t("search.title")}
         description={t("torrentAutomation.description", {
           defaultValue:
@@ -770,7 +771,6 @@ export function TorrentAutomationPage() {
           statusLabel={t("torrentAutomation.unsavedChanges")}
           revertLabel={t("torrentAutomation.revert")}
           saveLabel={t("torrentAutomation.saveChanges")}
-          className="settings-actions automation-save-bar"
         />
       </form>
     </div>
