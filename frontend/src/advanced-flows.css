@@ -23,9 +23,11 @@
 .advanced-chain-stage-heading > div { flex: 1; min-width: 0; }
 .advanced-chain-stage h2, .advanced-history h2 { margin: 0; font-size: 1rem; }
 .advanced-chain-stage p { margin: 5px 0 0; color: var(--muted); font-size: .82rem; }
-.advanced-chain-config { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 15px; }
+.advanced-chain-config { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 12px; margin-top: 15px; }
 .advanced-chain-config label, label.advanced-chain-config { display: grid; gap: 6px; color: var(--muted); font-size: .8rem; }
 .advanced-chain-config input, .advanced-chain-config textarea, .advanced-chain-config select { width: 100%; min-width: 0; padding: 9px; border: 1px solid var(--border); border-radius: 8px; color: var(--text); background: var(--surface2); font: inherit; }
+.advanced-chain-config input, .advanced-chain-config select { box-sizing: border-box; height: 38px; padding: 0 9px; }
+.advanced-chain-config textarea { box-sizing: border-box; }
 .advanced-chain-config textarea { resize: vertical; }
 .advanced-chain-config textarea.advanced-chain-filter-list { height: 84px; resize: none; overflow-y: auto; }
 .advanced-chain-result { margin-top: 14px; font-size: .82rem; }
