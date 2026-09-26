@@ -1,15 +1,15 @@
 #!/bin/sh
 set -eu
 
-case "${PUID:-10001}" in
+case "${PUID:-1000}" in
   ''|*[!0-9]*) echo "PUID must be a numeric user id" >&2; exit 64 ;;
 esac
-case "${PGID:-10001}" in
+case "${PGID:-1000}" in
   ''|*[!0-9]*) echo "PGID must be a numeric group id" >&2; exit 64 ;;
 esac
 
-PUID="${PUID:-10001}"
-PGID="${PGID:-10001}"
+PUID="${PUID:-1000}"
+PGID="${PGID:-1000}"
 
 group_name="tally"
 user_name="tally"
